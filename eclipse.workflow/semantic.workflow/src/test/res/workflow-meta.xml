@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow>
+  <t id="Instabl" pk="tabl" columns="tabl,instId,nodeFk,wfIdFk,busiFk,descol,operTime,handleCmd,prevInstNode">
+  	<d> <tabl>wf_nodeInsts</tabl>
+		<instId>recId</instId>
+		<!-- Workflow instance table's node id fk to ir_wfdef.nodeId, e.g processNodeId of c_process_processing -->
+		<nodeFk>nodeFk</nodeFk>
+		<!-- Optional wf type id FK to Wftabl.recId (wfId) -->
+		<wfIdFk>wfIdFk</wfIdFk>
+		<!-- Workflow instance reference to business record id, e.g. e_tasks.taskId  -->
+		<busiFk>busiFk</busiFk>
+		<!-- Workflow instance table's node description column name  -->
+		<descol>dealDescribe</descol>
+		<!-- update time in instance table -->
+		<operTime>disposalTime</operTime>
+		<!-- Workflow instance table's column that recording user's command handled this node,
+			 e.g. c_process_processing.nodeState used to record req name.  -->
+		<handleCmd>nodeStatus</handleCmd>
+		<!-- Previous instance node cole: c_process_processing.prevRec<br>
+			 * Reason? The last handled description is important to show in main list. -->
+		<prevInstNode>prevRec</prevInstNode>
+  	</d>
+  </t>
+
+  <t id="Wftabl " pk="" columns="">
+	<d> <tabl>ir_workflow</tabl>
+		<!-- virtual node code hard coded -->
+		<virtualNCode>virt</virtualNCode>
+		<recId>wfId</recId>
+		<wfName>wfName</wfName>
+		<bussTable>bussTable</bussTable>
+		<bRecId>bRecId</bRecId>
+		<bRefCol>bRefCol</bRefCol>
+		<!-- bussiness wf type, like e_inspect_tasks.taskType  -->
+		<bussCateCol>bussCateCol</bussCateCol>
+		<node1>Node1</node1>
+		<backRefs>backRefs</backRefs>
+	</d>
+  </t>
+  
+  <t id="WfDeftabl" pk="tabl" columns="tabl,wfId">
+  	<d>	<tabl>tabl</tabl>
+		<wfId>wfId</wfId>
+		<nodeId>nodeId</nodeId>
+		<ncode>nodeCode</ncode>
+		<nname>nodeName</nname>
+		<cmdRoute>route</cmdRoute>
+		<onEvents>onEvents</onEvents>
+		<!-- time out in minute  -->
+		<outTime>timeoutmm</outTime>
+		<!-- timeout route (nodeId)  -->
+		<timeoutRoute>timeoutRoute</timeoutRoute>
+  	</d>
+  </t>
+  <t id="Wfrole" pk="tabl" columns="tabl,wfId,nid,roleId">
+	<d> <tabl>ir_wfrole</tabl>
+		<wfId>wfId</wfId>
+		<nid>nodeId</nid>
+		<roleId>roleId</roleId>
+	</d>
+  </t>
+</workflow>
