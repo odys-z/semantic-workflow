@@ -9,6 +9,7 @@ import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
+import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
 public class CheapChecker implements Runnable {
@@ -91,19 +92,18 @@ public class CheapChecker implements Runnable {
 	/**Handle timeout event: step event's current node to timeout node - timeout event not fired here.
 	 * @param evt
 	 * @throws SQLException
-	 * @throws CheapException
 	 * @throws IOException
-	 * @throws SemanticException
+	 * @throws TransException 
 	 */
 	private static void timeout(CheapEvent evt)
-			throws SQLException, CheapException, IOException, SemanticException {
+			throws SQLException, IOException, TransException {
 		// current node Id means current instance
 		CheapApi wfapi = CheapApi.stepTimeout(evt.wfId(), evt.instId(), evt.taskId());
-		JRequestUpdate jreq = (JRequestUpdate) wfapi.commit(CheapEngin.checkUser)[0];
+		Update jreq = (Update) wfapi.commit(CheapEngin.checkUser).get("res");
 		if (jreq != null) {
 			ArrayList<String> sqls = new ArrayList<String>();
-			jreq.commit(checkUser, sqls);
-			Connects.commit(checkUser, sqls);
+			jreq.commit(sqls, CheapEngin.checkUser);
+//			Connects.commit(CheapEngin.checkUser, sqls);
 		}
 		
 	}
