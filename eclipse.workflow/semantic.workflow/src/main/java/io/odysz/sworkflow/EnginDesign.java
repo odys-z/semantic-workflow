@@ -1,6 +1,8 @@
 package io.odysz.sworkflow;
 
 public class EnginDesign {
+
+
 	public enum Req { heartbeat("ping.serv"),
 		session("login.serv"), TgetDef("get-def"), findRoute("findroute"),
 		/** client use this to ask plausible operation using 't' */

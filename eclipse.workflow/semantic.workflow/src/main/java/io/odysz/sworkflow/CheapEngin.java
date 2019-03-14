@@ -35,9 +35,6 @@ import io.odysz.transact.x.TransException;
  * @author odys-z@github.com
  */
 public class CheapEngin {
-	/** * */
-	private static final long serialVersionUID = 1L;
-
 	public static final boolean debug = true;
 
 	static IUser checkUser;
@@ -278,7 +275,7 @@ public class CheapEngin {
 		}
 		// t is anything else, handle request commands
 		else {
-			Object[] rets = getJUpdate(usr, wftype, currentInstId,
+			Object[] rets = onReqCmd(usr, wftype, currentInstId,
 					req, busiId, nodeDesc, busiNvs, multireq, parsePosts(postreq));
 			Insert jupdate = (Insert) rets[0];
 			ArrayList<String> sqls = new ArrayList<String>(1);
@@ -287,6 +284,8 @@ public class CheapEngin {
 			// fire event
 			CheapEvent evt = (CheapEvent) rets[1];
 			evt.resolveTaskId(newIds);
+			// FIXME: Event handling can throw an exception.
+			// FIXME: Event handling may needing a returning message to update nodes.
 			ICheapEventHandler stepHandler = (ICheapEventHandler) rets[2];
 			if (stepHandler != null)
 				stepHandler.onNext(evt);
@@ -336,16 +335,17 @@ public class CheapEngin {
 	 * @param nodeDesc workflow instance node description
 	 * @param busiPack nvs for task records
 	 * @param multireq  {tabl: tablename, del: dels, insert: eaches};
-	 * @param postreq 
+	 * @param postreq
 	 * @return [0: {@link Insert} (for committing), <br>
 	 * 1: start/step event (new task ID must resolved), <br>
 	 * 2: {@link ICheapEventHandler} for req (step/deny/next) if there is one configured]<br>
 	 * 3: {@link ICheapEventHandler} for arriving event if there is one configured]
-	 * @throws SQLException 
-	 * @throws CheapException 
+	 * @throws SQLException
+	 * @throws CheapException
 	 */
-	public static Object[] getJUpdate(IUser usr, String wftype, String currentInstId, Req req,
-			String busiId, String nodeDesc, String[] busiPack, SemanticObject multireq, Update postreq) throws SQLException, CheapException {
+	public static SemanticObject onReqCmd(IUser usr, String wftype, String currentInstId, Req req,
+			String busiId, String nodeDesc, ArrayList<String[]> busiPack, SemanticObject multireq, Update postreq)
+					throws SQLException, CheapException {
 
 		CheapNode currentNode; 
 		CheapEvent evt = null; 
@@ -353,7 +353,6 @@ public class CheapEngin {
 		CheapWorkflow wf = wfs.get(wftype);
 		if (req == Req.start) {
 			currentNode = wf.start(); // a virtual node
-			// TODO load a starting handler's name from wf.
 		}
 		else {
 			currentNode = wf.getNodeByInst(currentInstId);
@@ -439,9 +438,8 @@ public class CheapEngin {
 			ins1 = CheapEngin.scontext.insert(wf.bTabl);
 			ins1.nv(wf.bCateCol, wf.wfId);
 			if (busiPack != null) {
-				for (String businv : busiPack) {
-					String[] nv = businv.split(",");
-					ins1.nv(nv[1], nv[2]);
+				for (String[] nv : busiPack) {
+					ins1.nv(nv[0], nv[1]);
 				}
 			}
 			ins1.post(ins2);
@@ -463,8 +461,13 @@ public class CheapEngin {
 						// busiId is null for new task, resolved later
 						Req.start == req ? "AUTO" : busiId, req);
 		
-		return new Object[] {ins1, evt, currentNode.stepEventHandler(req),
-				nextNode.onEventHandler(Event.arrive)};
+//		return new Object[] {ins1, evt, currentNode.stepEventHandler(req),
+//				nextNode.onEventHandler(Event.arrive)};
+		return new SemanticObject()
+				.put("stmt", ins1)
+				.put("startEvt", evt)
+				.put("stepEvt", currentNode.stepEventHandler(req))
+				.put("arriEvt", nextNode.onEventHandler(Event.arrive));
 	}
 
 	/**SHOUDN'T BE HERE
@@ -489,7 +492,6 @@ public class CheapEngin {
 	 * @param postups
 	 * @return
 	 * @throws SQLException
-	 */
 	@SuppressWarnings("rawtypes")
 	private static Update parsePosts(JSONArray postups) throws SQLException {
 		if (postups != null) {
@@ -569,5 +571,6 @@ public class CheapEngin {
 		}
 		return null;
 	}
+	 */
 
 }

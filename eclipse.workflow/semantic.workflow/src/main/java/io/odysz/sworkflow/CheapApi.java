@@ -88,18 +88,20 @@ public class CheapApi {
 
 	/**Commit current request set in {@link #req}.
 	 * @param usr
-	 * @return {res: {@link Update} (for committing), <br>
-	 * 		startEvt: start/step event (new task ID must resolved), <br>
-	 * 		cfgEvt: {@link ICheapEventHandler} for req (step/deny/next) if there is one configured, <br>
-	 * 		arrive: {@link ICheapEventHandler} for arriving event if there is one configured}
+	 * @return {stmt: {@link Update} (for committing), <br>
+	 * 		stepEvt: {@link CheapEvent} for start event(new task ID must resolved), <br>
+	 * 		stepEvt: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
+	 * 		arriEvt: {@link CheapEvent} for arriving event if there is one configured}
 	 * @throws SQLException
 	 * @throws CheapException
 	 */
 	public SemanticObject commit(IUser usr) throws SQLException, CheapException {
-		JSONArray busiPack = JsonHelper.convertJSONNv(nvs);
-		JSONObject multireq = formatMulti(multiChildTabl, multiDels, multiInserts);
-		return CheapEngin.getJUpdate(usr, wftype, currentNode, req, taskId,
-									nodeDesc, busiPack, multireq, postups);
+//		JSONArray busiPack = JsonHelper.convertJSONNv(nvs);
+//		JSONObject multireq = formatMulti(multiChildTabl, multiDels, multiInserts);
+
+		SemanticObject multireq = formatMulti(multiChildTabl, multiDels, multiInserts);
+		return CheapEngin.onReqCmd(usr, wftype, currentNode, req, taskId,
+									nodeDesc, nvs, multireq, postups);
 	}
 
 	// SHOULDN'T BE HERE

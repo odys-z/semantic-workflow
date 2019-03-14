@@ -5,10 +5,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import io.odysz.semantic.DA.Connects;
-import io.odysz.semantics.IUser;
-import io.odysz.semantics.SemanticObject;
-import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
@@ -17,18 +13,8 @@ public class CheapChecker implements Runnable {
 
 	private ICustomChecker customChker;
 
-
-//	private static final DbLog dbLog;
-//	public static DbLog dbLog() { return dbLog; }
-	
-//	static {
-//		checkUser = new CheapRobot();
-////		dbLog = new DbLog(checkUser, "WF Checking", "WF Checking", "timeout");
-//	}
-
 	public CheapChecker(HashMap<String,CheapWorkflow> wfs, ICustomChecker usrChker) {
 		this.wfs = wfs;
-		
 		this.customChker = usrChker;
 	}
 
