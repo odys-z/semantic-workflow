@@ -1,0 +1,35 @@
+drop table oz_workflow;
+CREATE TABLE oz_workflow (
+  wfId varchar(50) NOT NULL,
+  wfName varchar(50) NOT NULL,
+  bussTable varchar(20) NOT NULL, -- e.g. task
+  bRecId varchar(50) NOT NULL , -- e.g. task.taskId,
+  bRefCol varchar(20) DEFAULT NULL , -- task.state (node id ref in business table),
+  bussCateCol varchar(20) DEFAULT NULL , -- cate id in business table, e.g. task.tasktype.  The value is one of ir_workflow.wfId.,
+  node1 varchar(50) NOT NULL , -- start node id in ir_wfdef,
+  backRefs varchar(200) DEFAULT NULL , -- back reference (node instance ref to business task record) [node-id]:[business-col],
+  sort int(11) DEFAULT NULL,
+  PRIMARY KEY (wfId)
+);
+
+CREATE TABLE oz_wfdef (
+  wfId varchar(50) NOT NULL,
+  nodeId varchar(50) NOT NULL,
+  nodeName varchar(20) DEFAULT NULL,
+  nodeCode varchar(20) DEFAULT NULL,
+  route varchar(500) DEFAULT NULL,
+  arrivCondit varchar(200) DEFAULT NULL, -- '[TODO] previous node list. If not null, all previous node handlered can reach here . EX: a01 AND (a02 OR a03)',
+  timeoutRoute varchar(500) NULL, -- 'timeout-node-id:(optional)event-handler(implement ICheapEventHandler)',
+  timeoutmm int(11) DEFAULT NULL, -- 'timeout minutes',
+  onEvents varchar(200) DEFAULT NULL,
+  PRIMARY KEY (nodeId)
+);
+
+CREATE TABLE oz_wfrole (
+  wfId varchar(50) DEFAULT NULL,
+  nodeId varchar(50) NOT NULL,
+  roleId varchar(50) NOT NULL,
+  PRIMARY KEY (nodeId,roleId)
+);
+
+
