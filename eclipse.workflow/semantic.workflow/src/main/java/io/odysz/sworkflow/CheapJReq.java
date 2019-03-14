@@ -31,4 +31,19 @@ public class CheapJReq extends SemanticObject {
 		put("insDetails", nvs);
 		return this;
 	}
+
+	/**Create a new message that starting a workflow, usually for test and jclient.java.
+	 * @param wftype
+	 */
+	public static CheapJReq start(String wftype) {
+		return new CheapJReq(Req.start);
+	}
+	
+	/**Create a new api instance that handling a workflow request.
+	 * @param jreq
+	 * @return
+	 */
+	public static CheapApi parse(SemanticObject jbody) {
+		return null;
+	}
 }

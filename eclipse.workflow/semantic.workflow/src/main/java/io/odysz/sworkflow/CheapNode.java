@@ -1,5 +1,6 @@
 package io.odysz.sworkflow;
 
+import java.awt.Event;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -7,8 +8,7 @@ import java.util.HashSet;
 import io.odysz.common.Utils;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
-import io.odysz.sworkflow.EnginDesign.Act;
-import io.odysz.sworkflow.EnginDesign.Event;
+import io.odysz.sworkflow.CheapEvent.Evtype;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfProtocol;
 
@@ -36,7 +36,7 @@ public class CheapNode {
 	private ICheapEventHandler timeoutHandler;
 
 	private HashSet<String> roles;
-	private HashMap<Integer, ICheapEventHandler> onEvents;
+	private HashMap<Evtype, ICheapEventHandler> onEvents;
 
 	CheapNode(CheapWorkflow wf, String nid, String ncode, String nname, String route, String onEvents, int timeout,
 			String timeoutRoute, String roleIds) throws SQLException {
@@ -95,16 +95,16 @@ public class CheapNode {
 		return null;
 	}
 
-	private static HashMap<Integer, ICheapEventHandler> parseEvent(String strEvt) {
+	private static HashMap<Evtype, ICheapEventHandler> parseEvent(String strEvt) {
 		String[] ssEvt = strEvt == null || strEvt.trim().length() == 0 ? null : strEvt.split(",");
 		if (ssEvt != null) {
-			HashMap<Integer, ICheapEventHandler> ehandlers = new HashMap<Integer, ICheapEventHandler>(ssEvt.length);
+			HashMap<Evtype, ICheapEventHandler> ehandlers = new HashMap<Evtype, ICheapEventHandler>(ssEvt.length);
 			for (String evt : ssEvt) {
 				String[] ss = evt.split(":");
 				if (ss != null && ss.length > 1) {
 					try {
 						ICheapEventHandler handler = (ICheapEventHandler) Class.forName(ss[1].trim()).newInstance();
-						ehandlers.put(Event.parse(ss[0].trim()), handler);
+						ehandlers.put(Evtype.valueOf(ss[0].trim()), handler);
 					} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
 						Utils.warn("Can't parse event handler configuration: %s", strEvt);
 						e.printStackTrace();
@@ -169,9 +169,9 @@ public class CheapNode {
 		return wf.wfId;
 	}
 
-	Act getAct(int arrive) {
-		return null;
-	}
+//	Act getAct(int arrive) {
+//		return null;
+//	}
 
 	HashSet<String> roles() {
 		return roles;
@@ -242,7 +242,7 @@ public class CheapNode {
 		return null;
 	}
 
-	public ICheapEventHandler onEventHandler(int arrive) {
+	public ICheapEventHandler onEventHandler(Evtype arrive) {
 		return onEvents == null ? null : onEvents.get(arrive);
 	}
 

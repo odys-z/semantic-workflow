@@ -21,25 +21,25 @@ public class EnginDesign {
 		}
 	};
 
-	static class Event {
-		static int arrive = 11;
-
-		public static Integer parse(String trim) {
-			throw new NullPointerException(); // TODO
-		}
-	}
-
-	/** ? */
-	static class Act {
-		static int newbusi = 21;
-		static int close = 22;
-
-		private int acode = newbusi;
-		public boolean eq(int actCode) {
-			return acode == actCode;
-		}
-	}
-		
+//	static class Event {
+//		static int arrive = 11;
+//
+//		public static Integer parse(String trim) {
+//			throw new NullPointerException(); // TODO
+//		}
+//	}
+//
+//	/** ? */
+//	static class Act {
+//		static int newbusi = 21;
+//		static int close = 22;
+//
+//		private int acode = newbusi;
+//		public boolean eq(int actCode) {
+//			return acode == actCode;
+//		}
+//	}
+	
 	/**Keywords used to communicate with client
 	 * @author odys-z@github.com
 	 */

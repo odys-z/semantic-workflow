@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -20,14 +19,12 @@ import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
-import io.odysz.sworkflow.EnginDesign.Act;
-import io.odysz.sworkflow.EnginDesign.Event;
+import io.odysz.sworkflow.CheapEvent.Evtype;
 import io.odysz.sworkflow.EnginDesign.Instabl;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfProtocol;
 import io.odysz.sworkflow.EnginDesign.Wftabl;
 import io.odysz.transact.sql.Insert;
-import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
@@ -46,10 +43,12 @@ public class CheapEngin {
 	private static ScheduledFuture<?> schedualed;
 	private static ScheduledExecutorService scheduler;
 
-	static void init (String connId, String rootpath) throws SemanticException, SAXException, IOException{
+	static void init (String connId, String rootpath) throws SAXException, IOException, TransException{
 		checkUser = new CheapRobot();
 		ISemantext s = new DASemantext(connId, rootpath + "/semantics.xml");
 		scontext = new SContext(s);
+		// add auto pk semantics to instance table
+		scontext.addSemantics(Instabl.tabl, Instabl.instId, "pk", null);
 	}
 
 	/**Init cheep engine configuration, schedual a timeout checker. 
@@ -375,7 +374,8 @@ public class CheapEngin {
 		wf.checkRights(usr, currentNode, nextNode);
 			
 		// 2.1 new node-id
-		String newInstancId = scontext.genId(Instabl.tabl, Instabl.instId, null);
+		// using semantic support instead - semantics all ready added.
+		// String newInstancId = scontext.genId(Instabl.tabl, Instabl.instId, null);
 
 		// 3 update task.taskStatus
 		// 3.4. postupdate requested by client
@@ -446,13 +446,12 @@ public class CheapEngin {
 		}
 		else {
 			ins1 = ins2;
-			Act act = (nextNode.getAct(EnginDesign.Event.arrive));
-			if (act != null && act.eq(Act.close)) {
+			ICheapEventHandler act = (nextNode.onEventHandler(Evtype.arrive));
+			if (act != null) {
 				// do nothing
 			}
-			else if (act != null)
-				throw new SQLException("TODO..."); 
-			// and act is not necessary?
+			else
+				throw new SemanticException("TODO..."); 
 		}
 
 		// stepping event except a starting one
@@ -467,7 +466,7 @@ public class CheapEngin {
 				.put("stmt", ins1)
 				.put("startEvt", evt)
 				.put("stepEvt", currentNode.stepEventHandler(req))
-				.put("arriEvt", nextNode.onEventHandler(Event.arrive));
+				.put("arriEvt", nextNode.onEventHandler(CheapEvent.Evtype.arrive));
 	}
 
 	/**SHOUDN'T BE HERE

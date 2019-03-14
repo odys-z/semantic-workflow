@@ -18,7 +18,7 @@ import io.odysz.transact.x.TransException;
 
 class CheapApiTest {
 	static final String wftype = "test-wf01";
-	private IUser testUser = new IUser() {
+	static IUser testUser = new IUser() {
 		@Override public ArrayList<String> dbLog(ArrayList<String> sqls) { return sqls; }
 		@Override public boolean login(Object req) throws TransException { return false; }
 		@Override public String sessionId() { return null; }

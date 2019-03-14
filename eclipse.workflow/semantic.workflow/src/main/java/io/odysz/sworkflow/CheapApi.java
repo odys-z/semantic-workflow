@@ -96,9 +96,6 @@ public class CheapApi {
 	 * @throws CheapException
 	 */
 	public SemanticObject commit(IUser usr) throws SQLException, CheapException {
-//		JSONArray busiPack = JsonHelper.convertJSONNv(nvs);
-//		JSONObject multireq = formatMulti(multiChildTabl, multiDels, multiInserts);
-
 		SemanticObject multireq = formatMulti(multiChildTabl, multiDels, multiInserts);
 		return CheapEngin.onReqCmd(usr, wftype, currentNode, req, taskId,
 									nodeDesc, nvs, multireq, postups);

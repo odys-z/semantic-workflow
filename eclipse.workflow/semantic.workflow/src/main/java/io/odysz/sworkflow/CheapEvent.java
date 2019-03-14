@@ -6,6 +6,10 @@ import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.EnginDesign.Req;
 
 public class CheapEvent {
+	public enum Evtype {
+		arrive
+		
+	}
 
 	@Override
 	public String toString() {
