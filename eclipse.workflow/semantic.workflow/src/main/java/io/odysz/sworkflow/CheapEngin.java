@@ -278,6 +278,7 @@ public class CheapEngin {
 					req, busiId, nodeDesc, busiNvs, multireq, parsePosts(postreq));
 			Insert jupdate = (Insert) rets[0];
 			ArrayList<String> sqls = new ArrayList<String>(1);
+			// FIXME check duplicated successor - re-stepping occurs when clien error, competetions,
 			SemanticObject newIds = jupdate.commit(sqls, usr);
 			
 			// fire event
