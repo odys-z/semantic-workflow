@@ -38,7 +38,7 @@ public class CheapEngin {
 	public static final boolean debug = true;
 
 	static IUser checkUser;
-	static SContext scontext;
+	static CheapTransBuild transBuilder;
 	
 	static HashMap<String, CheapWorkflow> wfs;
 	public static HashMap<String, CheapWorkflow> wfs() { return wfs; }
@@ -48,8 +48,8 @@ public class CheapEngin {
 
 	static void init (String connId, String rootpath) throws SemanticException, SAXException, IOException{
 		checkUser = new CheapRobot();
-		ISemantext s = new DASemantext(connId, rootpath + "/semantics.xml");
-		scontext = new SContext(s);
+		ISemantext s = new DASemantext(connId, CheapTransBuild.initConfigs(connId, rootpath + "/semantics.xml"));
+		transBuilder = new CheapTransBuild(s);
 	}
 
 	/**Init cheep engine configuration, schedual a timeout checker. 
@@ -72,9 +72,9 @@ public class CheapEngin {
 
 			// String sql = String.format("select * from %s", EnginDesign.Wftabl.tabl);
 			// SResultset rs = Connects.select(sql);
-			SemanticObject o = (SemanticObject) scontext
+			SemanticObject o = (SemanticObject) transBuilder
 					.select(EnginDesign.Wftabl.tabl)
-					.rs();
+					.rs(transBuilder.staticContext()); // static context is enough to load cheap configs
 			SResultset rs = (SResultset) o.get("rs");
 
 			rs.beforeFirst();
@@ -375,7 +375,7 @@ public class CheapEngin {
 		wf.checkRights(usr, currentNode, nextNode);
 			
 		// 2.1 new node-id
-		String newInstancId = scontext.genId(Instabl.tabl, Instabl.instId, null);
+		String newInstancId = transBuilder.genId(Instabl.tabl, Instabl.instId, null);
 
 		// 3 update task.taskStatus
 		// 3.4. postupdate requested by client
@@ -383,7 +383,7 @@ public class CheapEngin {
 		postupClient = postreq;
 
 		// 3.3. handle multi-operation request 
-		Update upd3 = CheapEngin.scontext.update(wf.bTabl)
+		Update upd3 = CheapEngin.transBuilder.update(wf.bTabl)
 				.where("=", wf.bRecId, busiId == null ? "AUTO" : busiId);
 		if (multireq != null) {
 			upd3.postChildren(multireq);
@@ -392,7 +392,7 @@ public class CheapEngin {
 		// 3.2 save command name as current node's state (c_process_processing.nodeState = cmdName)
 		Update post32 = null;
 		if (currentNode != null && Req.start != req && EnginDesign.Instabl.handleCmd != null) {
-			post32 = CheapEngin.scontext.update(Instabl.tabl)
+			post32 = CheapEngin.transBuilder.update(Instabl.tabl)
 					.where("=", Instabl.instId, currentInstId)
 					.nv(Instabl.handleCmd, currentNode.getReqName(req))
 					.post(postupClient);
@@ -412,7 +412,7 @@ public class CheapEngin {
 		// 2. create node
 		// starting a new wf at the beginning
 		// nodeId = new-id
-		Insert ins2 = CheapEngin.scontext.insert(Instabl.tabl);
+		Insert ins2 = CheapEngin.transBuilder.insert(Instabl.tabl);
 		ins2.nv(Instabl.instId, newInstancId)
 			.nv(Instabl.nodeFk, nextNode.nodeId())
 			.nv(Instabl.descol, nodeDesc);
@@ -435,7 +435,7 @@ public class CheapEngin {
 		Insert ins1 = null; 
 		if (Req.start == req) {
 			// 1. create task
-			ins1 = CheapEngin.scontext.insert(wf.bTabl);
+			ins1 = CheapEngin.transBuilder.insert(wf.bTabl);
 			ins1.nv(wf.bCateCol, wf.wfId);
 			if (busiPack != null) {
 				for (String[] nv : busiPack) {

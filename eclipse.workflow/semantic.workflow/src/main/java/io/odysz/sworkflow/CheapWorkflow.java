@@ -55,7 +55,7 @@ public class CheapWorkflow {
 //				EnginDesign.Wfrole.nid(),    EnginDesign.WfDeftabl.wfId(), wfId);
 //		SResultset rs = q.commit(sqls, usrInfo);
 
-		SResultset rs = (SResultset) CheapEngin.scontext.select(WfDeftabl.tabl()).rs();
+		SResultset rs = (SResultset) CheapEngin.transBuilder.select(WfDeftabl.tabl()).rs();
 		rs.beforeFirst();
 
 		nodes = new HashMap<String, CheapNode>(rs.getRowCount());
