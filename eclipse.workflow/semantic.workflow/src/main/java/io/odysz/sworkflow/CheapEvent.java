@@ -8,7 +8,6 @@ import io.odysz.sworkflow.EnginDesign.Req;
 public class CheapEvent {
 	public enum Evtype {
 		arrive
-		
 	}
 
 	@Override

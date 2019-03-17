@@ -20,8 +20,7 @@ import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
-import io.odysz.sworkflow.EnginDesign.Act;
-import io.odysz.sworkflow.EnginDesign.Event;
+import io.odysz.sworkflow.CheapEvent.Evtype;
 import io.odysz.sworkflow.EnginDesign.Instabl;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfProtocol;
@@ -405,7 +404,7 @@ public class CheapEngin {
 		if (wf.backRefs != null && wf.backRefs.containsKey(nextNode.nodeId())) {
 			// if next node == "f01", update task.startNode = new-node-instance-id
 			String colname = wf.backRefs.get(nextNode.nodeId());
-			upd3.nv(wf.bRefCol, newInstancId)
+			upd3.nv(wf.bRefCol, newInstancId) // TODO cheap engine has a static semantext, bRefCol is configured with a FK.
 				.nv(wf.bCateCol, wf.wfId)
 				.nv(colname, newInstancId);
 		}
@@ -447,7 +446,7 @@ public class CheapEngin {
 		}
 		else {
 			ins1 = ins2;
-			Act act = (nextNode.getAct(EnginDesign.Event.arrive));
+			Act act = (nextNode.getAct(Evtype.arrive));
 			if (act != null && act.eq(Act.close)) {
 				// do nothing
 			}
@@ -468,7 +467,7 @@ public class CheapEngin {
 				.put("stmt", ins1)
 				.put("startEvt", evt)
 				.put("stepEvt", currentNode.stepEventHandler(req))
-				.put("arriEvt", nextNode.onEventHandler(Event.arrive));
+				.put("arriEvt", nextNode.onEventHandler(Evtype.arrive));
 	}
 
 	/**SHOUDN'T BE HERE
