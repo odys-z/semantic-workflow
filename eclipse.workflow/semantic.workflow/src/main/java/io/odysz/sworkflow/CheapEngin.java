@@ -375,7 +375,8 @@ public class CheapEngin {
 		wf.checkRights(usr, currentNode, nextNode);
 			
 		// 2.1 new node-id
-		String newInstancId = transBuilder.genId(Instabl.tabl, Instabl.instId, null);
+		// using semantic support instead - semantics all ready added.
+		// String newInstancId = transBuilder.genId(Instabl.tabl, Instabl.instId, null);
 
 		// 3 update task.taskStatus
 		// 3.4. postupdate requested by client
