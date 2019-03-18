@@ -1,6 +1,5 @@
 package io.odysz.sworkflow;
 
-import java.awt.Event;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,11 +11,10 @@ import io.odysz.sworkflow.CheapEvent.Evtype;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfProtocol;
 
-@SuppressWarnings("unused")
 public class CheapNode {
-	static class wfInstance {
-		static String bussRec = "baseProcessDataId";
-	}
+//	static class wfInstance {
+//		static String bussRec = "baseProcessDataId";
+//	}
 
 	private CheapWorkflow wf;
 	private String nid;
@@ -157,9 +155,9 @@ public class CheapNode {
 		return route == null ? null : route.get(req)[1];
 	}
 
-	String nodeName() {
-		return nname;
-	}
+//	String nodeName() {
+//		return nname;
+//	}
 
 	public String nodeId() {
 		return nid;
@@ -177,15 +175,15 @@ public class CheapNode {
 		return roles;
 	}
 
-	String rolestr() {
-		String rls = null;
-		for (String r : roles)
-			if (roles != null)
-				rls += "," + r;
-			else
-				rls = r;
-		return rls;
-	}
+//	String rolestr() {
+//		String rls = null;
+//		for (String r : roles)
+//			if (roles != null)
+//				rls += "," + r;
+//			else
+//				rls = r;
+//		return rls;
+//	}
 
 	public SemanticObject formatAllRoutes(IUser usr) throws SQLException {
 		try {

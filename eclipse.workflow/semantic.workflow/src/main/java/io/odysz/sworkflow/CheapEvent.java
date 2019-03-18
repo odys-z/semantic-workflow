@@ -6,9 +6,7 @@ import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.EnginDesign.Req;
 
 public class CheapEvent {
-	public enum Evtype {
-		arrive
-	}
+	public enum Evtype { arrive, start, step, close }
 
 	@Override
 	public String toString() {
@@ -17,27 +15,33 @@ public class CheapEvent {
 	}
 
 	private String wfId;
+	private Evtype etype;
 	private String currentNodeId;
 	private String nextNodeId;
+	private String prevNodes;
 	private String instId;
 	private String taskId;
 	private Req cmd;
 
 	/**When this is creating by cheap engine, there is not node instance id.
 	 * After sqls be committed, resolve it from semantext.
-	 * @param wfId
-	 * @param currentNode
-	 * @param nextNode
+	 * @param wfId workflow id/type
+	 * @param evt event type
+	 * @param currentN current node id
+	 * @param nextN
+	 * @param prevNs previous nodes
 	 * @param taskId
-	 * @param req
+	 * @param rq
 	 */
-	public CheapEvent(String wfId, String currentNode, String nextNode, String taskId, Req req) {
+	public CheapEvent(String wfId, Evtype evt, String currentN, String nextN, String prevNs, String taskId, Req rq) {
 		this.wfId = wfId;
-		this.currentNodeId = currentNode;
-		this.nextNodeId = nextNode;
+		this.etype = evt;
+		this.currentNodeId = currentN;
+		this.nextNodeId = nextN;
 		// this.instId = instid;
+		this.prevNodes = prevNs;
 		this.taskId = taskId;
-		this.cmd = req;
+		this.cmd = rq;
 	}
 
 	public String wfId() {
@@ -80,4 +84,7 @@ public class CheapEvent {
 			&& currentNodeId.matches(wftype + CheapWorkflow.virtNodeSuffix);
 	}
 
+	public String prevNodes() { return prevNodes; }
+
+	public String evtype() { return etype.name(); }
 }

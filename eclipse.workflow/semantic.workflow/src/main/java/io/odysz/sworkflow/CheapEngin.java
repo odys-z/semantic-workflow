@@ -14,7 +14,6 @@ import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DASemantics.smtype;
 import io.odysz.semantic.DA.DATranscxt;
-import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
@@ -39,7 +38,7 @@ public class CheapEngin {
 	public static HashMap<String, CheapWorkflow> wfs() { return wfs; }
 	
 	static CheapTransBuild transBuilder;
-	static HashMap<String, ISemantext> semantxs;
+//	static HashMap<String, ISemantext> semantxs;
 
 	private static ScheduledFuture<?> schedualed;
 	private static ScheduledExecutorService scheduler;
@@ -68,13 +67,13 @@ public class CheapEngin {
 
 	private static void reloadCheap(String filepath) throws TransException, IOException {
 		try {
-			EnginDesign.reloadMeta(filepath);
+			transBuilder = EnginDesign.reloadMeta(filepath);
 
 			// String sql = String.format("select * from %s", EnginDesign.Wftabl.tabl);
 			// SResultset rs = Connects.select(sql);
 			SemanticObject o = (SemanticObject) transBuilder
 					.select(EnginDesign.Wftabl.tabl)
-					.rs(transBuilder.staticContext()); // static context is enough to load cheap configs
+					.rs(transBuilder.basiContext()); // static context is enough to load cheap configs
 			SResultset rs = (SResultset) o.get("rs");
 
 			rs.beforeFirst();

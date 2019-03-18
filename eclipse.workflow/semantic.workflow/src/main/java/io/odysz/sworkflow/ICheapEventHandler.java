@@ -6,6 +6,6 @@ public interface ICheapEventHandler {
 	 * @param evnt
 	 */
 	void onTimeout(CheapEvent evnt);
-	void onNext(CheapEvent evnt);
+	void onCmd(CheapEvent evnt);
 	void onArrive(CheapEvent evnt);
 }

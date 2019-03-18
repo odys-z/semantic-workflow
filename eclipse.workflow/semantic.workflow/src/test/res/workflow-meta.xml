@@ -23,7 +23,8 @@
   	</d>
   </t>
 
-  <t id="Wftabl " pk="tabl" columns="tabl,virtualNCode,recId,wfName,bussTable,bRecId,bTaskState,bussCateCol,node1,bNodeInstRefs">
+  <t id="meta" pk="tabl" columns="tabl,virtualNCode,recId,wfName,bussTable,bRecId,bTaskState,bussCateCol,node1,bNodeInstRefs
+  		n-wfId,n-id,n-code,n-name,n-route,n-onEvents,n-timeout,n-timeoutRoute">
 	<d> <tabl>ir_workflow</tabl>
 		<!-- virtual node code hard coded -->
 		<virtualNCode>virt</virtualNCode>
@@ -41,24 +42,20 @@
 			This is the column names define, in format:
 			[node-id:task-col, ...] -->
 		<bNodeInstRefs>backRefs</bNodeInstRefs>
+
+		<n-wfId>wfId</n-wfId>
+		<n-id>nodeId</n-id>
+		<n-code>nodeCode</n-code>
+		<n-name>nodeName</n-name>
+		<n-route>route</n-route>
+		<n-onEvents>onEvents</n-onEvents>
+		<!-- time out in seconds  -->
+		<n-timeout>timeoutmm</n-timeout>
+		<!-- timeout route (nodeId)  -->
+		<n-timeoutRoute>timeoutRoute</n-timeoutRoute>
 	</d>
   </t>
   
-  <t id="WfDeftabl" pk="tabl" columns="tabl,wfId,nodeId,ncode,nname,cmdRoute,onEvents,outTime,timeoutRoute">
-  	<d>	<tabl>tabl</tabl>
-		<wfId>wfId</wfId>
-		<nodeId>nodeId</nodeId>
-		<ncode>nodeCode</ncode>
-		<nname>nodeName</nname>
-		<cmdRoute>route</cmdRoute>
-		<onEvents>onEvents</onEvents>
-		<!-- time out in seconds  -->
-		<outTime>timeoutmm</outTime>
-		<!-- timeout route (nodeId)  -->
-		<timeoutRoute>timeoutRoute</timeoutRoute>
-  	</d>
-  </t>
-
   <t id="Wfrole" pk="tabl" columns="tabl,wfId,nid,roleId">
 	<d> <tabl>ir_wfrole</tabl>
 		<wfId>wfId</wfId>

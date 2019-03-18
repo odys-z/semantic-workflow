@@ -75,7 +75,7 @@ public class CheapWorkflow {
 
 		SResultset rs = (SResultset) CheapEngin.transBuilder
 				.select(WfDeftabl.tabl())
-				.rs(CheapEngin.transBuilder.staticContext());
+				.rs(CheapEngin.transBuilder.basiContext());
 		rs.beforeFirst();
 
 		nodes = new HashMap<String, CheapNode>(rs.getRowCount());
@@ -131,7 +131,6 @@ public class CheapWorkflow {
 	 * @throws SQLException
 	 */
 	private static CheapNode createVirtualNode(CheapWorkflow wf) throws SQLException {
-		// FIXME add method: getVirtualNode0()
 		return new CheapNode(wf, wf.wfId + virtNodeSuffix, EnginDesign.Wftabl.virtualNCode(),
 				"You can't see this", // node name
 				String.format("next:%1$s:next,start:%1$s:start", wf.node1), // route: always to the beginning

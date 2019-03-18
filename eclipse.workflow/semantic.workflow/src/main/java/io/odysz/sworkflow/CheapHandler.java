@@ -1,5 +1,7 @@
 package io.odysz.sworkflow;
 
+import io.odysz.common.Utils;
+
 /**Don't just modify code here. <br>
  * Business code should be another class, e.g. com.ir.ifire.wf.EventHandler,
  * rather than modify handler here.<br>
@@ -9,22 +11,20 @@ package io.odysz.sworkflow;
 public class CheapHandler implements ICheapEventHandler {
 	
 	@Override
-	public void onTimeout(CheapEvent evnt) {
-		// if (CheapEngin.debug)
-		// Don't comment this line to disable error message.
-		// To disable this message, delete timeout event handler name in ir_wfdef.timeoutRoute.
-		// User timeout event handler is optional.
-		System.out.println(String.format(
-					"This is a sample for timeout handler. wfId: %s, nodeId: %s, node-instance: %s, task-id: %s, target-route: %s",
-					evnt.wfId(), evnt.currentNodeId(), evnt.instId(), evnt.taskId(), evnt.nextNodeId()));
-		
-		// FIXME move this lines to a business class, e.g. com.ir.ifre.wf.EventHandler, which is ifire business handler.
-		// String wfId, String nodeId, String instId, String taskId, String routeId
+	public void onTimeout(CheapEvent e) {
+		Utils.logi("Cheap timeout\n\twfId: %s, nodeId: %s, node-instance: %s, task-id: %s, target-route: %s",
+					e.wfId(), e.currentNodeId(), e.instId(), e.taskId(), e.nextNodeId());
 	}
+
 	@Override
-	public void onNext(CheapEvent evnt) {
-		
+	public void onCmd(CheapEvent e) {
+		Utils.logi("Cheap Command Event\n\twfId: %s, nodeId: %s, node-instance: %s, cmd: %s, task-id: %s, target-route: %s",
+					e.wfId(), e.currentNodeId(), e.instId(), e.cmd(), e.taskId(), e.nextNodeId());
 	}
+
 	@Override
-	public void onArrive(CheapEvent evnt) {}
+	public void onArrive(CheapEvent e) {
+		Utils.logi("Cheap Command Event\n\twfId: %s, nodeId: %s, node-instance: %s, prive nodes: %s, task-id: %s, target-route: %s",
+					e.wfId(), e.currentNodeId(), e.instId(), e.prevNodes(), e.taskId(), e.nextNodeId());
+	}
 }

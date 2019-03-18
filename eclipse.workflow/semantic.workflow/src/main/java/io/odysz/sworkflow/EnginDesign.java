@@ -163,8 +163,11 @@ public class EnginDesign {
 
 	/**Load meta from xml configure file (workflow-meta.xml).
 	 * @param filepath
+	 * @return 
 	 */
-	public static void reloadMeta(String filepath) {
+	public static CheapTransBuild reloadMeta(String filepath) {
 		Utils.warn("loading meta to be done: %s", filepath);
+		CheapTransBuild builder = new CheapTransBuild("local-sqlite");
+		return builder;
 	}
 }
