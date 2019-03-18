@@ -4,18 +4,16 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.xml.sax.SAXException;
-
 import io.odysz.common.Configs;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
-import io.odysz.semantic.DASemantext;
+import io.odysz.semantic.DASemantics.smtype;
+import io.odysz.semantic.DA.DATranscxt;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
@@ -23,10 +21,9 @@ import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapEvent.Evtype;
 import io.odysz.sworkflow.EnginDesign.Instabl;
 import io.odysz.sworkflow.EnginDesign.Req;
-import io.odysz.sworkflow.EnginDesign.WfProtocol;
+import io.odysz.sworkflow.EnginDesign.WfDeftabl;
 import io.odysz.sworkflow.EnginDesign.Wftabl;
 import io.odysz.transact.sql.Insert;
-import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
@@ -37,24 +34,28 @@ public class CheapEngin {
 	public static final boolean debug = true;
 
 	static IUser checkUser;
-	static CheapTransBuild transBuilder;
 	
 	static HashMap<String, CheapWorkflow> wfs;
 	public static HashMap<String, CheapWorkflow> wfs() { return wfs; }
+	
+	static CheapTransBuild transBuilder;
+	static HashMap<String, ISemantext> semantxs;
 
 	private static ScheduledFuture<?> schedualed;
 	private static ScheduledExecutorService scheduler;
 
-	static void init (String connId, String rootpath) throws SemanticException, SAXException, IOException{
-		checkUser = new CheapRobot();
-		ISemantext s = new DASemantext(connId, CheapTransBuild.initConfigs(connId, rootpath + "/semantics.xml"));
-		transBuilder = new CheapTransBuild(s);
-	}
+//	static void init (String connId, String rootpath) throws SemanticException, SAXException, IOException{
+//		checkUser = new CheapRobot();
+//		ISemantext s = new DASemantext(connId, CheapTransBuild.initConfigs(connId, rootpath + "/semantics.xml"));
+//		transBuilder = new CheapTransBuild(s);
+//	}
 
 	/**Init cheep engine configuration, schedual a timeout checker. 
 	 * @param customChecker 
-	 * @throws TransException */
-	public static void initCheap(String configPath, ICustomChecker customChecker) throws TransException {
+	 * @throws TransException 
+	 * @throws IOException */
+	public static void initCheap(String configPath, ICustomChecker customChecker)
+			throws TransException, IOException {
 		reloadCheap(configPath);
 
 		// worker thread 
@@ -65,9 +66,9 @@ public class CheapEngin {
 				new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
 	}
 
-	private static void reloadCheap(String filepath) throws TransException {
+	private static void reloadCheap(String filepath) throws TransException, IOException {
 		try {
-			EnginDesign.reload(filepath);
+			EnginDesign.reloadMeta(filepath);
 
 			// String sql = String.format("select * from %s", EnginDesign.Wftabl.tabl);
 			// SResultset rs = Connects.select(sql);
@@ -80,17 +81,40 @@ public class CheapEngin {
 
 			wfs = new HashMap<String, CheapWorkflow>(rs.getRowCount());
 			while (rs.next()) {
-				// CheapWorkflow ( wfType,  bTabl,  bRecId,  bRefCol,  node1)
+				// 1. Load work flow meta configuration from xml
+				String busitabl = rs.getString(Wftabl.bussTable);
+				String busiState = rs.getString(Wftabl.bTaskState);
 				CheapWorkflow wf = new CheapWorkflow(
 						rs.getString(Wftabl.recId),
 						rs.getString(Wftabl.wfName),
-						rs.getString(Wftabl.bussTable),
+						// rs.getString(Wftabl.bussTable),
+						busitabl, 
 						rs.getString(Wftabl.bRecId),
-						rs.getString(Wftabl.bRefCol),
+						// rs.getString(Wftabl.bTaskState),
+						busiState,
 						rs.getString(Wftabl.bussCateCol),
 						rs.getString(Wftabl.node1),
-						rs.getString(Wftabl.backRefs));
+						rs.getString(Wftabl.bNodeInstRefs));
 				wfs.put(rs.getString(Wftabl.recId), wf);
+
+				// 2. append semantics for handling routes, etc.
+				// 2.1 node instance auto key
+				String nodeInstabl = rs.getString(WfDeftabl.tabl());
+				String nodeInstPk = rs.getString(WfDeftabl.nid());
+				DATranscxt.addSemantics(EnginDesign.connId, nodeInstabl, nodeInstPk, smtype.autoInc, nodeInstPk);
+				// 2.2 business task's current state ref
+				DATranscxt.addSemantics(EnginDesign.connId, busitabl, busiState, smtype.fkIns,
+						// TODO make this configurable
+						// TODO make this configurable
+						// TODO make this configurable
+						// TODO make this configurable
+						"task_nodes,instId");
+				// 2.3 node instance Fk to nodes.nodeId
+				DATranscxt.addSemantics(EnginDesign.connId, nodeInstabl, nodeInstPk, smtype.fkIns,
+						"task_nodes,nodeId");
+
+				// usage:
+				// DASemantext smtx = new DASemantext(EnginDesign.connId, DATranscxt.smtCfonfigs(EnginDesign.connId));
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -192,7 +216,8 @@ public class CheapEngin {
 	}
 	 */
 	
-	/**Test plausibility, find routes of current node, or handle commitment.<br>
+	/**TODO move to CheapServ
+	 * Test plausibility, find routes of current node, or handle commitment.<br>
 	 * To commit:<br>
 	 * 1. t='test', test the accessibility<br>
 	 * 1.1 req = 'start', can user start a workflow? Where right considered the same as the node1.<br>
@@ -210,7 +235,6 @@ public class CheapEngin {
 	 * @throws IOException
 	 * @throws IrSemanticsException
 	 * @throws CheapException
-	 */
 	private SemanticObject handle(SemanticObject jobj, String connId, String t, IUser usr)
 			throws SQLException, IOException, SemanticException, CheapException {
 		String wftype = (String) jobj.get(WfProtocol.wfid);
@@ -220,8 +244,10 @@ public class CheapEngin {
 		String nodeDesc = (String)jobj.get(WfProtocol.ndesc);
 		String[] busiNvs = (String[])jobj.get(WfProtocol.nvs);
 		SemanticObject multireq = (SemanticObject)jobj.get(WfProtocol.busiMulti);
-		String[] postreq = (String[])jobj.get(WfProtocol.busiPostupdate);
-			
+
+		// String[] postreq = (String[])jobj.get(WfProtocol.busiPostupdate);
+		SemanticObject postreq = (SemanticObject)jobj.get(WfProtocol.busiPostupdate);
+	
 		// 1. t= test
 		if (Req.Ttest.eq(t) && req != null && req.trim().length() > 0) {
 			// can next? can start?
@@ -275,7 +301,9 @@ public class CheapEngin {
 		// t is anything else, handle request commands
 		else {
 			Object[] rets = onReqCmd(usr, wftype, currentInstId,
-					req, busiId, nodeDesc, busiNvs, multireq, parsePosts(postreq));
+					req, busiId, nodeDesc, busiNvs, multireq,
+					// parsePosts(postreq)
+					postreq);
 			Insert jupdate = (Insert) rets[0];
 			ArrayList<String> sqls = new ArrayList<String>(1);
 			SemanticObject newIds = jupdate.commit(sqls, usr);
@@ -295,6 +323,7 @@ public class CheapEngin {
 			return new SemanticObject().code(WfProtocol.ok).data(newIds);
 		}
 	}
+	 */
 
 	/**step to next node according to current node and request.<br>
 	 * Use case 1: To create a new e_insp_task(start):<br>
@@ -340,11 +369,12 @@ public class CheapEngin {
 	 * 2: {@link ICheapEventHandler} for req (step/deny/next) if there is one configured]<br>
 	 * 3: {@link ICheapEventHandler} for arriving event if there is one configured]
 	 * @throws SQLException
-	 * @throws CheapException
+	 * @throws SemanticException 
 	 */
 	public static SemanticObject onReqCmd(IUser usr, String wftype, String currentInstId, Req req,
-			String busiId, String nodeDesc, ArrayList<String[]> busiPack, SemanticObject multireq, Update postreq)
-					throws SQLException, CheapException {
+			String busiId, String nodeDesc, ArrayList<String[]> busiPack,
+			SemanticObject multireq, Update postreq)
+					throws SQLException, SemanticException {
 
 		CheapNode currentNode; 
 		CheapEvent evt = null; 
@@ -401,21 +431,28 @@ public class CheapEngin {
 			post32 = postupClient;
 
 		// 3.1 update task.startNode = new-nodeId when nodeId = 'f01' (ir_workflow.backRef = "f01:startNode")
-		if (wf.backRefs != null && wf.backRefs.containsKey(nextNode.nodeId())) {
+		if (wf.bNodeInstRefs != null && wf.bNodeInstRefs.containsKey(nextNode.nodeId())) {
 			// if next node == "f01", update task.startNode = new-node-instance-id
-			String colname = wf.backRefs.get(nextNode.nodeId());
-			upd3.nv(wf.bRefCol, newInstancId) // TODO cheap engine has a static semantext, bRefCol is configured with a FK.
-				.nv(wf.bCateCol, wf.wfId)
-				.nv(colname, newInstancId);
+			String colname = wf.bNodeInstRefs.get(nextNode.nodeId());
+
+			upd3
+			//	.nv(wf.bTaskStateRef, newInstancId) - fkIns already solved this semantics
+				.nv(wf.bCateCol, wf.wfId);
+
+			// - fkIns can't solve this semantics because it's not smart enough to find out that whether the data is appliable
+			if (colname != null)
+				upd3.nv(colname, "FIXME: fk-if-ask");
 		}
 
 		// 2. create node
 		// starting a new wf at the beginning
 		// nodeId = new-id
 		Insert ins2 = CheapEngin.transBuilder.insert(Instabl.tabl);
-		ins2.nv(Instabl.instId, newInstancId)
-			.nv(Instabl.nodeFk, nextNode.nodeId())
+		ins2
+			// .nv(Instabl.instId, newInstancId)
+			// .nv(Instabl.nodeFk, nextNode.nodeId())
 			.nv(Instabl.descol, nodeDesc);
+
 		// 2.2 prevNode=current-nodeId;
 		if (currentInstId != null)
 			ins2.nv(Instabl.prevInstNode, currentInstId);
@@ -430,7 +467,7 @@ public class CheapEngin {
 			throw new CheapException(Configs.getCfg("cheap-workflow", "t-no-business"), wf.wfId);
 
 		// c_process_processing.baseProcessDataId = e_inspect_tasks.taskId
-		ins2.nv(Instabl.busiFK, Req.start == req ? "AUTO" : busiId);
+		// ins2.nv(Instabl.busiFK, Req.start == req ? "AUTO" : busiId);
 
 		Insert ins1 = null; 
 		if (Req.start == req) {
@@ -446,18 +483,17 @@ public class CheapEngin {
 		}
 		else {
 			ins1 = ins2;
-			Act act = (nextNode.getAct(Evtype.arrive));
-			if (act != null && act.eq(Act.close)) {
-				// do nothing
-			}
-			else if (act != null)
-				throw new SQLException("TODO..."); 
-			// and act is not necessary?
+//			Act act = (nextNode.getAct(Evtype.arrive));
+//			if (act != null && act.eq(Act.close)) {
+//				// do nothing
+//			}
+//			else if (act != null)
+//				throw new SQLException("TODO..."); 
 		}
 
-		// stepping event except a starting one
+		// stepping event or starting event
 		evt = new CheapEvent(currentNode.wfId(), currentNode.nodeId(),
-						nextNode.nodeId(), newInstancId,
+						nextNode.nodeId(), 
 						// busiId is null for new task, resolved later
 						Req.start == req ? "AUTO" : busiId, req);
 		

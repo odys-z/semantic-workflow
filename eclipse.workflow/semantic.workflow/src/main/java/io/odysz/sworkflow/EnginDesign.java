@@ -1,5 +1,7 @@
 package io.odysz.sworkflow;
 
+import io.odysz.common.Utils;
+
 public class EnginDesign {
 
 
@@ -7,9 +9,8 @@ public class EnginDesign {
 		session("login.serv"), TgetDef("get-def"), findRoute("findroute"),
 		/** client use this to ask plausible operation using 't' */
 		Ttest("test"),
-		start("start"), next("next"),
-		back("back"), deny("deny"), close("close"),
-		timeout("timeout");
+		start("start"), next("next"), back("back"),
+		deny("deny"), close("close"), timeout("timeout");
 		@SuppressWarnings("unused")
 		private String cmd;
 		Req(String cmd) { this.cmd = cmd; }
@@ -117,11 +118,11 @@ public class EnginDesign {
 		static String wfName = "wfName";
 		static String bussTable = "bussTable";
 		static String bRecId = "bRecId";
-		static String bRefCol = "bRefCol";
+		static String bTaskState = "bTaskState";
 		/** bussiness wf type, like e_inspect_tasks.taskType */
 		static String bussCateCol = "bussCateCol";
 		static String node1 = "Node1";
-		static String backRefs = "backRefs";
+		static String bNodeInstRefs = "bNodeInstRefs";
 	}
 
 	static class WfDeftabl {
@@ -158,7 +159,12 @@ public class EnginDesign {
 		static public String roleId() { return roleId; }
 	}
 
-	public static void reload(String webRoot) {
-		// TODO Auto-generated method stub
+	static String connId;
+
+	/**Load meta from xml configure file (workflow-meta.xml).
+	 * @param filepath
+	 */
+	public static void reloadMeta(String filepath) {
+		Utils.warn("loading meta to be done: %s", filepath);
 	}
 }

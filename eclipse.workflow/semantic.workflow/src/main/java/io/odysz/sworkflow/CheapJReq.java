@@ -1,9 +1,13 @@
 package io.odysz.sworkflow;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.EnginDesign.Req;
+import io.odysz.transact.sql.Delete;
+import io.odysz.transact.sql.Insert;
+import io.odysz.transact.sql.Transcxt;
 import io.odysz.transact.x.TransException;
 
 /**A bridge between JMessage/JBody and cheap engine API.
@@ -46,4 +50,25 @@ public class CheapJReq extends SemanticObject {
 	public static CheapApi parse(SemanticObject jbody) {
 		return null;
 	}
+
+	public static SemanticObject formatMulti(Transcxt st, String tabl,
+			ArrayList<String[]> delConds, ArrayList<String[]> inserts) {
+		SemanticObject jmultis = new SemanticObject();
+		// del
+		Delete jdel = st.delete(tabl);
+		for (String[] cond : delConds) {
+			jdel.where(cond[0], cond[1], cond[2]);
+		}
+		jmultis.put("del", jdel);
+		
+		// insert
+		Insert jinss = st.insert(tabl);
+		for (String[] nv : inserts) {
+			jinss.nv(nv[0], nv[1]);
+		}
+		jmultis.put("insert", jinss);
+
+		return jmultis;
+	}
+	
 }

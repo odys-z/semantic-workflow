@@ -4,10 +4,10 @@ CREATE TABLE oz_workflow (
   wfName varchar(50) NOT NULL,
   bussTable varchar(20) NOT NULL, -- e.g. task
   bRecId varchar(50) NOT NULL , -- e.g. task.taskId,
-  bRefCol varchar(20) DEFAULT NULL , -- task.state (node id ref in business table),
+  bStateRef varchar(20) DEFAULT NULL , -- task.state (node instance id ref in business table),
   bussCateCol varchar(20) DEFAULT NULL , -- cate id in business table, e.g. task.tasktype.  The value is one of ir_workflow.wfId.,
   node1 varchar(50) NOT NULL , -- start node id in ir_wfdef,
-  backRefs varchar(200) DEFAULT NULL , -- back reference (node instance ref to business task record) [node-id]:[business-col],
+  backRefs varchar(200) DEFAULT NULL , -- node instance back reference to business task record pk, format [node-id]:[business-col],
   sort int(11) DEFAULT NULL,
   PRIMARY KEY (wfId)
 );
@@ -20,7 +20,7 @@ CREATE TABLE oz_wfdef (
   route varchar(500) DEFAULT NULL,
   arrivCondit varchar(200) DEFAULT NULL, -- '[TODO] previous node list. If not null, all previous node handlered can reach here . EX: a01 AND (a02 OR a03)',
   timeoutRoute varchar(500) NULL, -- 'timeout-node-id:(optional)event-handler(implement ICheapEventHandler)',
-  timeoutmm int(11) DEFAULT NULL, -- 'timeout minutes',
+  timeouts int(11) DEFAULT NULL, -- 'timeout minutes',
   onEvents varchar(200) DEFAULT NULL,
   PRIMARY KEY (nodeId)
 );
@@ -32,4 +32,57 @@ CREATE TABLE oz_wfrole (
   PRIMARY KEY (nodeId,roleId)
 );
 
+-- drop table task_states;
+CREATE TABLE task_nodes (
+-- work flow node instances
+  instId varchar(20) NOT NULL,
+  nodeId varchar(20) NOT NULL, -- node FK
+  oper varchar(20) NOT NULL,
+  opertime DATETIME,
+  remarks varchar(2000),
+  handlingCmd varchar(10),
+  prevRec varchar(20),
+  PRIMARY KEY (instId)
+);
+
+CREATE TABLE tasks (
+-- business task
+  taskId varchar(20) NOT NULL,
+  wfId varchar(20) NOT NULL,
+  wfState varchar(20) NOT NULL,
+  oper varchar(20) NOT NULL,
+  opertime DATETIME,
+  remarks varchar(2000),
+  startNode varchar(10),
+  rquireAllStep varchar(20),
+  PRIMARY KEY (taskId)
+);
+
+CREATE TABLE task_details (
+-- business task details, update / insert details batch commit submitted by cheap engine.
+  taskId varchar(20) NOT NULL,
+  recId varchar(20) NOT NULL,
+  remarks varchar(200),
+  PRIMARY KEY (recId)
+);
+
+delete from oz_workflow;
+insert into oz_workflow (wfId, wfName, bussTable, bRecId, bStateRef, bussCateCol, node1, backRefs, sort)
+values ('t01', 'workflow 01', 'tasks', 'taskId', 'wfState', 'wfId', 'startNode', 't01.03:requireAllStep', '0');
+delete from oz_wfdef;
+insert into oz_wfdef( wfId, nodeId, nodeName, nodeCode, route, 
+	arrivCondit, timeoutRoute, timeouts, onEvents )
+values
+('t01', 't01.01', 'starting', 't01.01', 'next:t01.02:cmd next,back:t01.02B:cmd branch,deny:t01.03:cmd abort', 
+	null, null, null, 'com.ir.ifire.event.CheapHandler'),
+('t01', 't01.02', 'handling', 't01.02', 'next:t01.04:cmd ok,deny:t01.03:cmd failed', 
+	null, 't03:Time Out', 15, 'com.ir.ifire.event.CheapHandler'),
+('t01', 't01.02B', 'plan B', 't01.02B', 'next:t01.04:cmd ok,deny:t01.03:cmd failed', 
+	null, 't03:Time Out', 25, 'com.ir.ifire.event.CheapHandler'),
+('t01', 't01.03', 'abort', 't01.03', null,
+	null, null, null, 'com.ir.ifire.event.CheapHandler'),
+('t01', 't01.04', 'finished', 't01.04', null, 
+	't01.02 AND t01.02B', null, null, 'com.ir.ifire.event.CheapHandler')
+;
+select * from oz_wfdef;
 

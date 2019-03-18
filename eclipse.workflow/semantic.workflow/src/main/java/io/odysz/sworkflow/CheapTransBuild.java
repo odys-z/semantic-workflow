@@ -1,21 +1,14 @@
 package io.odysz.sworkflow;
 
-import java.io.IOException;
-import java.util.HashMap;
-
-import org.xml.sax.SAXException;
-
-import io.odysz.semantic.DASemantics;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DATranscxt;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
-import io.odysz.transact.sql.Transcxt;
 import io.odysz.transact.sql.Update;
 
-public class CheapTransBuild extends Transcxt {
+public class CheapTransBuild extends DATranscxt {
 
 	@Override
 	public Query select(String tabl, String... alias) {
@@ -40,8 +33,9 @@ public class CheapTransBuild extends Transcxt {
 		super(semantext);
 	}
 
-	public static HashMap<String, DASemantics> initConfigs(String conn, String path) throws SAXException, IOException {
-		return DATranscxt.initConfigs(conn, path);
-	}
+
+//	public static HashMap<String, DASemantics> initConfigs(String conn, String path) throws SAXException, IOException {
+//		return DATranscxt.initConfigs(conn, path);
+//	}
 
 }

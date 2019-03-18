@@ -23,11 +23,19 @@ public class CheapEvent {
 	private String taskId;
 	private Req cmd;
 
-	public CheapEvent(String wfId, String currentNode, String nextNode, String instid, String taskId, Req req) {
+	/**When this is creating by cheap engine, there is not node instance id.
+	 * After sqls be committed, resolve it from semantext.
+	 * @param wfId
+	 * @param currentNode
+	 * @param nextNode
+	 * @param taskId
+	 * @param req
+	 */
+	public CheapEvent(String wfId, String currentNode, String nextNode, String taskId, Req req) {
 		this.wfId = wfId;
 		this.currentNodeId = currentNode;
 		this.nextNodeId = nextNode;
-		this.instId = instid;
+		// this.instId = instid;
 		this.taskId = taskId;
 		this.cmd = req;
 	}

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <workflow>
+  <!-- Work flow DB meta -->
   <t id="Instabl" pk="tabl" columns="tabl,instId,nodeFk,wfIdFk,busiFk,descol,operTime,handleCmd,prevInstNode">
   	<d> <tabl>wf_nodeInsts</tabl>
 		<instId>recId</instId>
@@ -22,7 +23,7 @@
   	</d>
   </t>
 
-  <t id="Wftabl " pk="" columns="">
+  <t id="Wftabl " pk="tabl" columns="tabl,virtualNCode,recId,wfName,bussTable,bRecId,bTaskState,bussCateCol,node1,bNodeInstRefs">
 	<d> <tabl>ir_workflow</tabl>
 		<!-- virtual node code hard coded -->
 		<virtualNCode>virt</virtualNCode>
@@ -30,15 +31,20 @@
 		<wfName>wfName</wfName>
 		<bussTable>bussTable</bussTable>
 		<bRecId>bRecId</bRecId>
-		<bRefCol>bRefCol</bRefCol>
-		<!-- bussiness wf type, like e_inspect_tasks.taskType  -->
+		<!-- column name like task.currentState -->
+		<bTaskState>bStateRef</bTaskState>
+		<!-- business wf type, like e_inspect_tasks.taskType  -->
 		<bussCateCol>bussCateCol</bussCateCol>
 		<node1>Node1</node1>
-		<backRefs>backRefs</backRefs>
+		<!-- business task record can referring some special state, so there may be more column than current state
+			e.g. task.node0 referring to a stating node instance.
+			This is the column names define, in format:
+			[node-id:task-col, ...] -->
+		<bNodeInstRefs>backRefs</bNodeInstRefs>
 	</d>
   </t>
   
-  <t id="WfDeftabl" pk="tabl" columns="tabl,wfId">
+  <t id="WfDeftabl" pk="tabl" columns="tabl,wfId,nodeId,ncode,nname,cmdRoute,onEvents,outTime,timeoutRoute">
   	<d>	<tabl>tabl</tabl>
 		<wfId>wfId</wfId>
 		<nodeId>nodeId</nodeId>
@@ -46,12 +52,13 @@
 		<nname>nodeName</nname>
 		<cmdRoute>route</cmdRoute>
 		<onEvents>onEvents</onEvents>
-		<!-- time out in minute  -->
+		<!-- time out in seconds  -->
 		<outTime>timeoutmm</outTime>
 		<!-- timeout route (nodeId)  -->
 		<timeoutRoute>timeoutRoute</timeoutRoute>
   	</d>
   </t>
+
   <t id="Wfrole" pk="tabl" columns="tabl,wfId,nid,roleId">
 	<d> <tabl>ir_wfrole</tabl>
 		<wfId>wfId</wfId>
@@ -59,4 +66,5 @@
 		<roleId>roleId</roleId>
 	</d>
   </t>
+  
 </workflow>

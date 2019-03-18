@@ -5,7 +5,9 @@ import java.util.ArrayList;
 
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.Req;
+import io.odysz.transact.sql.Transcxt;
 import io.odysz.transact.sql.Update;
 
 /**CheapEngine API for server side, equivalent to js/cheapwf.<br>
@@ -51,8 +53,8 @@ public class CheapApi {
 	private ArrayList<String[]> nvs;
 
 	private String multiChildTabl;
-	private ArrayList<String[][]> multiDels;
-	private ArrayList<ArrayList<String[]>> multiInserts;
+	private ArrayList<String[]> multiDels;
+	private ArrayList<String[]> multiInserts;
 	private Update postups;
 	
 
@@ -74,7 +76,7 @@ public class CheapApi {
 	}
 	
 	public CheapApi taskChildMulti(String tabl,
-			ArrayList<String[][]> delConds, ArrayList<ArrayList<String[]>> inserts) {
+			ArrayList<String[]> delConds, ArrayList<String[]> inserts) {
 		multiChildTabl = tabl;
 		multiDels = delConds;
 		multiInserts = inserts;
@@ -88,56 +90,18 @@ public class CheapApi {
 
 	/**Commit current request set in {@link #req}.
 	 * @param usr
+	 * @param st 
 	 * @return {stmt: {@link Update} (for committing), <br>
 	 * 		stepEvt: {@link CheapEvent} for start event(new task ID must resolved), <br>
 	 * 		stepEvt: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
 	 * 		arriEvt: {@link CheapEvent} for arriving event if there is one configured}
 	 * @throws SQLException
-	 * @throws CheapException
+	 * @throws SemanticException 
 	 */
-	public SemanticObject commit(IUser usr) throws SQLException, CheapException {
-		SemanticObject multireq = formatMulti(multiChildTabl, multiDels, multiInserts);
+	public SemanticObject commit(IUser usr, Transcxt st) throws SQLException, SemanticException {
+		SemanticObject multireq = CheapJReq.formatMulti(st, multiChildTabl, multiDels, multiInserts);
 		return CheapEngin.onReqCmd(usr, wftype, currentNode, req, taskId,
 									nodeDesc, nvs, multireq, postups);
-	}
-
-	// SHOULDN'T BE HERE
-	@SuppressWarnings("unchecked")
-	private SemanticObject formatMulti(String multiTabl, ArrayList<String[][]> delConds,
-			ArrayList<ArrayList<String[]>> inserts) {
-		JSONObject jmultis = new JSONObject();
-		jmultis.put("method", "multi");
-
-		// tabl
-//		JSONObject jmultiObj = new JSONObject();
-//		jmultiObj.put("tabl", multiTabl);
-		jmultis.put("tabl", multiTabl);
-
-		// del
-//		JSONArray jdels = new JSONArray();
-//		for (String[][] delCond : delConds) {
-//			JsonObject d = JsonHelper.convert2FvLists(delCond);
-//			jdels.add(d);
-//		}
-		JSONArray jdel = JsonHelper.convertNvs2EqConds(delConds);
-		JSONArray jdels = new JSONArray();
-		jdels.add(jdel);
-		jmultis.put("del", jdels);
-		
-		// insert
-//		JSONArray jinss = new JSONArray();
-//		for (ArrayList<String[]> inse : inserts) {
-//			JsonArray i = JsonHelper.convert2FvLists(inse).build();
-//			// see UpdateBatch.updateMulti(): {field: "roleId", v: "role.01"}
-//			jinss.add(i);
-//		}
-
-		JSONArray jinss = JsonHelper.convert2FvJSONArray(inserts);
-		jmultis.put("insert", jinss);
-		
-//		jmultis.put("vals", jmultiObj);
-
-		return jmultis;
 	}
 
 }
