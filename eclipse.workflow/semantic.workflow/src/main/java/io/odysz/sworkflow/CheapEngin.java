@@ -388,7 +388,7 @@ public class CheapEngin {
 		if (currentNode == null) throw new SQLException(
 				String.format(Configs.getCfg("cheap-workflow", "t-no-node"),
 				wftype, currentInstId, req));
-		CheapNode nextNode = currentNode.getRoute(req);
+		CheapNode nextNode = currentNode.findRoute(req);
 		
 		if (nextNode == null)
 			// a configuration problem?
@@ -400,7 +400,7 @@ public class CheapEngin {
 		// if (!Req.eq(Req.start, req))
 		//		checkExistance(nextNode, busiId);
 
-		wf.checkRights(usr, currentNode, nextNode);
+		wf.checkRights(usr, currentNode, nextNode, req);
 			
 		// 2.1 new node-id
 		// using semantic support instead - semantics all ready added.
@@ -423,7 +423,7 @@ public class CheapEngin {
 		if (currentNode != null && Req.start != req && EnginDesign.Instabl.handleCmd != null) {
 			post32 = CheapEngin.transBuilder.update(Instabl.tabl)
 					.where("=", Instabl.instId, currentInstId)
-					.nv(Instabl.handleCmd, currentNode.getReqName(req))
+					.nv(Instabl.handleCmd, currentNode.getReqText(req))
 					.post(postupClient);
 		}
 		if (post32 == null)
@@ -491,8 +491,8 @@ public class CheapEngin {
 		}
 
 		// stepping event or starting event
-		evt = new CheapEvent(currentNode.wfId(), currentNode.nodeId(),
-						nextNode.nodeId(), 
+		evt = new CheapEvent(currentNode.wfId(), Evtype.start,
+						currentNode, nextNode,
 						// busiId is null for new task, resolved later
 						Req.start == req ? "AUTO" : busiId, req);
 		
@@ -501,8 +501,8 @@ public class CheapEngin {
 		return new SemanticObject()
 				.put("stmt", ins1)
 				.put("startEvt", evt)
-				.put("stepEvt", currentNode.stepEventHandler(req))
-				.put("arriEvt", nextNode.onEventHandler(Evtype.arrive));
+				.put("stepEvt", currentNode.onEventHandler())
+				.put("arriEvt", nextNode.isArrived(currentNode) ? nextNode.onEventHandler() : null);
 	}
 
 	/**SHOUDN'T BE HERE

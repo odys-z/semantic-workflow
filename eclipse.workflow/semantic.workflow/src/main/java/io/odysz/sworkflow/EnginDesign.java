@@ -138,6 +138,8 @@ public class EnginDesign {
 		static public String nname() { return nname; }
 		static private String cmdRoute = "route";
 		static public String cmdRoute() { return cmdRoute; }
+		static private String arriveCondit = "arriveCondit";
+		static public String arriveCondit() { return arriveCondit; }
 		static private String onEvents = "onEvents";
 		static public String onEvents() { return onEvents; }
 		/**time out in minute */

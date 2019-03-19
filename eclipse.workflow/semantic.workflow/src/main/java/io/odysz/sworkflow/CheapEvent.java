@@ -16,9 +16,9 @@ public class CheapEvent {
 
 	private String wfId;
 	private Evtype etype;
-	private String currentNodeId;
-	private String nextNodeId;
-	private String prevNodes;
+	private CheapNode currentNodeId;
+	private CheapNode nextNodeId;
+//	private String prevNodes;
 	private String instId;
 	private String taskId;
 	private Req cmd;
@@ -27,32 +27,37 @@ public class CheapEvent {
 	 * After sqls be committed, resolve it from semantext.
 	 * @param wfId workflow id/type
 	 * @param evt event type
-	 * @param currentN current node id
-	 * @param nextN
+	 * @param current current node id
+	 * @param next
 	 * @param prevNs previous nodes
 	 * @param taskId
 	 * @param rq
 	 */
-	public CheapEvent(String wfId, Evtype evt, String currentN, String nextN, String prevNs, String taskId, Req rq) {
+	public CheapEvent(String wfId, Evtype evt, CheapNode current,
+			CheapNode next, String taskId, Req rq) {
 		this.wfId = wfId;
 		this.etype = evt;
-		this.currentNodeId = currentN;
-		this.nextNodeId = nextN;
+		this.currentNodeId = current;
+		this.nextNodeId = next;
 		// this.instId = instid;
-		this.prevNodes = prevNs;
+		// this.prevNodes = next.prevNodes();
 		this.taskId = taskId;
 		this.cmd = rq;
 	}
+
+//	public CheapEvent(String wfId, String nodeId, String nextId, String taskId, Req req) {
+//		// TODO Auto-generated constructor stub
+//	}
 
 	public String wfId() {
 		return wfId;
 	}
 
-	public String currentNodeId() {
+	public CheapNode currentNodeId() {
 		return currentNodeId;
 	}
 
-	public String nextNodeId() {
+	public CheapNode nextNodeId() {
 		return nextNodeId;
 	}
 
@@ -79,12 +84,12 @@ public class CheapEvent {
 			taskId = taskId.replaceAll("^\\s*AUTO", ((ArrayList<String>) newIds.get("rows")).get(0));
 	}
 
-	public boolean isStarting(String wftype) {
-		return wfId.equals(wftype)
-			&& currentNodeId.matches(wftype + CheapWorkflow.virtNodeSuffix);
-	}
+//	public boolean isStarting(String wftype) {
+//		return wfId.equals(wftype)
+//			&& currentNodeId.matches(wftype + CheapWorkflow.virtNodeSuffix);
+//	}
 
-	public String prevNodes() { return prevNodes; }
+//	public String prevNodes() { return prevNodes; }
 
 	public String evtype() { return etype.name(); }
 }

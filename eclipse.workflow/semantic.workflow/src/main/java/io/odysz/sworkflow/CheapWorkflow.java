@@ -2,15 +2,18 @@ package io.odysz.sworkflow;
 
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.HashSet;
 
-import io.odysz.common.Configs;
 import io.odysz.common.LangExt;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.x.SemanticException;
+import io.odysz.sworkflow.CheapNode.CheapRoute;
+import io.odysz.sworkflow.CheapNode.VirtualNode;
+import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfDeftabl;
-import io.odysz.sworkflow.EnginDesign.Wfrole;
 import io.odysz.transact.x.TransException;
 
 public class CheapWorkflow {
@@ -41,7 +44,9 @@ public class CheapWorkflow {
 	HashMap<String, CheapNode> nodes;
 	
 	/**Starting virtual node that not configured in DB*/
-	private CheapNode virtualNode;
+	private VirtualNode virtualNode;
+
+	private HashMap<Req, CheapRoute> routeCfgs;
 
 	/**
 	 * @param wfId
@@ -80,16 +85,16 @@ public class CheapWorkflow {
 
 		nodes = new HashMap<String, CheapNode>(rs.getRowCount());
 		while (rs.next()) {
-			// CheapNode(CheapWorkflow wf, String nid, String ncode, String nname, String route, String onEvents)
+			String nid = rs.getString(WfDeftabl.nid());
 			CheapNode n = new CheapNode(this,
-					rs.getString(WfDeftabl.nid()),
+					rs.getString(nid),
 					rs.getString(WfDeftabl.ncode()),
 					rs.getString(WfDeftabl.nname()),
-					rs.getString(WfDeftabl.cmdRoute()),
-					rs.getString(WfDeftabl.onEvents()),
+					rs.getString(WfDeftabl.arriveCondit()),
 					rs.getInt(WfDeftabl.outTime(), 0),
 					rs.getString(WfDeftabl.timeoutRoute()),
-					rs.getString(Wfrole.roleId()));
+					routeCfgs,
+					rs.getString(WfDeftabl.onEvents()));
 			nodes.put(rs.getString(WfDeftabl.nid()), n);
 		}
 	}
@@ -118,32 +123,51 @@ public class CheapWorkflow {
 		return null;
 	}
 
-	public CheapNode start() throws SQLException {
+	public VirtualNode start() throws SQLException, SemanticException {
 		// design memo, handling virtual/new node arriving.
 		if (virtualNode == null)
-			virtualNode = createVirtualNode(this);
+			virtualNode = new VirtualNode(this, virtualNode);
 		return virtualNode;
 	}
 
 	/**Create a virtual node before starting node.
+	 * @param req 
 	 * @param wf
 	 * @return
 	 * @throws SQLException
-	 */
 	private static CheapNode createVirtualNode(CheapWorkflow wf) throws SQLException {
 		return new CheapNode(wf, wf.wfId + virtNodeSuffix, EnginDesign.Wftabl.virtualNCode(),
 				"You can't see this", // node name
-				String.format("next:%1$s:next,start:%1$s:start", wf.node1), // route: always to the beginning
+				null, -1, null,
+				startRoute, // route: always to the beginning
 				null,		// no arrive event for virtual - always already arrived
-				0, null,	// no timeout
-				wf.nodes.get(wf.node1).rolestr()); // virtual node has the same rights as the start node
+				0, null	// no timeout
+				); // virtual node has the same rights as the start node
 	}
+	 */
 
-	public void checkRights(IUser usr, CheapNode currentNode, CheapNode nextNode) throws CheapException {
+	/**Check user rights for req.
+	 * @param usr
+	 * @param currentNode
+	 * @param nextNode
+	 * @param req
+	 * @throws CheapException
+	 */
+	public void checkRights(IUser usr, CheapNode currentNode, CheapNode nextNode, Req req) throws CheapException {
 		if (usr instanceof CheapRobot)
 			return;
 		if (currentNode != null)
-			if (currentNode.roles() == null || !currentNode.roles().contains(usr.get("wfRole")))
-				throw new CheapException(String.format(Configs.getCfg("cheap-workflow", "t-no-rights"), usr.get("wfRole")));
+//			if (currentNode.roles() == null || !currentNode.roles().contains(usr.get("wfRole")))
+//				throw new CheapException(String.format(Configs.getCfg("cheap-workflow", "t-no-rights"), usr.get("wfRole")));
+			if (!collectSet().contains(req))
+				throw new CheapException(txt("t-no-rights"), usr.get("wfRole"));
+	}
+
+	private String txt(String key) {
+		return "zh: %s";
+	}
+
+	private HashSet<Req> collectSet() {
+		return new HashSet<Req>();
 	}
 }

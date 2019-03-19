@@ -25,6 +25,6 @@ public class CheapHandler implements ICheapEventHandler {
 	@Override
 	public void onArrive(CheapEvent e) {
 		Utils.logi("Cheap Command Event\n\twfId: %s, nodeId: %s, node-instance: %s, prive nodes: %s, task-id: %s, target-route: %s",
-					e.wfId(), e.currentNodeId(), e.instId(), e.prevNodes(), e.taskId(), e.nextNodeId());
+					e.wfId(), e.currentNodeId(), e.instId(), e.currentNodeId().prevNodes(), e.taskId(), e.nextNodeId());
 	}
 }

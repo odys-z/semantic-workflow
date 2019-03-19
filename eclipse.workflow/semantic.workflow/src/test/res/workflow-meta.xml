@@ -53,6 +53,11 @@
 		<n-timeout>timeoutmm</n-timeout>
 		<!-- timeout route (nodeId)  -->
 		<n-timeoutRoute>timeoutRoute</n-timeoutRoute>
+		<!--$1s: role-id, $2s: user-id, $3s: node-id, $4s cmd-id
+			FIXME What' about performance?
+			output: [nodeId, cmdId]
+		-->
+		<rights>select n.nodeId, c.cmdId from oz_wfnodes n, oz_wfcmds c where n.nodeId = '%$3s' and n.nodeId = c.nodeId</rights>
 	</d>
   </t>
   
