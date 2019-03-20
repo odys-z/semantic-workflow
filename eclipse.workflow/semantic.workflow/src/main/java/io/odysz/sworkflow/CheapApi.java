@@ -9,6 +9,7 @@ import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.transact.sql.Transcxt;
 import io.odysz.transact.sql.Update;
+import io.odysz.transact.x.TransException;
 
 /**CheapEngine API for server side, equivalent to js/cheapwf.<br>
  * Check Schedual.startInspectask() for sample code.
@@ -96,9 +97,9 @@ public class CheapApi {
 	 * 		stepEvt: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
 	 * 		arriEvt: {@link CheapEvent} for arriving event if there is one configured}
 	 * @throws SQLException
-	 * @throws SemanticException 
+	 * @throws TransException 
 	 */
-	public SemanticObject commit(IUser usr, Transcxt st) throws SQLException, SemanticException {
+	public SemanticObject commit(IUser usr, Transcxt st) throws SQLException, TransException {
 		SemanticObject multireq = CheapJReq.formatMulti(st, multiChildTabl, multiDels, multiInserts);
 		return CheapEngin.onReqCmd(usr, wftype, currentNode, req, taskId,
 									nodeDesc, nvs, multireq, postups);

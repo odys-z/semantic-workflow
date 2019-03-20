@@ -20,8 +20,7 @@ import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapEvent.Evtype;
 import io.odysz.sworkflow.EnginDesign.Instabl;
 import io.odysz.sworkflow.EnginDesign.Req;
-import io.odysz.sworkflow.EnginDesign.WfDeftabl;
-import io.odysz.sworkflow.EnginDesign.Wftabl;
+import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
@@ -32,22 +31,14 @@ import io.odysz.transact.x.TransException;
 public class CheapEngin {
 	public static final boolean debug = true;
 
+	static CheapTransBuild trcs;
 	static IUser checkUser;
 	
 	static HashMap<String, CheapWorkflow> wfs;
 	public static HashMap<String, CheapWorkflow> wfs() { return wfs; }
-	
-	static CheapTransBuild transBuilder;
-//	static HashMap<String, ISemantext> semantxs;
 
 	private static ScheduledFuture<?> schedualed;
 	private static ScheduledExecutorService scheduler;
-
-//	static void init (String connId, String rootpath) throws SemanticException, SAXException, IOException{
-//		checkUser = new CheapRobot();
-//		ISemantext s = new DASemantext(connId, CheapTransBuild.initConfigs(connId, rootpath + "/semantics.xml"));
-//		transBuilder = new CheapTransBuild(s);
-//	}
 
 	/**Init cheep engine configuration, schedual a timeout checker. 
 	 * @param customChecker 
@@ -67,50 +58,45 @@ public class CheapEngin {
 
 	private static void reloadCheap(String filepath) throws TransException, IOException {
 		try {
-			transBuilder = EnginDesign.reloadMeta(filepath);
+			trcs = EnginDesign.reloadMeta(filepath);
 
-			// String sql = String.format("select * from %s", EnginDesign.Wftabl.tabl);
-			// SResultset rs = Connects.select(sql);
-			SemanticObject o = (SemanticObject) transBuilder
-					.select(EnginDesign.Wftabl.tabl)
-					.rs(transBuilder.basiContext()); // static context is enough to load cheap configs
-			SResultset rs = (SResultset) o.get("rs");
+			// select * from oz_wfworkflow;
+			SResultset rs = (SResultset) trcs
+					.select(WfMeta.wftabl)
+					.rs(trcs.basiContext()); // static context is enough to load cheap configs
 
 			rs.beforeFirst();
 
 			wfs = new HashMap<String, CheapWorkflow>(rs.getRowCount());
 			while (rs.next()) {
 				// 1. Load work flow meta configuration from xml
-				String busitabl = rs.getString(Wftabl.bussTable);
-				String busiState = rs.getString(Wftabl.bTaskState);
+				String busitabl = rs.getString(WfMeta.bussTable);
+				String busiState = rs.getString(WfMeta.bTaskState);
+				String bRecId = rs.getString(WfMeta.bRecId);
 				CheapWorkflow wf = new CheapWorkflow(
-						rs.getString(Wftabl.recId),
-						rs.getString(Wftabl.wfName),
-						// rs.getString(Wftabl.bussTable),
-						busitabl, 
-						rs.getString(Wftabl.bRecId),
-						// rs.getString(Wftabl.bTaskState),
-						busiState,
-						rs.getString(Wftabl.bussCateCol),
-						rs.getString(Wftabl.node1),
-						rs.getString(Wftabl.bNodeInstRefs));
-				wfs.put(rs.getString(Wftabl.recId), wf);
+						rs.getString(WfMeta.recId),
+						rs.getString(WfMeta.wfName),
+						rs.getString(WfMeta.nodeInstabl),
+						busitabl, // tasks
+						bRecId, // tasks.taskId
+						busiState, // tasks.wfState
+						rs.getString(WfMeta.bussCateCol),
+						rs.getString(WfMeta.node1),
+						rs.getString(WfMeta.bNodeInstBackRefs));
+				wfs.put(rs.getString(WfMeta.recId), wf);
 
 				// 2. append semantics for handling routes, etc.
-				// 2.1 node instance auto key
-				String nodeInstabl = rs.getString(WfDeftabl.tabl());
-				String nodeInstPk = rs.getString(WfDeftabl.nid());
-				DATranscxt.addSemantics(EnginDesign.connId, nodeInstabl, nodeInstPk, smtype.autoInc, nodeInstPk);
-				// 2.2 business task's current state ref
-				DATranscxt.addSemantics(EnginDesign.connId, busitabl, busiState, smtype.fkIns,
-						// TODO make this configurable
-						// TODO make this configurable
-						// TODO make this configurable
-						// TODO make this configurable
-						"task_nodes,instId");
-				// 2.3 node instance Fk to nodes.nodeId
-				DATranscxt.addSemantics(EnginDesign.connId, nodeInstabl, nodeInstPk, smtype.fkIns,
-						"task_nodes,nodeId");
+				// 2.1 node instance auto key, e.g. task_nodes.instId
+				String nodeInstabl = rs.getString(WfMeta.nodeInstabl);
+				DATranscxt.addSemantics(EnginDesign.connId, nodeInstabl, WfMeta.nodeInstId, smtype.autoInc, WfMeta.nodeInstId);
+
+				// 2.2 business task's current state ref, e.g. tasks.wfState -> task_nodes.instId
+				DATranscxt.addSemantics(EnginDesign.connId, busitabl, bRecId, smtype.fkIns,
+						String.format("%s,%s,%s", busiState, nodeInstabl, WfMeta.nodeInstId));
+
+				// 2.3 node instance Fk to nodes.nodeId, e.g. task_nodes.nodeId -> oz_wfnodes.nodeId
+				DATranscxt.addSemantics(EnginDesign.connId, nodeInstabl, WfMeta.nodeInstId, smtype.fkIns,
+						String.format("%s,%s,%s", WfMeta.nodeInstNode, WfMeta.nodeTabl, WfMeta.nid));
 
 				// usage:
 				// DASemantext smtx = new DASemantext(EnginDesign.connId, DATranscxt.smtCfonfigs(EnginDesign.connId));
@@ -368,15 +354,18 @@ public class CheapEngin {
 	 * 2: {@link ICheapEventHandler} for req (step/deny/next) if there is one configured]<br>
 	 * 3: {@link ICheapEventHandler} for arriving event if there is one configured]
 	 * @throws SQLException
-	 * @throws SemanticException 
+	 * @throws TransException 
 	 */
 	public static SemanticObject onReqCmd(IUser usr, String wftype, String currentInstId, Req req,
 			String busiId, String nodeDesc, ArrayList<String[]> busiPack,
 			SemanticObject multireq, Update postreq)
-					throws SQLException, SemanticException {
+					throws SQLException, TransException {
 
 		CheapNode currentNode; 
 		CheapEvent evt = null; 
+
+		if (wfs == null)
+			throw new SemanticException("Engine must be initialized");
 
 		CheapWorkflow wf = wfs.get(wftype);
 		if (req == Req.start) {
@@ -412,7 +401,7 @@ public class CheapEngin {
 		postupClient = postreq;
 
 		// 3.3. handle multi-operation request 
-		Update upd3 = CheapEngin.transBuilder.update(wf.bTabl)
+		Update upd3 = CheapEngin.trcs.update(wf.bTabl)
 				.where("=", wf.bRecId, busiId == null ? "AUTO" : busiId);
 		if (multireq != null) {
 			upd3.postChildren(multireq);
@@ -421,7 +410,7 @@ public class CheapEngin {
 		// 3.2 save command name as current node's state (c_process_processing.nodeState = cmdName)
 		Update post32 = null;
 		if (currentNode != null && Req.start != req && EnginDesign.Instabl.handleCmd != null) {
-			post32 = CheapEngin.transBuilder.update(Instabl.tabl)
+			post32 = CheapEngin.trcs.update(wf.instabl())
 					.where("=", Instabl.instId, currentInstId)
 					.nv(Instabl.handleCmd, currentNode.getReqText(req))
 					.post(postupClient);
@@ -446,7 +435,7 @@ public class CheapEngin {
 		// 2. create node
 		// starting a new wf at the beginning
 		// nodeId = new-id
-		Insert ins2 = CheapEngin.transBuilder.insert(Instabl.tabl);
+		Insert ins2 = CheapEngin.trcs.insert(wf.instabl());
 		ins2
 			// .nv(Instabl.instId, newInstancId)
 			// .nv(Instabl.nodeFk, nextNode.nodeId())
@@ -471,7 +460,7 @@ public class CheapEngin {
 		Insert ins1 = null; 
 		if (Req.start == req) {
 			// 1. create task
-			ins1 = CheapEngin.transBuilder.insert(wf.bTabl);
+			ins1 = CheapEngin.trcs.insert(wf.bTabl);
 			ins1.nv(wf.bCateCol, wf.wfId);
 			if (busiPack != null) {
 				for (String[] nv : busiPack) {

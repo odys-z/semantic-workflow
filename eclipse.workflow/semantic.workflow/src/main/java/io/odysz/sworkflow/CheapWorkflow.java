@@ -9,11 +9,9 @@ import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
-import io.odysz.semantics.x.SemanticException;
-import io.odysz.sworkflow.CheapNode.CheapRoute;
 import io.odysz.sworkflow.CheapNode.VirtualNode;
 import io.odysz.sworkflow.EnginDesign.Req;
-import io.odysz.sworkflow.EnginDesign.WfDeftabl;
+import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.x.TransException;
 
 public class CheapWorkflow {
@@ -46,24 +44,29 @@ public class CheapWorkflow {
 	/**Starting virtual node that not configured in DB*/
 	private VirtualNode virtualNode;
 
-	private HashMap<Req, CheapRoute> routeCfgs;
+	/** node instance table name, configured in oz_workflow.instabl */
+	private String instabl;
+
+	private CheapNode startingNode;
 
 	/**
 	 * @param wfId
 	 * @param wfName
+	 * @param nInstabl node instance table name, configured in oz_workflow.instabl
 	 * @param bTabl
 	 * @param bRecId
-	 * @param bTaskState task's referencing column name, e.g. task.currentState -&gt; wf_def.nodeId
+	 * @param bTaskState
 	 * @param bCateCol
 	 * @param node1
 	 * @param bNodeInstRefs
 	 * @throws SQLException
 	 * @throws TransException
 	 */
-	public CheapWorkflow(String wfId, String wfName, String bTabl, String bRecId, String bTaskState,
+	public CheapWorkflow(String wfId, String wfName, String nInstabl, String bTabl, String bRecId, String bTaskState,
 			String bCateCol, String node1, String bNodeInstRefs) throws SQLException, TransException {
 		this.wfId = wfId;
 		this.wfName = wfName;
+		this.instabl = nInstabl;
 		this.bTabl = bTabl;
 		this.bRecId = bRecId;
 		this.bTaskStateRef = bTaskState;
@@ -72,31 +75,26 @@ public class CheapWorkflow {
 		this.bNodeInstRefs = LangExt.parseMap(bNodeInstRefs);
 
 		// load configs
-		// select w.*, group_concat(wr.roleId) from ir_wfdef w join ir_wfrole wr on w.nodeId = wr.nodeId where w.wfId = 'falt' group by w.nodeId;
-//		String sql = String.format("select w.*, group_concat(wr.%1$s) %1$s from %2$s w left outer join %3$s wr on w.%4$s = wr.%5$s where w.%6$s = '%7$s' group by w.%4$s",
-//				EnginDesign.Wfrole.roleId(), EnginDesign.WfDeftabl.tabl(), EnginDesign.Wfrole.tabl(), EnginDesign.WfDeftabl.nid(),
-//				EnginDesign.Wfrole.nid(),    EnginDesign.WfDeftabl.wfId(), wfId);
-//		SResultset rs = q.commit(sqls, usrInfo);
-
-		SResultset rs = (SResultset) CheapEngin.transBuilder
-				.select(WfDeftabl.tabl())
-				.rs(CheapEngin.transBuilder.basiContext());
+		SResultset rs = (SResultset) CheapEngin.trcs
+				.select(WfMeta.nodeTabl)
+				.rs(CheapEngin.trcs.basiContext());
 		rs.beforeFirst();
 
 		nodes = new HashMap<String, CheapNode>(rs.getRowCount());
 		while (rs.next()) {
-			String nid = rs.getString(WfDeftabl.nid());
+			String nid = rs.getString(WfMeta.nid);
 			CheapNode n = new CheapNode(this,
-					rs.getString(nid),
-					rs.getString(WfDeftabl.ncode()),
-					rs.getString(WfDeftabl.nname()),
-					rs.getString(WfDeftabl.arriveCondit()),
-					rs.getInt(WfDeftabl.outTime(), 0),
-					rs.getString(WfDeftabl.timeoutRoute()),
-					routeCfgs,
-					rs.getString(WfDeftabl.onEvents()));
-			nodes.put(rs.getString(WfDeftabl.nid()), n);
+					nid,
+					rs.getString(WfMeta.ncode),
+					rs.getString(WfMeta.nname),
+					rs.getString(WfMeta.arriveCondit),
+					rs.getInt(WfMeta.outTime, 0),
+					rs.getString(WfMeta.timeoutRoute),
+					rs.getString(WfMeta.onEvents));
+			nodes.put(rs.getString(WfMeta.nid), n);
 		}
+		
+		startingNode = nodes.get(node1);
 	}
 
 	public SemanticObject getDef() {
@@ -114,7 +112,7 @@ public class CheapWorkflow {
 
 	public CheapNode getNodeByInst(String instId) throws SQLException {
 		String sql = String.format("select %s nodeId from %s i where i.%s = '%s'",
-				EnginDesign.Instabl.nodeFk(), EnginDesign.Instabl.tabl(), EnginDesign.Instabl.instId(), instId);
+				EnginDesign.Instabl.nodeFk, instabl(), EnginDesign.Instabl.instId, instId);
 		SResultset rs = Connects.select(sql);
 		if (rs.beforeFirst().next()) {
 			String nodeId = rs.getString("nodeId");
@@ -123,10 +121,18 @@ public class CheapWorkflow {
 		return null;
 	}
 
-	public VirtualNode start() throws SQLException, SemanticException {
+	/**Different workflow can have different nodes instance table.
+	 * Use this to get correct instance table name.
+	 * @return instance table name for this workflow template.
+	 */
+	String instabl() {
+		return instabl;
+	}
+
+	public VirtualNode start() throws SQLException, TransException {
 		// design memo, handling virtual/new node arriving.
 		if (virtualNode == null)
-			virtualNode = new VirtualNode(this, virtualNode);
+			virtualNode = new VirtualNode(this, startingNode);
 		return virtualNode;
 	}
 
@@ -157,14 +163,16 @@ public class CheapWorkflow {
 		if (usr instanceof CheapRobot)
 			return;
 		if (currentNode != null)
-//			if (currentNode.roles() == null || !currentNode.roles().contains(usr.get("wfRole")))
-//				throw new CheapException(String.format(Configs.getCfg("cheap-workflow", "t-no-rights"), usr.get("wfRole")));
 			if (!collectSet().contains(req))
-				throw new CheapException(txt("t-no-rights"), usr.get("wfRole"));
+				throw new CheapException(txt("t-no-rights"), usr.uid());
 	}
 
+	/**Get configured text string in workflow-meta.xml/table='txt'
+	 * @param key
+	 * @return configured txt
+	 */
 	private String txt(String key) {
-		return "zh: %s";
+		return key + " zh: %s";
 	}
 
 	private HashSet<Req> collectSet() {

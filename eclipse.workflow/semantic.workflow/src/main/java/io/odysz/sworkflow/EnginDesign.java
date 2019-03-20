@@ -69,96 +69,91 @@ public class EnginDesign {
 	 * a.k.a. columns and tables of business that must be handled by workflow engine.
 	 */
 	static class Instabl {
-		static String tabl = "wf_nodeInsts";
-		/**Workflow instance table name: wf_nodeInsts */
-		static public String tabl() { return tabl; }
+//		static String tabl = "wf_nodeInsts";
+//		/**Workflow instance table name: wf_nodeInsts */
+//		static public String tabl() { return tabl; }
 		
-		static String instId = "recId";
+		static final String instId = "recId";
 		/**Workflow instance table's pk column name */
-		static public String instId() { return instId; }
+		// static public String instId() { return instId; }
 		
-		static String nodeFk = "processNodeId";
+		static final String nodeFk = "processNodeId";
 		/**Workflow instance table's node id fk to ir_wfdef.nodeId, e.g processNodeId of c_process_processing */
-		static public String nodeFk() { return nodeFk; }
+		// static public String nodeFk() { return nodeFk; }
 		
-		static String wfIdFk = "processTypeId";
+		static final String wfIdFk = "processTypeId";
 		/**Optional wf type id FK to Wftabl.recId (wfId) */
-		static public String wfIdFk() { return wfIdFk; }
+		// static public String wfIdFk() { return wfIdFk; }
 
-		static String busiFK = "baseProcessDataId";
+		static final String busiFK = "baseProcessDataId";
 		/**Workflow instance reference to business record, e.g. e_inspect_tasks.taskId */
-		static public String busiFK() { return busiFK; }
+		// static public String busiFK() { return busiFK; }
 
-		static String descol = "dealDescribe";
+		static final String descol = "dealDescribe";
 		/**Workflow instance table's node description column name */
-		static public String descol() { return descol; }
+		// static public String descol() { return descol; }
 		
-		static private String operTime = "disposalTime";
+		static final String operTime = "disposalTime";
 		/**update time in instance table*/
-		static public String operTime() { return operTime; }
+		// static public String operTime() { return operTime; }
 		
-		static String handleCmd = "nodeStatus";
+		static final String handleCmd = "nodeStatus";
 		/**Workflow instance table's column that recording user's command handled this node,
 		 * e.g. c_process_processing.nodeState used to record req name. */
-		static public String handleCmd() { return handleCmd; }
+		// static public String handleCmd() { return handleCmd; }
 		
-		static String prevInstNode = "prevRec";
+		static final String prevInstNode = "prevRec";
 		/** Previous instance node cole: c_process_processing.prevRec<br>
 		 * Reason? The last handled description is important to show in main list. */
-		static public String prevInstNode() { return prevInstNode; }
+		// static public String prevInstNode() { return prevInstNode; }
 	}
 
-	static class Wftabl {
+	static class WfMeta {
 		/** virtual node code hard coded */
-		static String tabl = "ir_workflow";
+		static final String wftabl = "oz_workflow";
 
-		static private String virtualNCode = "virt";
-		static public String virtualNCode() { return virtualNCode; }
-		static String recId = "wfId";
-		static String wfName = "wfName";
-		static String bussTable = "bussTable";
-		static String bRecId = "bRecId";
-		static String bTaskState = "bTaskState";
+		static final String virtualNCode = "virt";
+		static final String recId = "wfId";
+		static final String wfName = "wfName";
+		static final String bussTable = "bussTable";
+		static final String bRecId = "bRecId";
+		static final String bTaskState = "bStateRef";
 		/** bussiness wf type, like e_inspect_tasks.taskType */
-		static String bussCateCol = "bussCateCol";
-		static String node1 = "Node1";
-		static String bNodeInstRefs = "bNodeInstRefs";
-	}
+		static final String bussCateCol = "bussCateCol";
+		static final String node1 = "Node1";
+		static final String bNodeInstBackRefs = "backRefs";
 
-	static class WfDeftabl {
-		static private String tabl = "ir_wfdef";
-		static public String tabl() { return tabl; }
-		static private String wfId = "wfId";
-		static public String wfId() { return wfId; }
-		static private String nid = "nodeId";
-		static public String nid() { return nid; }
-		static private String ncode = "nodeCode";
-		static public String ncode() { return ncode; }
-		static private String nname = "nodeName";
-		static public String nname() { return nname; }
-		static private String cmdRoute = "route";
-		static public String cmdRoute() { return cmdRoute; }
-		static private String arriveCondit = "arriveCondit";
-		static public String arriveCondit() { return arriveCondit; }
-		static private String onEvents = "onEvents";
-		static public String onEvents() { return onEvents; }
+		static final String nodeTabl = "oz_wfnodes";
+		static final String wfId = "wfId";
+		static final String nid = "nodeId";
+		static final String ncode = "nodeCode";
+		static final String nname = "nodeName";
+		static final String arriveCondit = "arrivCondit";
+		static final String onEvents = "onEvents";
 		/**time out in minute */
-		static private String outTime = "timeoutmm";
-		static public String outTime() { return outTime; }
+		static final String outTime = "timeouts";
 		/**timeout route (nodeId) */
-		static private String timeoutRoute = "timeoutRoute";
-		static public String timeoutRoute() { return timeoutRoute; }
-	}
+		static final String timeoutRoute = "timeoutRoute";
+		
+		//////// oz_wfcmds
+		static final String cmdTabl = "oz_wfcmds";
+		static final String cmdCmd = "cmd";
+		static final String cmdRoute = "route";
+		static final String cmdTxt = "txt";
+		static final String cmdSort = "sort";
 
-	static class Wfrole {
-		static private String tabl = "ir_wfrole";
-		static public String tabl() { return tabl; }
-		static private String wfId = "wfId";
-		static public String wfId() { return wfId; }
-		static private String nid = "nodeId";
-		static public String nid() { return nid; }
-		static private String roleId = "roleId";
-		static public String roleId() { return roleId; }
+		//////// Node instance table
+		/** column of node-instance-table-name
+		 * This table name is configurable in oz_workflow.instabl,
+		 * for separating node instance table to improve performance
+		 * - this table can be large.*/
+		static final String nodeInstabl = "instabl";
+
+		/**e.g. task_nodes.instId */
+		static final String nodeInstId = "instId";
+
+		/**e.g. task_nodes.nodeId */
+		static final String nodeInstNode = "nodeId";
 	}
 
 	static String connId;
@@ -168,8 +163,8 @@ public class EnginDesign {
 	 * @return 
 	 */
 	public static CheapTransBuild reloadMeta(String filepath) {
-		Utils.warn("loading meta to be done: %s", filepath);
-		CheapTransBuild builder = new CheapTransBuild("local-sqlite");
+		Utils.warn("loading meta from: %s", filepath);
+		CheapTransBuild builder = new CheapTransBuild("local-sqlite"); // TODO conn-id comes from configuration
 		return builder;
 	}
 }

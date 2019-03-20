@@ -66,18 +66,22 @@ public class CheapJReq extends SemanticObject {
 			ArrayList<String[]> delConds, ArrayList<String[]> inserts) {
 		SemanticObject jmultis = new SemanticObject();
 		// del
-		Delete jdel = st.delete(tabl);
-		for (String[] cond : delConds) {
-			jdel.where(cond[0], cond[1], cond[2]);
+		if (delConds != null) {
+			Delete jdel = st.delete(tabl);
+			for (String[] cond : delConds) {
+				jdel.where(cond[0], cond[1], cond[2]);
+			}
+			jmultis.put("del", jdel);
 		}
-		jmultis.put("del", jdel);
 		
 		// insert
-		Insert jinss = st.insert(tabl);
-		for (String[] nv : inserts) {
-			jinss.nv(nv[0], nv[1]);
+		if (inserts != null) {
+			Insert jinss = st.insert(tabl);
+			for (String[] nv : inserts) {
+				jinss.nv(nv[0], nv[1]);
+			}
+			jmultis.put("insert", jinss);
 		}
-		jmultis.put("insert", jinss);
 
 		return jmultis;
 	}

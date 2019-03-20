@@ -3,47 +3,60 @@ package io.odysz.sworkflow;
 import java.sql.SQLException;
 import java.util.HashMap;
 
+import io.odysz.module.rs.SResultset;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.Req;
+import io.odysz.sworkflow.EnginDesign.WfMeta;
+import io.odysz.transact.x.TransException;
 
 public class CheapNode {
-
 	public static class CheapRoute {
 		String from;
 		String to;
 		String txt;
 		/** -1 for not a timeout route */
 		int timeoutsnd = -1;
-		Req cmd; 
+		String cmd; 
 		int sort;
 
 		public CheapRoute(int timeout, String timeoutRoute) throws SemanticException {
 			if (timeout <= 0)
-				throw new SemanticException("Timeout Route consturctor can been called if timeout is not defined");
+				throw new SemanticException("Timeout Route consturctor can't been called if timeout is not defined");
 			// TODO Auto-generated constructor stub
 		}
 
-		public CheapRoute(String from, String cmd, String to) {
-			TO BE CONTINUED
-			// TODO Auto-generated constructor stub
+		public CheapRoute(String from, String cmd, String to, String text, int sort) {
+			this.from = from;
+			this.to= to;
+			this.txt = text;
+			this.timeoutsnd = 0;
+			this.cmd = cmd;
+			this.sort = sort;
 		}
 	}
 
 	public static class VirtualNode extends CheapNode {
-		private CheapNode startNode;
+		private CheapNode toStartNode;
 
-		VirtualNode(CheapWorkflow wf, String nid, String ncode, String nname, String prevNodes, int timeout,
-				String timeoutRoute, HashMap<Req, CheapRoute> routes, String onEvents)
-				throws SQLException, SemanticException {
-			super(wf, nid, ncode, nname, prevNodes, timeout, timeoutRoute, routes, onEvents);
+		VirtualNode(CheapWorkflow wf, String nid, String ncode, String text, String prevNodes, int timeout,
+				String timeoutRoute,
+				// HashMap<Req, CheapRoute> routes,
+				String onEvents) throws SQLException, TransException {
+			super(wf, "virt-" + nid, "start", "invisible", prevNodes, timeout, timeoutRoute, onEvents);
 		}
 
 		public VirtualNode(CheapWorkflow wf, CheapNode startNode)
-				throws SemanticException, SQLException {
-			super(wf, "#virt", "virt", "invisible", null, 0, null, null, null);
-			this.startNode = startNode;
+				throws SQLException, TransException {
+			super(wf, "virt-" + startNode.nid, "start", "invisible", null, 0, null, null);
+			this.toStartNode = startNode;
 		}
 
+		@Override
+		public CheapNode findRoute(Req req) throws SemanticException {
+			if (req == Req.start)
+				return toStartNode;
+			else throw new SemanticException("Can't step from virutal node to start node on req %s", req.name());
+		}
 	}
 
 	private CheapWorkflow wf;
@@ -55,7 +68,7 @@ public class CheapNode {
 	 * findroute).<br>
 	 * Created according to route when needed.
 	 */
-	private HashMap<Req, CheapRoute> route_lazy;
+	private HashMap<String, CheapRoute> route_lazy;
 
 	private CheapRoute timeoutRoute;
 	private ICheapEventHandler timeoutHandler;
@@ -66,26 +79,45 @@ public class CheapNode {
 
 	CheapNode(CheapWorkflow wf, String nid, String ncode, String nname,
 			String prevNodes, int timeout, String timeoutRoute,
-			HashMap<Req, CheapRoute> routes, String onEvents) throws SQLException, SemanticException {
+			String onEvents) throws SQLException, TransException {
 		this.wf = wf;
 		this.nid = nid;
 		this.ncode = ncode;
 		this.nname = nname;
-		this.route_lazy = routes;
+		this.route_lazy = loadRoutes(nid);
 		this.prevNodes = prevNodes;
 		this.arriveCondt = new CheapLogic(prevNodes);
-		this.eventHandler = parseEvent(onEvents);
+		this.eventHandler = createHandler(onEvents);
 
 		if (timeout > 0)
 			this.timeoutRoute = new CheapRoute(timeout, timeoutRoute);
 		if (timeout > 0) {
 			// String[] timeoutRt = new String[2];
-			this.timeoutHandler = parseEvent(timeoutRoute);
+			this.timeoutHandler = parseTimeoutRoute(timeoutRoute);
 		}
 	}
 
+	private HashMap<String, CheapRoute> loadRoutes(String nodeId) throws TransException, SQLException {
+		HashMap<String, CheapRoute> routs = new HashMap<String, CheapRoute>();
+		SResultset rs = (SResultset) CheapEngin.trcs
+				.select(WfMeta.cmdTabl)
+				.col(WfMeta.cmdCmd, "cmd")
+				.col(WfMeta.cmdTxt, "txt")
+				.col(WfMeta.cmdRoute, "route")
+				.col(WfMeta.cmdSort, "sort")
+				.where("=", WfMeta.nid, "'" + nodeId + "'")
+				.rs(CheapEngin.trcs.basiContext());
+		rs.beforeFirst();
+		while (rs.next()) {
+			String cmd = rs.getString("cmd");
+			routs.put(cmd, new CheapRoute(nodeId,
+					cmd, rs.getString("route"),
+					rs.getString("txt"), rs.getInt("sort", 0)));
+		}
+		return routs;
+	}
 
-	private ICheapEventHandler parseEvent(String onEvent) {
+	private ICheapEventHandler createHandler(String onEvent) {
 		if(onEvent != null) {
 			try {
 				ICheapEventHandler handler = (ICheapEventHandler) Class.forName(onEvent.trim()).newInstance();
@@ -95,7 +127,18 @@ public class CheapNode {
 				return new CheapHandler();
 			}
 		}
-		return null;
+		return new CheapHandler();
+	}
+
+	private ICheapEventHandler parseTimeoutRoute(String timeoutRoute) {
+		if (timeoutRoute == null)
+			return null;
+		String[] timess = timeoutRoute.split(":");
+		if (timess == null || timess.length < 2)
+			return null;
+		if (timess.length == 2)
+			return new CheapHandler();
+		return createHandler(timess[2]);
 	}
 
 	/**
@@ -168,7 +211,7 @@ public class CheapNode {
 		return arriveCondt.isArrive(currentNode.nodeId());
 	}
 
-	public CheapNode findRoute(Req req) {
+	public CheapNode findRoute(Req req) throws SemanticException {
 		if (route_lazy.containsKey(req))
 			return wf.getNode(route_lazy.get(req).to);
 		else return null;

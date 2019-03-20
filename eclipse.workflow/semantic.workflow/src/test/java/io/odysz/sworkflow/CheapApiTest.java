@@ -1,52 +1,51 @@
 package io.odysz.sworkflow;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 
-import org.junit.jupiter.api.Test;
-import org.xml.sax.SAXException;
+import org.junit.Test;
 
 import io.odysz.common.DateFormat;
 import io.odysz.common.Utils;
-import io.odysz.semantic.DASemantext;
-import io.odysz.semantic.DASemantics;
-import io.odysz.semantic.DA.DATranscxt;
-import io.odysz.semantics.IUser;
+import io.odysz.module.rs.SResultset;
+import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.transact.sql.Transcxt;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
-class CheapApiTest {
+public class CheapApiTest {
 	static final String wftype = "t01";
-	static IUser testUser = new IUser() {
-		@Override public ArrayList<String> dbLog(ArrayList<String> sqls) { return sqls; }
-		@Override public boolean login(Object req) throws TransException { return false; }
-		@Override public String sessionId() { return null; }
-		@Override public void touch() { }
-		@Override public String uid() { return "CheapApiTest"; }
-		@Override public SemanticObject logout() { return null; }
-		@Override public void writeJsonRespValue(Object writer) throws IOException { }
-	};
 
-	static Transcxt stmtBuilder;
+	static String connId;
+	static Transcxt basicSt;
+
+	static TestUser usr;
 	static {
+		SemanticObject jo = new SemanticObject();
+		jo.put("userId", "CheapApiTest");
+		SemanticObject usrAct = new SemanticObject();
+		usrAct.put("funcId", "cheap engine testing");
+		usrAct.put("funcName", "test cheap engine");
+		jo.put("usrAct", usrAct);
+		usr = new TestUser("CheapApiTest", jo);
+
 		try {
-			HashMap<String, DASemantics> cfgs = DATranscxt.initConfigs("loca-sqlite", "src/test/res/business.semantics");
-			stmtBuilder = new DATranscxt(new DASemantext("local-sqlite", cfgs));
-		} catch (SAXException | IOException e) {
+			initSqlite();
+			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
+		} catch (SQLException | TransException | IOException e) {
 			e.printStackTrace();
 		}
 	}
-	
+
+
 	@Test
-	void testStart() throws SQLException, TransException {
-		initSqlite();
+	public void testStart() throws SQLException, TransException {
 		// TODO test support dels with semantics.xml
 		// ArrayList<String[]> delConds = new ArrayList<String[]>();
 		// delConds.add(new String[] {});
@@ -64,11 +63,11 @@ class CheapApiTest {
 				.taskNv("remarks", "testing")
 				.taskChildMulti("task_details", null, inserts)
 				.postupdates(postups)
-				.commit(testUser, stmtBuilder);
+				.commit(usr, basicSt);
 		
 		Update updt = (Update) res.get("stmt");
 		ArrayList<String> sqls = new ArrayList<String>();
-		updt.commit(sqls, testUser);
+		updt.commit(sqls, usr);
 		
 		Utils.logi(res.get("stepEvt").toString());
 		Utils.logi(res.get("arriveEvt").toString());
@@ -79,6 +78,143 @@ class CheapApiTest {
 	void testNext() {
 	}
 
-	private void initSqlite() {
+	private static void initSqlite() throws SQLException {
+		File file = new File("src/test/res");
+		String path = file.getAbsolutePath();
+		Connects.init(path);
+
+		basicSt = new Transcxt(null);
+		
+		// initialize oz_autoseq - only for sqlite
+		SResultset rs = Connects.select("SELECT type, name, tbl_name FROM sqlite_master where type = 'table' and tbl_name = 'oz_autoseq'",
+				Connects.flag_nothing);
+		if (rs.getRowCount() == 0) {
+			try { 
+				// create oz_autoseq
+				ArrayList<String> sqls = new ArrayList<String>();
+				sqls.add("CREATE TABLE oz_autoseq (\n" + 
+					"  sid text(50),\n" + 
+					"  seq INTEGER,\n" + 
+					"  remarks text(200),\n" + 
+					"  CONSTRAINT oz_autoseq_pk PRIMARY KEY (sid) )");
+
+				sqls.add("CREATE TABLE a_logs (\n" +
+					"  logId text(20),\n" + 
+					"  funcId text(20),\n" + 
+					"  funcName text(50),\n" + 
+					"  oper text(20),\n" + 
+					"  logTime text(20),\n" + 
+					"  txt text(4000),\n" + 
+					"  CONSTRAINT oz_logs_pk PRIMARY KEY (logId))");
+
+				sqls.add("CREATE TABLE oz_workflow (\n" +
+					 "wfId varchar(50) NOT NULL,\n" +
+					 "wfName varchar(50) NOT NULL,\n" +
+					 "instabl varchar(20) NOT NULL, -- node instance's table name\n" +
+					 "bussTable varchar(20) NOT NULL, -- e.g. task\n" +
+					 "bRecId varchar(50) NOT NULL , -- e.g. task.taskId,\n" +
+					 "bStateRef varchar(20) DEFAULT NULL , -- task.state (node instance id ref in business table),\n" +
+					 "bussCateCol varchar(20) DEFAULT NULL , -- cate id in business table, e.g. task.tasktype.  The value is one of ir_workflow.wfId.,\n" +
+					 "node1 varchar(50) NOT NULL , -- start node id in ir_wfdef,\n" +
+					 "backRefs varchar(200) DEFAULT NULL , -- node instance back reference to business task record pk, format [node-id]:[business-col],\n" +
+					 "sort int(11) DEFAULT NULL,\n" +
+					 "PRIMARY KEY (wfId) )"
+					);
+
+				sqls.add("CREATE TABLE oz_wfnodes (\n" +
+					 "wfId varchar(50) NOT NULL,\n" +
+					 "nodeId varchar(50) NOT NULL,\n" +
+					 "sort int default 1,\n" +
+					 "nodeName varchar(20) DEFAULT NULL,\n" +
+					 "nodeCode varchar(20) DEFAULT NULL,\n" +
+					 "arrivCondit varchar(200) DEFAULT NULL, -- '[TODO] previous node list. If not null, all previous node handlered can reach here . EX: a01 AND (a02 OR a03)',\n" +
+					 "timeoutRoute varchar(500) NULL, -- 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)',\n" +
+					 "timeouts int(11) DEFAULT NULL, -- 'timeout minutes',\n" +
+					 "onEvents varchar(200) DEFAULT NULL, -- the envent handler's class name\n" +
+					 "PRIMARY KEY (nodeId) )"
+					);
+
+				sqls.add("CREATE TABLE oz_wfcmds (\n" +
+					 "-- workflow commnads\n" +
+					 "nodeId varchar(20) NOT NULL, -- fkIns: oz_wfnodes.nodeId\n" +
+					 "cmd varchar(20) NOT NULL, -- command / req id\n" +
+					 "txt varchar(50), -- readable command text\n" +
+					 "route varchar(20) NOT NULL, -- route: next nodeId for cmd\n" +
+					 "sort int default 0,\n" +
+					 "PRIMARY KEY (cmd) )"
+					);
+
+				sqls.add("CREATE TABLE task_nodes (\n" +
+					"-- work flow node instances, table name is configured in oz_workflow.instabl (separating table for performance)\n" +
+					 "instId varchar(20) NOT NULL,\n" +
+					 "nodeId varchar(20) NOT NULL, -- node FK\n" +
+					 "oper varchar(20) NOT NULL,\n" +
+					 "opertime DATETIME,\n" +
+					 "remarks varchar(2000),\n" +
+					 "handlingCmd varchar(10),\n" +
+					 "prevRec varchar(20),\n" +
+					 "PRIMARY KEY (instId) )"
+					);
+
+				sqls.add("CREATE TABLE tasks (\n" +
+					"-- business task\n" +
+					 "taskId varchar(20) NOT NULL,\n" +
+					 "wfId varchar(20) NOT NULL,\n" +
+					 "wfState varchar(20) NOT NULL,\n" +
+					 "oper varchar(20) NOT NULL,\n" +
+					 "opertime DATETIME,\n" +
+					 "remarks varchar(2000),\n" +
+					 "startNode varchar(10),\n" +
+					 "rquireAllStep varchar(20),\n" +
+					 "PRIMARY KEY (taskId) )"
+					);
+
+				sqls.add("CREATE TABLE task_details (\n" +
+					"-- business task details, update / insert details batch commit submitted by cheap engine.\n" +
+					 "taskId varchar(20) NOT NULL,\n" +
+					 "recId varchar(20) NOT NULL,\n" +
+					 "remarks varchar(200),\n" +
+					 "PRIMARY KEY (recId) )"
+					);
+				Connects.commit(usr, sqls, Connects.flag_nothing);
+				sqls.clear();
+
+				sqls.add("insert into oz_workflow (wfId, wfName, instabl, bussTable, bRecId, bStateRef, bussCateCol, node1, backRefs, sort)\n" +
+					"values ('t01', 'workflow 01', 'task_nodes', 'tasks', 'taskId', 'wfState', 'wfId', 't01.01', 't01.03:requireAllStep', '0')");
+				
+				sqls.add("insert into oz_wfnodes( wfId, nodeId, sort, nodeName, nodeCode,  \n" +
+					"	arrivCondit, timeoutRoute, timeouts, onEvents )\n" +
+					"values\n" +
+					"('t01', 't01.01', 10, 'starting', 't01.01',  \n" +
+						"null, null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
+					"('t01', 't01.02A', 20, 'plan A', 't01.02A',\n" +
+						"null, 't03:Time Out:', 15, 'io.odysz.sworkflow.CheapHandler'),\n" +
+					"('t01', 't01.02B', 30, 'plan B', 't01.02B',\n" +
+						"null, 't03:Time Out:', 25, 'io.odysz.sworkflow.CheapHandler'),\n" +
+					"('t01', 't01.03', 90, 'abort', 't01.03',\n" +
+						"'t01.02 AND t01.02B', null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
+					"('t01', 't01.04', 99, 'finished', 't01.04',\n" +
+						"null, null, null, 'io.odysz.sworkflow.CheapHandler')\n");
+
+				sqls.add("insert into oz_wfcmds (nodeId, cmd, txt, route, sort)\n" +
+					"values\n" +
+					"('t01.01',  't01.01.stepA', 'Go A(t01.02A)', 't01.02A', 0),\n" +
+					"('t01.01',  't01.01.stepB', 'Go B(t01.02B)', 't01.02B', 1),\n" +
+					"('t01.02A', 't01.02.go03',  'A To 03',       't01.03', 2),\n" +
+					"('t01.02B', 't01.02B.go03', 'B To 03',       't01.03', 3),\n" +
+					"('t01.03',  't01.03.go-end','03 Go End',     't01.04', 9)\n");
+
+				sqls.add("insert into oz_autoseq (sid, seq, remarks) values\n" +
+					"('a_logs.logId', 0, 'log'),\n" +
+					"('oz_task_nodes.instId', 0, 'node instances'),\n" +
+					"('tasks.taskId', 0, 'tasks'),\n" +
+					"('task_details.detailId', 0, 'task details')");
+
+				Connects.commit(usr, sqls, Connects.flag_nothing);
+			} catch (Exception e) {
+				Utils.warn("Make sure table oz_autoseq already exists, and only for testing aginst a sqlite DB.");
+			}
+		}
+
 	}
 }

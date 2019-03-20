@@ -25,11 +25,11 @@
 
   <dependencies>
   	<dependency>
-    	<groupId>org.junit.jupiter</groupId>
-    	<artifactId>junit-jupiter-engine</artifactId>
-    	<version>5.3.2</version>
-    	<scope>test</scope>
-    </dependency>
+  		<groupId>junit</groupId>
+  		<artifactId>junit</artifactId>
+  		<version>4.12</version>
+  		<scope>test</scope>
+  	</dependency>
 
    	<dependency>
 		<!-- As sonatype SNAPSHOT is updating on a daily base, you may update this with:
@@ -81,6 +81,7 @@
     <finalName>semantic.workflow</finalName>
     
     <plugins>
+        
     	<plugin>
     		<artifactId>maven-compiler-plugin</artifactId>
     		<version>3.7.0</version>

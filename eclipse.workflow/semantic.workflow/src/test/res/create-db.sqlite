@@ -78,15 +78,15 @@ insert into oz_wfnodes( wfId, nodeId, sort, nodeName, nodeCode,
 	arrivCondit, timeoutRoute, timeouts, onEvents )
 values
 ('t01', 't01.01', 10, 'starting', 't01.01',  
-	null, null, null, 'io.dosyz.sworkflow.CheapHandler'),
+	null, null, null, 'io.odysz.sworkflow.CheapHandler'),
 ('t01', 't01.02A', 20, 'plan A', 't01.02A',
-	null, 't03:Time Out', 15, 'io.dosyz.sworkflow.CheapHandler'),
+	null, 't03:Time Out', 15, 'io.odysz.sworkflow.CheapHandler'),
 ('t01', 't01.02B', 30, 'plan B', 't01.02B',
-	null, 't03:Time Out', 25, 'io.dosyz.sworkflow.CheapHandler'),
+	null, 't03:Time Out', 25, 'io.odysz.sworkflow.CheapHandler'),
 ('t01', 't01.03', 90, 'abort', 't01.03',
-	't01.02 AND t01.02B', null, null, 'io.dosyz.sworkflow.CheapHandler'),
+	't01.02 AND t01.02B', null, null, 'io.odysz.sworkflow.CheapHandler'),
 ('t01', 't01.04', 99, 'finished', 't01.04',
-	null, null, null, 'io.dosyz.sworkflow.CheapHandler')
+	null, null, null, 'io.odysz.sworkflow.CheapHandler')
 ;
 select * from oz_wfnodes;
 
@@ -100,5 +100,8 @@ values
 ('t01.03',  't01.03.go-end','03 Go End',     't01.04', 9)
 ;
 
+select * from oz_workflow;
 select * from oz_wfnodes;
 select * from oz_wfcmds;
+select * from task_nodes;
+
