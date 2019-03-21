@@ -9,13 +9,14 @@ import java.util.ArrayList;
 import java.util.Date;
 
 import org.junit.Test;
+import org.xml.sax.SAXException;
 
 import io.odysz.common.DateFormat;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.SemanticObject;
-import io.odysz.transact.sql.Transcxt;
+import io.odysz.transact.sql.Statement;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
@@ -23,10 +24,14 @@ public class CheapApiTest {
 	static final String wftype = "t01";
 
 	static String connId;
-	static Transcxt basicSt;
+	static CheapTransBuild testcxt;
 
 	static TestUser usr;
 	static {
+		Utils.printCaller(false);
+		
+		connId = "local-sqlite";
+
 		SemanticObject jo = new SemanticObject();
 		jo.put("userId", "CheapApiTest");
 		SemanticObject usrAct = new SemanticObject();
@@ -38,7 +43,8 @@ public class CheapApiTest {
 		try {
 			initSqlite();
 			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
-		} catch (SQLException | TransException | IOException e) {
+			testcxt = CheapEngin.trcs;
+		} catch (SQLException | TransException | IOException | SAXException e) {
 			e.printStackTrace();
 		}
 	}
@@ -63,19 +69,21 @@ public class CheapApiTest {
 				.taskNv("remarks", "testing")
 				.taskChildMulti("task_details", null, inserts)
 				.postupdates(postups)
-				.commit(usr, basicSt);
+				.commit(usr, testcxt);
 		
-		Update updt = (Update) res.get("stmt");
+		Statement<?> updt = (Statement<?>) res.get("stmt");
 		ArrayList<String> sqls = new ArrayList<String>();
 		updt.commit(sqls, usr);
 		
+		Utils.logi(sqls);
 		Utils.logi(res.get("stepEvt").toString());
-		Utils.logi(res.get("arriveEvt").toString());
+		Utils.logi(res.get("arriveEvt") == null ? "arrive event is empty" :
+				res.get("arrivEvt").toString());
 
-		fail("Not yet implemented");
 	}
 
 	void testNext() {
+		fail("Not yet implemented");
 	}
 
 	private static void initSqlite() throws SQLException {
@@ -83,7 +91,7 @@ public class CheapApiTest {
 		String path = file.getAbsolutePath();
 		Connects.init(path);
 
-		basicSt = new Transcxt(null);
+		// testxt = new Transcxt(null);
 		
 		// initialize oz_autoseq - only for sqlite
 		SResultset rs = Connects.select("SELECT type, name, tbl_name FROM sqlite_master where type = 'table' and tbl_name = 'oz_autoseq'",
@@ -128,6 +136,7 @@ public class CheapApiTest {
 					 "nodeName varchar(20) DEFAULT NULL,\n" +
 					 "nodeCode varchar(20) DEFAULT NULL,\n" +
 					 "arrivCondit varchar(200) DEFAULT NULL, -- '[TODO] previous node list. If not null, all previous node handlered can reach here . EX: a01 AND (a02 OR a03)',\n" +
+					 "cmdRights varchar(2000), -- rights view sql, args: $1s current id, $2s next id, $3s uid, $4s cmd (oz_wfnodes.cmd)\n" +
 					 "timeoutRoute varchar(500) NULL, -- 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)',\n" +
 					 "timeouts int(11) DEFAULT NULL, -- 'timeout minutes',\n" +
 					 "onEvents varchar(200) DEFAULT NULL, -- the envent handler's class name\n" +
@@ -183,18 +192,18 @@ public class CheapApiTest {
 					"values ('t01', 'workflow 01', 'task_nodes', 'tasks', 'taskId', 'wfState', 'wfId', 't01.01', 't01.03:requireAllStep', '0')");
 				
 				sqls.add("insert into oz_wfnodes( wfId, nodeId, sort, nodeName, nodeCode,  \n" +
-					"	arrivCondit, timeoutRoute, timeouts, onEvents )\n" +
+					"	arrivCondit, cmdRights, timeoutRoute, timeouts, onEvents )\n" +
 					"values\n" +
 					"('t01', 't01.01', 10, 'starting', 't01.01',  \n" +
-						"null, null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"null, null, null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.02A', 20, 'plan A', 't01.02A',\n" +
-						"null, 't03:Time Out:', 15, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"null, null, 't03:Time Out:', 15, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.02B', 30, 'plan B', 't01.02B',\n" +
-						"null, 't03:Time Out:', 25, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"null, null, 't03:Time Out:', 25, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.03', 90, 'abort', 't01.03',\n" +
-						"'t01.02 AND t01.02B', null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"'t01.02 AND t01.02B', null, null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.04', 99, 'finished', 't01.04',\n" +
-						"null, null, null, 'io.odysz.sworkflow.CheapHandler')\n");
+						"null, null, null, null, 'io.odysz.sworkflow.CheapHandler')\n");
 
 				sqls.add("insert into oz_wfcmds (nodeId, cmd, txt, route, sort)\n" +
 					"values\n" +

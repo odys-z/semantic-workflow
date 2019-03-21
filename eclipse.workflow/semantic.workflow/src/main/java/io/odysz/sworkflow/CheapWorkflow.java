@@ -2,7 +2,6 @@ package io.odysz.sworkflow;
 
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.HashSet;
 
 import io.odysz.common.LangExt;
 import io.odysz.module.rs.SResultset;
@@ -10,7 +9,6 @@ import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.CheapNode.VirtualNode;
-import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.x.TransException;
 
@@ -90,7 +88,8 @@ public class CheapWorkflow {
 					rs.getString(WfMeta.arriveCondit),
 					rs.getInt(WfMeta.outTime, 0),
 					rs.getString(WfMeta.timeoutRoute),
-					rs.getString(WfMeta.onEvents));
+					rs.getString(WfMeta.onEvents),
+					rs.getString(WfMeta.nodeRigths));
 			nodes.put(rs.getString(WfMeta.nid), n);
 		}
 		
@@ -125,9 +124,7 @@ public class CheapWorkflow {
 	 * Use this to get correct instance table name.
 	 * @return instance table name for this workflow template.
 	 */
-	String instabl() {
-		return instabl;
-	}
+	String instabl() { return instabl; }
 
 	public VirtualNode start() throws SQLException, TransException {
 		// design memo, handling virtual/new node arriving.
@@ -136,34 +133,19 @@ public class CheapWorkflow {
 		return virtualNode;
 	}
 
-	/**Create a virtual node before starting node.
-	 * @param req 
-	 * @param wf
-	 * @return
-	 * @throws SQLException
-	private static CheapNode createVirtualNode(CheapWorkflow wf) throws SQLException {
-		return new CheapNode(wf, wf.wfId + virtNodeSuffix, EnginDesign.Wftabl.virtualNCode(),
-				"You can't see this", // node name
-				null, -1, null,
-				startRoute, // route: always to the beginning
-				null,		// no arrive event for virtual - always already arrived
-				0, null	// no timeout
-				); // virtual node has the same rights as the start node
-	}
-	 */
-
 	/**Check user rights for req.
 	 * @param usr
 	 * @param currentNode
 	 * @param nextNode
 	 * @param req
-	 * @throws CheapException
+	 * @throws CheapException no such right to commit a requested command
+	 * @throws SQLException Database accessing failed
 	 */
-	public void checkRights(IUser usr, CheapNode currentNode, CheapNode nextNode, Req req) throws CheapException {
+	public void checkRights(IUser usr, CheapNode currentNode, CheapNode nextNode, String cmd) throws CheapException, SQLException {
 		if (usr instanceof CheapRobot)
 			return;
 		if (currentNode != null)
-			if (!collectSet().contains(req))
+			if (!currentNode.rights(nextNode, cmd, usr).contains(cmd))
 				throw new CheapException(txt("t-no-rights"), usr.uid());
 	}
 
@@ -175,7 +157,4 @@ public class CheapWorkflow {
 		return key + " zh: %s";
 	}
 
-	private HashSet<Req> collectSet() {
-		return new HashSet<Req>();
-	}
 }

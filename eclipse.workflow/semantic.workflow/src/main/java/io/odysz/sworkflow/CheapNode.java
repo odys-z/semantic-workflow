@@ -2,8 +2,12 @@ package io.odysz.sworkflow;
 
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import io.odysz.module.rs.SResultset;
+import io.odysz.semantic.DA.Connects;
+import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
@@ -38,24 +42,25 @@ public class CheapNode {
 	public static class VirtualNode extends CheapNode {
 		private CheapNode toStartNode;
 
-		VirtualNode(CheapWorkflow wf, String nid, String ncode, String text, String prevNodes, int timeout,
-				String timeoutRoute,
-				// HashMap<Req, CheapRoute> routes,
-				String onEvents) throws SQLException, TransException {
-			super(wf, "virt-" + nid, "start", "invisible", prevNodes, timeout, timeoutRoute, onEvents);
-		}
+//		VirtualNode(CheapWorkflow wf, String startId, int timeout, String timeoutRoute,
+//				String onEvents, String rightView) throws SQLException, TransException {
+//			super(wf, "virt-" + startId, "start", "invisible", null, timeout, timeoutRoute, onEvents, rightView);
+//		}
 
 		public VirtualNode(CheapWorkflow wf, CheapNode startNode)
 				throws SQLException, TransException {
-			super(wf, "virt-" + startNode.nid, "start", "invisible", null, 0, null, null);
+			super(wf, "virt-" + startNode.nid, "start", "invisible", null, 0, null, null, null);
 			this.toStartNode = startNode;
+			super.routes = new HashMap<String, CheapRoute>(1);
+			super.routes.put(Req.start.name(), new CheapRoute(super.nid,
+					Req.start.name(), startNode.nid, Req.start.name(), 0) {});
 		}
 
 		@Override
-		public CheapNode findRoute(Req req) throws SemanticException {
-			if (req == Req.start)
+		public CheapNode findRoute(String req) throws SemanticException {
+//			if (req == Req.start)
 				return toStartNode;
-			else throw new SemanticException("Can't step from virutal node to start node on req %s", req.name());
+//			else throw new SemanticException("Can't step from virutal node to start node on req %s", req.name());
 		}
 	}
 
@@ -68,7 +73,7 @@ public class CheapNode {
 	 * findroute).<br>
 	 * Created according to route when needed.
 	 */
-	private HashMap<String, CheapRoute> route_lazy;
+	private HashMap<String, CheapRoute> routes;
 
 	private CheapRoute timeoutRoute;
 	private ICheapEventHandler timeoutHandler;
@@ -76,15 +81,31 @@ public class CheapNode {
 	private ICheapEventHandler eventHandler;
 	private String prevNodes;
 	private CheapLogic arriveCondt;
+	
+	private String rights;
+	/**Default rights if the right is configured as all next nodes without relationship to user, roles, ... */
 
+	/**
+	 * @param wf
+	 * @param nid
+	 * @param ncode
+	 * @param nname
+	 * @param prevNodes
+	 * @param timeout
+	 * @param timeoutRoute
+	 * @param onEvents
+	 * @param rightsView right view definition, arg[0] = next-node-id, arg[1] = user-id
+	 * @throws SQLException
+	 * @throws TransException
+	 */
 	CheapNode(CheapWorkflow wf, String nid, String ncode, String nname,
 			String prevNodes, int timeout, String timeoutRoute,
-			String onEvents) throws SQLException, TransException {
+			String onEvents, String rightsView) throws SQLException, TransException {
 		this.wf = wf;
 		this.nid = nid;
 		this.ncode = ncode;
 		this.nname = nname;
-		this.route_lazy = loadRoutes(nid);
+		this.routes = loadRoutes(nid);
 		this.prevNodes = prevNodes;
 		this.arriveCondt = new CheapLogic(prevNodes);
 		this.eventHandler = createHandler(onEvents);
@@ -95,6 +116,8 @@ public class CheapNode {
 			// String[] timeoutRt = new String[2];
 			this.timeoutHandler = parseTimeoutRoute(timeoutRoute);
 		}
+		
+		this.rights = rightsView;
 	}
 
 	private HashMap<String, CheapRoute> loadRoutes(String nodeId) throws TransException, SQLException {
@@ -173,51 +196,50 @@ public class CheapNode {
 		return timeoutRoute;
 	}
 
-//	public String timeoutTxt() {
-//		// return timeoutRoute == null ? null : timeoutRoute[1];
-//		return route != null && route.containsKey(Req.timeout) ? route.get(Req.timeout)[1] : null;
-//	}
-
 	public ICheapEventHandler timeoutHandler() {
 		return timeoutHandler;
 	}
-
-//	public ICheapEventHandler stepEventHandler(Req req) throws SQLException {
-//		if (route_lazy != null && route_lazy.containsKey(req)) {
-//			String[] rt = route.get(req);
-//
-//			if (rt.length > 2 && rt[2] != null)
-//				try {
-//					return (ICheapEventHandler) Class.forName(rt[2].trim()).newInstance();
-//				} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-//					Utils.warn("Node (nid = %s) can't initiate an event handler: %s", nid, rt[2]);
-//				}
-//		}
-//		return null;
-//	}
 
 	public ICheapEventHandler onEventHandler() {
 		// return eventHandler == null ? null : eventHandler.get(arrive);
 		return eventHandler;
 	}
 
-
 	public String getReqText(Req req) {
 		return null;
 	}
-
 
 	public boolean isArrived(CheapNode currentNode) {
 		return arriveCondt.isArrive(currentNode.nodeId());
 	}
 
-	public CheapNode findRoute(Req req) throws SemanticException {
-		if (route_lazy.containsKey(req))
-			return wf.getNode(route_lazy.get(req).to);
+	public CheapNode findRoute(String cmd) throws SemanticException {
+		if (routes.containsKey(cmd))
+			return wf.getNode(routes.get(cmd).to);
 		else return null;
 	}
 
-
 	public String prevNodes() { return prevNodes; }
+
+	public Set<String> rights(CheapNode nextNode, String cmd, IUser usr) throws SQLException {
+//		if (this instanceof VirtualNode)
+//			// FIXME What about the user can't start this workflow?
+//			return routes.keySet();
+//		else
+		if (rights != null) {
+			String vw = String.format(rights, nextNode.nid, usr.uid());
+			SResultset rs = Connects.select(CheapEngin.trcs.basiconnId(), vw, Connects.flag_nothing);
+
+			rs.beforeFirst();
+			HashSet<String> set = new HashSet<String>();
+			while (rs.next()) {
+				set.add(rs.getString("to"));
+			}
+			return set;
+		}
+		else {
+			return routes.keySet();
+		}
+	}
 
 }

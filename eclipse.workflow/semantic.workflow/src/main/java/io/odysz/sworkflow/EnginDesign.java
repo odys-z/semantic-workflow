@@ -1,6 +1,13 @@
 package io.odysz.sworkflow;
 
+import java.util.HashMap;
+
 import io.odysz.common.Utils;
+import io.odysz.module.xtable.XMLTable;
+import io.odysz.semantic.DASemantext;
+import io.odysz.semantic.DASemantics;
+import io.odysz.semantic.DA.DATranscxt;
+import io.odysz.semantics.ISemantext;
 
 public class EnginDesign {
 
@@ -9,11 +16,12 @@ public class EnginDesign {
 		session("login.serv"), TgetDef("get-def"), findRoute("findroute"),
 		/** client use this to ask plausible operation using 't' */
 		Ttest("test"),
-		start("start"), next("next"), back("back"),
-		deny("deny"), close("close"), timeout("timeout");
+		start("start"),
+		cmd("cmd"), // request stepping according to cmds configured in oz_wfcmds
+		close("close"), timeout("timeout");
 		@SuppressWarnings("unused")
-		private String cmd;
-		Req(String cmd) { this.cmd = cmd; }
+		private String rq;
+		Req(String req) { this.rq = req; }
 
 		public boolean eq(String code) {
 			if (code == null) return false;
@@ -22,25 +30,6 @@ public class EnginDesign {
 		}
 	};
 
-//	static class Event {
-//		static int arrive = 11;
-//
-//		public static Integer parse(String trim) {
-//			throw new NullPointerException(); // TODO
-//		}
-//	}
-//
-//	/** ? */
-//	static class Act {
-//		static int newbusi = 21;
-//		static int close = 22;
-//
-//		private int acode = newbusi;
-//		public boolean eq(int actCode) {
-//			return acode == actCode;
-//		}
-//	}
-	
 	/**Keywords used to communicate with client
 	 * @author odys-z@github.com
 	 */
@@ -69,10 +58,6 @@ public class EnginDesign {
 	 * a.k.a. columns and tables of business that must be handled by workflow engine.
 	 */
 	static class Instabl {
-//		static String tabl = "wf_nodeInsts";
-//		/**Workflow instance table name: wf_nodeInsts */
-//		static public String tabl() { return tabl; }
-		
 		static final String instId = "recId";
 		/**Workflow instance table's pk column name */
 		// static public String instId() { return instId; }
@@ -154,17 +139,19 @@ public class EnginDesign {
 
 		/**e.g. task_nodes.nodeId */
 		static final String nodeInstNode = "nodeId";
+
+		static final String nodeRigths = "cmdRights";
 	}
 
-	static String connId;
 
 	/**Load meta from xml configure file (workflow-meta.xml).
 	 * @param filepath
 	 * @return 
-	 */
-	public static CheapTransBuild reloadMeta(String filepath) {
-		Utils.warn("loading meta from: %s", filepath);
-		CheapTransBuild builder = new CheapTransBuild("local-sqlite"); // TODO conn-id comes from configuration
+	public static CheapTransBuild reloadMeta(String connId, XMLTable xcfgs) {
+		// Utils.warn("loading meta from: %s", filepath);
+		// String connId = "local-sqlite"; // TODO conn-id comes from configuration
+		CheapTransBuild builder = new CheapTransBuild(connId, xcfgs);
 		return builder;
 	}
+	 */
 }

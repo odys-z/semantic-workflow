@@ -4,14 +4,21 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.xml.sax.SAXException;
+
 import io.odysz.common.Configs;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
+import io.odysz.module.xtable.IXMLStruct;
+import io.odysz.module.xtable.Log4jWrapper;
+import io.odysz.module.xtable.XMLDataFactoryEx;
+import io.odysz.module.xtable.XMLTable;
 import io.odysz.semantic.DASemantics.smtype;
 import io.odysz.semantic.DA.DATranscxt;
 import io.odysz.semantics.IUser;
@@ -43,9 +50,10 @@ public class CheapEngin {
 	/**Init cheep engine configuration, schedual a timeout checker. 
 	 * @param customChecker 
 	 * @throws TransException 
-	 * @throws IOException */
+	 * @throws IOException 
+	 * @throws SAXException */
 	public static void initCheap(String configPath, ICustomChecker customChecker)
-			throws TransException, IOException {
+			throws TransException, IOException, SAXException {
 		reloadCheap(configPath);
 
 		// worker thread 
@@ -56,9 +64,14 @@ public class CheapEngin {
 				new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
 	}
 
-	private static void reloadCheap(String filepath) throws TransException, IOException {
+	private static void reloadCheap(String filepath) throws TransException, IOException, SAXException {
 		try {
-			trcs = EnginDesign.reloadMeta(filepath);
+			LinkedHashMap<String, XMLTable> xtabs = loadXmeta(filepath);
+			XMLTable tb = xtabs.get("conn");
+			tb.beforeFirst().next();
+			String connId = tb.getString("conn");
+
+			trcs = new CheapTransBuild(connId, xtabs.get("semantics"));
 
 			// select * from oz_wfworkflow;
 			SResultset rs = (SResultset) trcs
@@ -88,14 +101,14 @@ public class CheapEngin {
 				// 2. append semantics for handling routes, etc.
 				// 2.1 node instance auto key, e.g. task_nodes.instId
 				String nodeInstabl = rs.getString(WfMeta.nodeInstabl);
-				DATranscxt.addSemantics(EnginDesign.connId, nodeInstabl, WfMeta.nodeInstId, smtype.autoInc, WfMeta.nodeInstId);
+				DATranscxt.addSemantics(CheapEngin.trcs.basiconnId(), nodeInstabl, WfMeta.nodeInstId, smtype.autoInc, WfMeta.nodeInstId);
 
 				// 2.2 business task's current state ref, e.g. tasks.wfState -> task_nodes.instId
-				DATranscxt.addSemantics(EnginDesign.connId, busitabl, bRecId, smtype.fkIns,
+				DATranscxt.addSemantics(CheapEngin.trcs.basiconnId(), busitabl, bRecId, smtype.fkIns,
 						String.format("%s,%s,%s", busiState, nodeInstabl, WfMeta.nodeInstId));
 
 				// 2.3 node instance Fk to nodes.nodeId, e.g. task_nodes.nodeId -> oz_wfnodes.nodeId
-				DATranscxt.addSemantics(EnginDesign.connId, nodeInstabl, WfMeta.nodeInstId, smtype.fkIns,
+				DATranscxt.addSemantics(CheapEngin.trcs.basiconnId(), nodeInstabl, WfMeta.nodeInstId, smtype.fkIns,
 						String.format("%s,%s,%s", WfMeta.nodeInstNode, WfMeta.nodeTabl, WfMeta.nid));
 
 				// usage:
@@ -105,11 +118,21 @@ public class CheapEngin {
 			e.printStackTrace();
 		}
 	}
-	
+
+	private static LinkedHashMap<String,XMLTable> loadXmeta(String filepath) throws SAXException, IOException {
+		LinkedHashMap<String, XMLTable> xtabs = XMLDataFactoryEx.getXtables(
+				new Log4jWrapper("").setDebugMode(false), filepath, new IXMLStruct() {
+						@Override public String rootTag() { return "workflow"; }
+						@Override public String tableTag() { return "t"; }
+						@Override public String recordTag() { return "s"; }});
+
+		return xtabs;
+	}
+
 	public static void stopCheap() {
 		if (schedualed == null && scheduler == null) return;
 		// stop worker
-		System.out.println("cancling WF-Checker ... ");
+		Utils.logi("cancling WF-Checker ... ");
 		schedualed.cancel(true);
 		scheduler.shutdown();
 		try {
@@ -344,6 +367,7 @@ public class CheapEngin {
 	 * @param wftype
 	 * @param currentInstId current workflow instance id, e.g. value of c_process_processing.recId
 	 * @param req
+	 * @param cmd commands in the same as that configured in oz_wfcmds.cmd
 	 * @param busiId business record ID if exists, or null to create (providing piggyback)
 	 * @param nodeDesc workflow instance node description
 	 * @param busiPack nvs for task records
@@ -356,7 +380,7 @@ public class CheapEngin {
 	 * @throws SQLException
 	 * @throws TransException 
 	 */
-	public static SemanticObject onReqCmd(IUser usr, String wftype, String currentInstId, Req req,
+	public static SemanticObject onReqCmd(IUser usr, String wftype, String currentInstId, Req req, String cmd,
 			String busiId, String nodeDesc, ArrayList<String[]> busiPack,
 			SemanticObject multireq, Update postreq)
 					throws SQLException, TransException {
@@ -370,6 +394,7 @@ public class CheapEngin {
 		CheapWorkflow wf = wfs.get(wftype);
 		if (req == Req.start) {
 			currentNode = wf.start(); // a virtual node
+			cmd = Req.start.name();
 		}
 		else {
 			currentNode = wf.getNodeByInst(currentInstId);
@@ -377,7 +402,7 @@ public class CheapEngin {
 		if (currentNode == null) throw new SQLException(
 				String.format(Configs.getCfg("cheap-workflow", "t-no-node"),
 				wftype, currentInstId, req));
-		CheapNode nextNode = currentNode.findRoute(req);
+		CheapNode nextNode = currentNode.findRoute(cmd);
 		
 		if (nextNode == null)
 			// a configuration problem?
@@ -389,7 +414,7 @@ public class CheapEngin {
 		// if (!Req.eq(Req.start, req))
 		//		checkExistance(nextNode, busiId);
 
-		wf.checkRights(usr, currentNode, nextNode, req);
+		wf.checkRights(usr, currentNode, nextNode, cmd);
 			
 		// 2.1 new node-id
 		// using semantic support instead - semantics all ready added.
@@ -402,9 +427,10 @@ public class CheapEngin {
 
 		// 3.3. handle multi-operation request 
 		Update upd3 = CheapEngin.trcs.update(wf.bTabl)
-				.where("=", wf.bRecId, busiId == null ? "AUTO" : busiId);
+				.where("=", wf.bRecId, busiId == null ?
+							trcs.basiContext().formatResulv(wf.instabl(), wf.bRecId) : busiId);
 		if (multireq != null) {
-			upd3.postChildren(multireq);
+			upd3.postChildren(multireq, trcs);
 		}
 		// IMPORTANT timeout checking depends on this (null is not handled for timeout checking)
 		// 3.2 save command name as current node's state (c_process_processing.nodeState = cmdName)

@@ -1,5 +1,10 @@
 package io.odysz.sworkflow;
 
+import java.io.IOException;
+
+import org.xml.sax.SAXException;
+
+import io.odysz.module.xtable.XMLTable;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DATranscxt;
 import io.odysz.semantics.ISemantext;
@@ -35,14 +40,13 @@ public class CheapTransBuild extends DATranscxt {
 		super(semantext);
 	}
 
-	public CheapTransBuild(String connId) {
+	public CheapTransBuild(String connId, XMLTable xtabl) {
 		super(connId);
-		// this.connId = connId;
+		try {
+			initConfigs(connId, xtabl);
+		} catch (SAXException | IOException e) {
+			e.printStackTrace();
+		}
 	}
-
-
-//	public static HashMap<String, DASemantics> initConfigs(String conn, String path) throws SAXException, IOException {
-//		return DATranscxt.initConfigs(conn, path);
-//	}
 
 }

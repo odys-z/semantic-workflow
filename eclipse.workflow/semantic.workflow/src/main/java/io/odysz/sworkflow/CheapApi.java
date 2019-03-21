@@ -5,7 +5,6 @@ import java.util.ArrayList;
 
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
-import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.transact.sql.Transcxt;
 import io.odysz.transact.sql.Update;
@@ -21,11 +20,11 @@ public class CheapApi {
 	 * @return
 	 */
 	public static CheapApi start(String wftype) {
-		return new CheapApi(wftype, Req.start);
+		return new CheapApi(wftype, Req.start, null);
 	}
 
 	public static CheapApi next(String wftype, String currentNode, String taskId) {
-		CheapApi api = new CheapApi(wftype, Req.next);
+		CheapApi api = new CheapApi(wftype, Req.cmd, null);
 		api.currentNode = currentNode;
 		api.taskId = taskId;
 		return api;
@@ -39,7 +38,7 @@ public class CheapApi {
 	 * @return
 	 */
 	static CheapApi stepTimeout(String wftype, String currentNode, String taskId) {
-		CheapApi api = new CheapApi(wftype, Req.timeout);
+		CheapApi api = new CheapApi(wftype, Req.timeout, null);
 		api.currentNode = currentNode;
 		api.taskId = taskId;
 		return api;
@@ -57,11 +56,13 @@ public class CheapApi {
 	private ArrayList<String[]> multiDels;
 	private ArrayList<String[]> multiInserts;
 	private Update postups;
+	private String cmd;
 	
 
-	protected CheapApi(String wftype, Req req) {
+	protected CheapApi(String wftype, Req req, String cmd) {
 		this.wftype = wftype;
 		this.req = req;
+		this.cmd = cmd;
 	}
 	
 	public CheapApi taskNv(String n, String v) {
@@ -101,8 +102,8 @@ public class CheapApi {
 	 */
 	public SemanticObject commit(IUser usr, Transcxt st) throws SQLException, TransException {
 		SemanticObject multireq = CheapJReq.formatMulti(st, multiChildTabl, multiDels, multiInserts);
-		return CheapEngin.onReqCmd(usr, wftype, currentNode, req, taskId,
-									nodeDesc, nvs, multireq, postups);
+		return CheapEngin.onReqCmd(usr, wftype, currentNode, req, cmd,
+					taskId, nodeDesc, nvs, multireq, postups);
 	}
 
 }

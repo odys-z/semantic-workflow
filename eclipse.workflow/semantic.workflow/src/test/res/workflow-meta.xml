@@ -1,72 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <workflow>
+  <t id="conn" pk="conn" columns="conn">
+  	<s> <conn>local-sqlite</conn> </s>
+  </t>
+
   <!-- Work flow DB meta -->
-  <t id="Instabl" pk="tabl" columns="tabl,instId,nodeFk,wfIdFk,busiFk,descol,operTime,handleCmd,prevInstNode">
-  	<d> <tabl>wf_nodeInsts</tabl>
-		<instId>recId</instId>
-		<!-- Workflow instance table's node id fk to ir_wfdef.nodeId, e.g processNodeId of c_process_processing -->
-		<nodeFk>nodeFk</nodeFk>
-		<!-- Optional wf type id FK to Wftabl.recId (wfId) -->
-		<wfIdFk>wfIdFk</wfIdFk>
-		<!-- Workflow instance reference to business record id, e.g. e_tasks.taskId  -->
-		<busiFk>busiFk</busiFk>
-		<!-- Workflow instance table's node description column name  -->
-		<descol>dealDescribe</descol>
-		<!-- update time in instance table -->
-		<operTime>disposalTime</operTime>
-		<!-- Workflow instance table's column that recording user's command handled this node,
-			 e.g. c_process_processing.nodeState used to record req name.  -->
-		<handleCmd>nodeStatus</handleCmd>
-		<!-- Previous instance node cole: c_process_processing.prevRec<br>
-			 * Reason? The last handled description is important to show in main list. -->
-		<prevInstNode>prevRec</prevInstNode>
-  	</d>
+  <t id="instabl" pk="wfid" columns="wfid,tabl">
+  	<s> <wfid>t01</wfid>
+  		<tabl>oz_nodeInsts</tabl>
+  	</s>
   </t>
 
-  <t id="meta" pk="tabl" columns="tabl,virtualNCode,recId,wfName,bussTable,bRecId,bTaskState,bussCateCol,node1,bNodeInstRefs
-  		n-wfId,n-id,n-code,n-name,n-route,n-onEvents,n-timeout,n-timeoutRoute">
-	<d> <tabl>ir_workflow</tabl>
-		<!-- virtual node code hard coded -->
-		<virtualNCode>virt</virtualNCode>
-		<recId>wfId</recId>
-		<wfName>wfName</wfName>
-		<bussTable>bussTable</bussTable>
-		<bRecId>bRecId</bRecId>
-		<!-- column name like task.currentState -->
-		<bTaskState>bStateRef</bTaskState>
-		<!-- business wf type, like e_inspect_tasks.taskType  -->
-		<bussCateCol>bussCateCol</bussCateCol>
-		<node1>Node1</node1>
-		<!-- business task record can referring some special state, so there may be more column than current state
-			e.g. task.node0 referring to a stating node instance.
-			This is the column names define, in format:
-			[node-id:task-col, ...] -->
-		<bNodeInstRefs>backRefs</bNodeInstRefs>
+  <t id="semantics" pk="id" columns="id,smtc,tabl,pk,args">
+  <!-- workflow semantics for cheap engine definition -->
+  	<s>
+  		<id>01</id>
+  		<smtc>pkref</smtc>
+  		<tabl>oz_nodeInsts</tabl>
+  		<pk></pk>
+  		<args>taskId,tasks,taskId</args>
+  	</s>
+  	<s>
+  		<id>02</id>
+  		<smtc>pkref</smtc>
+  		<tabl>oz_nodeInsts</tabl>
+  		<pk>instId</pk>
+  		<args>nodeId,oz_wfnodes,nodeId</args>
+  	</s>
+  </t>
 
-		<n-wfId>wfId</n-wfId>
-		<n-id>nodeId</n-id>
-		<n-code>nodeCode</n-code>
-		<n-name>nodeName</n-name>
-		<n-route>route</n-route>
-		<n-onEvents>onEvents</n-onEvents>
-		<!-- time out in seconds  -->
-		<n-timeout>timeoutmm</n-timeout>
-		<!-- timeout route (nodeId)  -->
-		<n-timeoutRoute>timeoutRoute</n-timeoutRoute>
-		<!--$1s: role-id, $2s: user-id, $3s: node-id, $4s cmd-id
-			FIXME What' about performance?
-			output: [nodeId, cmdId]
-		-->
-		<rights>select n.nodeId, c.cmdId from oz_wfnodes n, oz_wfcmds c where n.nodeId = '%$3s' and n.nodeId = c.nodeId</rights>
-	</d>
-  </t>
-  
-  <t id="Wfrole" pk="tabl" columns="tabl,wfId,nid,roleId">
-	<d> <tabl>ir_wfrole</tabl>
-		<wfId>wfId</wfId>
-		<nid>nodeId</nid>
-		<roleId>roleId</roleId>
-	</d>
-  </t>
-  
 </workflow>

@@ -12,7 +12,7 @@ class CheapJReqTest {
 	void test() throws SQLException, TransException {
 		CheapJReq jreq = CheapJReq.start(CheapApiTest.wftype);
 		CheapApi cheap = CheapJReq.parse(jreq);
-		cheap.commit(CheapApiTest.usr, CheapApiTest.basicSt);
+		cheap.commit(CheapApiTest.usr, CheapApiTest.testcxt);
 
 	}
 
