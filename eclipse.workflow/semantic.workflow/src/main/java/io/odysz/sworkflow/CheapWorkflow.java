@@ -48,7 +48,7 @@ public class CheapWorkflow {
 	private CheapNode startingNode;
 
 	/**
-	 * @param wfId
+	 * @param nodeWfId
 	 * @param wfName
 	 * @param nInstabl node instance table name, configured in oz_workflow.instabl
 	 * @param bTabl
@@ -85,11 +85,11 @@ public class CheapWorkflow {
 					nid,
 					rs.getString(WfMeta.ncode),
 					rs.getString(WfMeta.nname),
-					rs.getString(WfMeta.arriveCondit),
-					rs.getInt(WfMeta.outTime, 0),
-					rs.getString(WfMeta.timeoutRoute),
-					rs.getString(WfMeta.onEvents),
-					rs.getString(WfMeta.nodeRigths));
+					rs.getString(WfMeta.narriveCondit),
+					rs.getInt(WfMeta.noutTime, 0),
+					rs.getString(WfMeta.ntimeoutRoute),
+					rs.getString(WfMeta.nonEvents),
+					rs.getString(WfMeta.nodeInst.cmdRigths));
 			nodes.put(rs.getString(WfMeta.nid), n);
 		}
 		
@@ -111,7 +111,7 @@ public class CheapWorkflow {
 
 	public CheapNode getNodeByInst(String instId) throws SQLException {
 		String sql = String.format("select %s nodeId from %s i where i.%s = '%s'",
-				EnginDesign.Instabl.nodeFk, instabl(), EnginDesign.Instabl.instId, instId);
+				WfMeta.nodeInst.nodeFk, instabl(), WfMeta.nodeInst.id, instId);
 		SResultset rs = Connects.select(sql);
 		if (rs.beforeFirst().next()) {
 			String nodeId = rs.getString("nodeId");

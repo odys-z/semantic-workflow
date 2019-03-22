@@ -42,9 +42,9 @@ public class CheapNode {
 	public static class VirtualNode extends CheapNode {
 		private CheapNode toStartNode;
 
-//		VirtualNode(CheapWorkflow wf, String startId, int timeout, String timeoutRoute,
-//				String onEvents, String rightView) throws SQLException, TransException {
-//			super(wf, "virt-" + startId, "start", "invisible", null, timeout, timeoutRoute, onEvents, rightView);
+//		VirtualNode(CheapWorkflow wf, String startId, int timeout, String ntimeoutRoute,
+//				String nonEvents, String rightView) throws SQLException, TransException {
+//			super(wf, "virt-" + startId, "start", "invisible", null, timeout, ntimeoutRoute, nonEvents, rightView);
 //		}
 
 		public VirtualNode(CheapWorkflow wf, CheapNode startNode)
@@ -92,8 +92,8 @@ public class CheapNode {
 	 * @param nname
 	 * @param prevNodes
 	 * @param timeout
-	 * @param timeoutRoute
-	 * @param onEvents
+	 * @param ntimeoutRoute
+	 * @param nonEvents
 	 * @param rightsView right view definition, arg[0] = next-node-id, arg[1] = user-id
 	 * @throws SQLException
 	 * @throws TransException
@@ -201,7 +201,6 @@ public class CheapNode {
 	}
 
 	public ICheapEventHandler onEventHandler() {
-		// return eventHandler == null ? null : eventHandler.get(arrive);
 		return eventHandler;
 	}
 
@@ -219,7 +218,7 @@ public class CheapNode {
 		else return null;
 	}
 
-	public String prevNodes() { return prevNodes; }
+	public String arrivCondt() { return prevNodes; }
 
 	public Set<String> rights(CheapNode nextNode, String cmd, IUser usr) throws SQLException {
 //		if (this instanceof VirtualNode)

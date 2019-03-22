@@ -16,34 +16,31 @@ import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.SemanticObject;
-import io.odysz.transact.sql.Statement;
+import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
 public class CheapApiTest {
 	static final String wftype = "t01";
 
-	static String connId;
-	static CheapTransBuild testcxt;
+	static CheapTransBuild testTrans;
 
 	static TestUser usr;
 	static {
 		Utils.printCaller(false);
 		
-		connId = "local-sqlite";
-
 		SemanticObject jo = new SemanticObject();
 		jo.put("userId", "CheapApiTest");
 		SemanticObject usrAct = new SemanticObject();
 		usrAct.put("funcId", "cheap engine testing");
 		usrAct.put("funcName", "test cheap engine");
 		jo.put("usrAct", usrAct);
-		usr = new TestUser("CheapApiTest", jo);
 
 		try {
 			initSqlite();
 			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
-			testcxt = CheapEngin.trcs;
+			testTrans = CheapEngin.trcs;
+			usr = new TestUser("CheapApiTest", jo);
 		} catch (SQLException | TransException | IOException | SAXException e) {
 			e.printStackTrace();
 		}
@@ -69,17 +66,25 @@ public class CheapApiTest {
 				.taskNv("remarks", "testing")
 				.taskChildMulti("task_details", null, inserts)
 				.postupdates(postups)
-				.commit(usr, testcxt);
-		
-		Statement<?> updt = (Statement<?>) res.get("stmt");
+				.commit(usr, testTrans);
+		// FIXME user are not only used for check rights, but also for semantext
+		// TODO move commitment to engine
+		Insert ins = (Insert) res.get("stmt");
 		ArrayList<String> sqls = new ArrayList<String>();
-		updt.commit(sqls, usr);
+		ins.ins(testTrans.instancontxt(usr));
 		
 		Utils.logi(sqls);
-		Utils.logi(res.get("stepEvt").toString());
-		Utils.logi(res.get("arriveEvt") == null ? "arrive event is empty" :
-				res.get("arrivEvt").toString());
 
+		// Utils.logi(res.get("stepEvt").toString());
+		ICheapEventHandler eh = (ICheapEventHandler) res.get("stepHandler");
+		if (eh != null)
+			eh.onCmd((CheapEvent) res.get("evt"));
+		else Utils.logi("No stepping event");
+
+		eh = (ICheapEventHandler) res.get("arriHandler");
+		if (eh != null)
+			eh.onCmd((CheapEvent) res.get("evt"));
+		else Utils.logi("No arriving event");
 	}
 
 	void testNext() {
@@ -116,7 +121,7 @@ public class CheapApiTest {
 					"  CONSTRAINT oz_logs_pk PRIMARY KEY (logId))");
 
 				sqls.add("CREATE TABLE oz_workflow (\n" +
-					 "wfId varchar(50) NOT NULL,\n" +
+					 "nodeWfId varchar(50) NOT NULL,\n" +
 					 "wfName varchar(50) NOT NULL,\n" +
 					 "instabl varchar(20) NOT NULL, -- node instance's table name\n" +
 					 "bussTable varchar(20) NOT NULL, -- e.g. task\n" +
@@ -126,20 +131,20 @@ public class CheapApiTest {
 					 "node1 varchar(50) NOT NULL , -- start node id in ir_wfdef,\n" +
 					 "backRefs varchar(200) DEFAULT NULL , -- node instance back reference to business task record pk, format [node-id]:[business-col],\n" +
 					 "sort int(11) DEFAULT NULL,\n" +
-					 "PRIMARY KEY (wfId) )"
+					 "PRIMARY KEY (nodeWfId) )"
 					);
 
 				sqls.add("CREATE TABLE oz_wfnodes (\n" +
-					 "wfId varchar(50) NOT NULL,\n" +
+					 "nodeWfId varchar(50) NOT NULL,\n" +
 					 "nodeId varchar(50) NOT NULL,\n" +
 					 "sort int default 1,\n" +
 					 "nodeName varchar(20) DEFAULT NULL,\n" +
 					 "nodeCode varchar(20) DEFAULT NULL,\n" +
 					 "arrivCondit varchar(200) DEFAULT NULL, -- '[TODO] previous node list. If not null, all previous node handlered can reach here . EX: a01 AND (a02 OR a03)',\n" +
 					 "cmdRights varchar(2000), -- rights view sql, args: $1s current id, $2s next id, $3s uid, $4s cmd (oz_wfnodes.cmd)\n" +
-					 "timeoutRoute varchar(500) NULL, -- 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)',\n" +
+					 "ntimeoutRoute varchar(500) NULL, -- 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)',\n" +
 					 "timeouts int(11) DEFAULT NULL, -- 'timeout minutes',\n" +
-					 "onEvents varchar(200) DEFAULT NULL, -- the envent handler's class name\n" +
+					 "nonEvents varchar(200) DEFAULT NULL, -- the envent handler's class name\n" +
 					 "PRIMARY KEY (nodeId) )"
 					);
 
@@ -159,6 +164,7 @@ public class CheapApiTest {
 					 "nodeId varchar(20) NOT NULL, -- node FK\n" +
 					 "oper varchar(20) NOT NULL,\n" +
 					 "opertime DATETIME,\n" +
+					 "descpt varchar(200),\n" + 
 					 "remarks varchar(2000),\n" +
 					 "handlingCmd varchar(10),\n" +
 					 "prevRec varchar(20),\n" +
@@ -168,7 +174,7 @@ public class CheapApiTest {
 				sqls.add("CREATE TABLE tasks (\n" +
 					"-- business task\n" +
 					 "taskId varchar(20) NOT NULL,\n" +
-					 "wfId varchar(20) NOT NULL,\n" +
+					 "nodeWfId varchar(20) NOT NULL,\n" +
 					 "wfState varchar(20) NOT NULL,\n" +
 					 "oper varchar(20) NOT NULL,\n" +
 					 "opertime DATETIME,\n" +
@@ -188,11 +194,11 @@ public class CheapApiTest {
 				Connects.commit(usr, sqls, Connects.flag_nothing);
 				sqls.clear();
 
-				sqls.add("insert into oz_workflow (wfId, wfName, instabl, bussTable, bRecId, bStateRef, bussCateCol, node1, backRefs, sort)\n" +
-					"values ('t01', 'workflow 01', 'task_nodes', 'tasks', 'taskId', 'wfState', 'wfId', 't01.01', 't01.03:requireAllStep', '0')");
+				sqls.add("insert into oz_workflow (nodeWfId, wfName, instabl, bussTable, bRecId, bStateRef, bussCateCol, node1, backRefs, sort)\n" +
+					"values ('t01', 'workflow 01', 'task_nodes', 'tasks', 'taskId', 'wfState', 'nodeWfId', 't01.01', 't01.03:requireAllStep', '0')");
 				
-				sqls.add("insert into oz_wfnodes( wfId, nodeId, sort, nodeName, nodeCode,  \n" +
-					"	arrivCondit, cmdRights, timeoutRoute, timeouts, onEvents )\n" +
+				sqls.add("insert into oz_wfnodes( nodeWfId, nodeId, sort, nodeName, nodeCode,  \n" +
+					"	arrivCondit, cmdRights, ntimeoutRoute, timeouts, nonEvents )\n" +
 					"values\n" +
 					"('t01', 't01.01', 10, 'starting', 't01.01',  \n" +
 						"null, null, null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
@@ -215,7 +221,7 @@ public class CheapApiTest {
 
 				sqls.add("insert into oz_autoseq (sid, seq, remarks) values\n" +
 					"('a_logs.logId', 0, 'log'),\n" +
-					"('oz_task_nodes.instId', 0, 'node instances'),\n" +
+					"('task_nodes.instId', 0, 'node instances'),\n" +
 					"('tasks.taskId', 0, 'tasks'),\n" +
 					"('task_details.detailId', 0, 'task details')");
 

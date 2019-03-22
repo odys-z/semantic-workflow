@@ -10,68 +10,57 @@ public class CheapEvent {
 
 	@Override
 	public String toString() {
-		return String.format("CheapEvent wf: %s, currentNodeId: %s, nextNodeId: %s, instId: %s, taskId: %s, cmd: %s",
-				wfId, currentNodeId, nextNodeId, instId, taskId, cmd);
+		return String.format("CheapEvent wf: %s,\ncurrentNodeId: %s, nextNode: %s, instId: %s, taskId: %s, req: %s",
+				wfId, currentNode, nextNode, instId, taskId, req);
 	}
 
 	private String wfId;
 	private Evtype etype;
-	private CheapNode currentNodeId;
-	private CheapNode nextNodeId;
-//	private String prevNodes;
+	private CheapNode currentNode;
+	private CheapNode nextNode;
 	private String instId;
 	private String taskId;
-	private Req cmd;
+	private Req req;
+	private String cmd;
 
 	/**When this is creating by cheap engine, there is not node instance id.
 	 * After sqls be committed, resolve it from semantext.
-	 * @param wfId workflow id/type
-	 * @param evt event type
-	 * @param current current node id
+	 * @param nodeWfId
+	 * @param evtype event type
+	 * @param current
 	 * @param next
-	 * @param prevNs previous nodes
 	 * @param taskId
 	 * @param rq
+	 * @param cmd
 	 */
-	public CheapEvent(String wfId, Evtype evt, CheapNode current,
-			CheapNode next, String taskId, Req rq) {
+	public CheapEvent(String wfId, Evtype evtype, CheapNode current,
+			CheapNode next, String taskId, Req rq, String cmd) {
 		this.wfId = wfId;
-		this.etype = evt;
-		this.currentNodeId = current;
-		this.nextNodeId = next;
-		// this.instId = instid;
-		// this.prevNodes = next.prevNodes();
+		this.etype = evtype;
+		this.currentNode = current;
+		this.nextNode = next;
 		this.taskId = taskId;
-		this.cmd = rq;
+		this.req = rq;
+		this.cmd = cmd;
 	}
 
-//	public CheapEvent(String wfId, String nodeId, String nextId, String taskId, Req req) {
-//		// TODO Auto-generated constructor stub
-//	}
+	public String wfId() { return wfId; }
 
-	public String wfId() {
-		return wfId;
-	}
+	public String currentNodeId() { return currentNode.nodeId(); }
 
-	public CheapNode currentNodeId() {
-		return currentNodeId;
-	}
+	public String nextNodeId() { return nextNode.nodeId(); }
 
-	public CheapNode nextNodeId() {
-		return nextNodeId;
-	}
+	public String instId() { return instId; }
 
-	public String instId() {
-		return instId;
-	}
+	public String taskId() { return taskId; }
 
-	public String taskId() {
-		return taskId;
-	}
+	public String arriveCondt() { return nextNode.arrivCondt(); }
 
-	public Req cmd() {
-		return cmd;
-	}
+	public Req req() { return req; }
+
+	public String cmd() { return cmd; }
+
+	public String evtype() { return etype.name(); }
 
 	/**When starting a new task, it must committed when the task id can be retrieved.<br>
 	 * Sometimes the event is figured out by engine on a new starting task.<br>
@@ -84,12 +73,4 @@ public class CheapEvent {
 			taskId = taskId.replaceAll("^\\s*AUTO", ((ArrayList<String>) newIds.get("rows")).get(0));
 	}
 
-//	public boolean isStarting(String wftype) {
-//		return wfId.equals(wftype)
-//			&& currentNodeId.matches(wftype + CheapWorkflow.virtNodeSuffix);
-//	}
-
-//	public String prevNodes() { return prevNodes; }
-
-	public String evtype() { return etype.name(); }
 }

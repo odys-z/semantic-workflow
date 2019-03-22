@@ -12,19 +12,19 @@ public class CheapHandler implements ICheapEventHandler {
 	
 	@Override
 	public void onTimeout(CheapEvent e) {
-		Utils.logi("Cheap timeout\n\twfId: %s, nodeId: %s, node-instance: %s, task-id: %s, target-route: %s",
+		Utils.logi("On Cheap timeout\n\twfId: %s, nodeId: %s, node-instance: %s, task-id: %s, target-route: %s",
 					e.wfId(), e.currentNodeId(), e.instId(), e.taskId(), e.nextNodeId());
 	}
 
 	@Override
 	public void onCmd(CheapEvent e) {
-		Utils.logi("Cheap Command Event\n\twfId: %s, nodeId: %s, node-instance: %s, cmd: %s, task-id: %s, target-route: %s",
+		Utils.logi("On Cheap Command Event\n\twfId: %s, nodeId: %s, node-instance: %s, cmd: %s, task-id: %s, target-route: %s",
 					e.wfId(), e.currentNodeId(), e.instId(), e.cmd(), e.taskId(), e.nextNodeId());
 	}
 
 	@Override
 	public void onArrive(CheapEvent e) {
-		Utils.logi("Cheap Command Event\n\twfId: %s, nodeId: %s, node-instance: %s, prive nodes: %s, task-id: %s, target-route: %s",
-					e.wfId(), e.currentNodeId(), e.instId(), e.currentNodeId().prevNodes(), e.taskId(), e.nextNodeId());
+		Utils.logi("On Cheap Command Event\n\twfId: %s, nodeId: %s, node-instance: %s, prive nodes: %s, task-id: %s, target-route: %s",
+					e.wfId(), e.currentNodeId(), e.instId(), e.arriveCondt(), e.taskId(), e.nextNodeId());
 	}
 }

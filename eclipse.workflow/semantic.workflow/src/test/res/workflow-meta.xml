@@ -4,28 +4,13 @@
   	<s> <conn>local-sqlite</conn> </s>
   </t>
 
-  <!-- Work flow DB meta -->
-  <t id="instabl" pk="wfid" columns="wfid,tabl">
-  	<s> <wfid>t01</wfid>
-  		<tabl>oz_nodeInsts</tabl>
-  	</s>
-  </t>
-
   <t id="semantics" pk="id" columns="id,smtc,tabl,pk,args">
   <!-- workflow semantics for cheap engine definition -->
-  	<s>
-  		<id>01</id>
-  		<smtc>pkref</smtc>
-  		<tabl>oz_nodeInsts</tabl>
-  		<pk></pk>
-  		<args>taskId,tasks,taskId</args>
-  	</s>
-  	<s>
-  		<id>02</id>
-  		<smtc>pkref</smtc>
-  		<tabl>oz_nodeInsts</tabl>
-  		<pk>instId</pk>
-  		<args>nodeId,oz_wfnodes,nodeId</args>
+  	<s> <id>01</id>
+  		<smtc>o-t</smtc>
+  		<tabl>tasks</tabl>
+  		<pk>taskId</pk>
+  		<args>oper,opertime</args>
   	</s>
   </t>
 

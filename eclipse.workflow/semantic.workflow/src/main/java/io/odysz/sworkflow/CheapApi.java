@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.EnginDesign.Req;
-import io.odysz.transact.sql.Transcxt;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
@@ -30,7 +29,7 @@ public class CheapApi {
 		return api;
 	}
 
-	/**Get next route node according to timeoutRoute (no time checking).<br>
+	/**Get next route node according to ntimeoutRoute (no time checking).<br>
 	 * Only called by CheapChecker?
 	 * @param wftype
 	 * @param currentNode
@@ -94,13 +93,13 @@ public class CheapApi {
 	 * @param usr
 	 * @param st 
 	 * @return {stmt: {@link Update} (for committing), <br>
-	 * 		stepEvt: {@link CheapEvent} for start event(new task ID must resolved), <br>
-	 * 		stepEvt: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
-	 * 		arriEvt: {@link CheapEvent} for arriving event if there is one configured}
+	 * 		evt: {@link CheapEvent} for start event(new task ID must resolved), <br>
+	 * 		stepHandler: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
+	 * 		arriHandler: {@link CheapEvent} for arriving event if there is one configured}
 	 * @throws SQLException
 	 * @throws TransException 
 	 */
-	public SemanticObject commit(IUser usr, Transcxt st) throws SQLException, TransException {
+	public SemanticObject commit(IUser usr, CheapTransBuild st) throws SQLException, TransException {
 		SemanticObject multireq = CheapJReq.formatMulti(st, multiChildTabl, multiDels, multiInserts);
 		return CheapEngin.onReqCmd(usr, wftype, currentNode, req, cmd,
 					taskId, nodeDesc, nvs, multireq, postups);

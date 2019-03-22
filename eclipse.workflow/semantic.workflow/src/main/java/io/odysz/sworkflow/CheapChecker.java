@@ -34,7 +34,7 @@ public class CheapChecker implements Runnable {
 		ArrayList<CheapEvent> evts = new ArrayList<CheapEvent>();
 		/* let's rock
 			// select TIMESTAMPDIFF(minute, disposalTime, now()) idled, n.timeoutmm, n.timeoutRoute,
-			// i.processTypeId wfId, i.processNodeId nodeId, i.baseProcessDataId taskId 
+			// i.processTypeId nodeWfId, i.processNodeId nodeId, i.baseProcessDataId taskId 
 			// from c_process_processing i join ir_wfdef n on i.processNodeId = n.nodeId and n.timeoutmm > 0
 			// where TIMESTAMPDIFF(minute, disposalTime, now()) > n.timeoutmm;
 			String sql = String.format(
@@ -49,7 +49,7 @@ public class CheapChecker implements Runnable {
 			rs.beforeFirst();
 			while (rs.next()) {
 				CheapNode n = wfs.get(rs.getString("wfid")).nodes.get(rs.getString("nodeid"));
-				// CheapEvent(wfId,  currentNode,  nextNode,  instid,  taskId,  cmd)
+				// CheapEvent(nodeWfId,  currentNode,  nextNode,  instid,  taskId,  cmd)
 				evts.add(new CheapEvent(n.wfId(), n.nodeId(),
 						n.timeoutRoute(), rs.getString("instId"),
 						rs.getString("taskId"), n.timeoutTxt()));
@@ -83,7 +83,7 @@ public class CheapChecker implements Runnable {
 	 */
 	private static void timeout(CheapEvent evt)
 			throws SQLException, IOException, TransException {
-		// current node Id means current instance
+		// current node id means current instance
 		CheapApi wfapi = CheapApi.stepTimeout(evt.wfId(), evt.instId(), evt.taskId());
 		Update jreq = (Update) wfapi.commit(CheapEngin.checkUser, null).get("res"); // NOT NULLLL!!!!
 		if (jreq != null) {

@@ -11,7 +11,6 @@ import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfProtocol;
 import io.odysz.transact.sql.Delete;
 import io.odysz.transact.sql.Insert;
-import io.odysz.transact.sql.Transcxt;
 import io.odysz.transact.x.TransException;
 
 /**A bridge between JMessage/JBody and cheap engine API.
@@ -62,7 +61,7 @@ public class CheapJReq extends SemanticObject {
 	 * @param inserts
 	 * @return formated SemanticObject
 	 */
-	public static SemanticObject formatMulti(Transcxt st, String tabl,
+	public static SemanticObject formatMulti(CheapTransBuild st, String tabl,
 			ArrayList<String[]> delConds, ArrayList<String[]> inserts) {
 		SemanticObject jmultis = new SemanticObject();
 		// del

@@ -42,8 +42,9 @@ public class TestUser implements IUser {
 		
 		ISemantext semt;
 		try {
-			HashMap<String, DASemantics> ss = DATranscxt.initConfigs(CheapApiTest.connId, "src/test/res/semantic-log.xml"); 
-			semt = new DASemantext(CheapApiTest.connId, ss);
+			String conn = CheapEngin.trcs.basiconnId();
+			HashMap<String, DASemantics> ss = DATranscxt.initConfigs(conn, "src/test/res/semantic-log.xml"); 
+			semt = new DASemantext(conn, ss, this);
 			logSemantic = new DATranscxt(semt); 
 		} catch (SAXException | IOException e) {
 			e.printStackTrace();

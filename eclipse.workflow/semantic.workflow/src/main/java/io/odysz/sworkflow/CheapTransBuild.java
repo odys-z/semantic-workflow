@@ -14,9 +14,6 @@ import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Update;
 
 public class CheapTransBuild extends DATranscxt {
-
-//	private String connId;
-
 	@Override
 	public Query select(String tabl, String... alias) {
 		Query q = super.select(tabl, alias);
@@ -40,6 +37,10 @@ public class CheapTransBuild extends DATranscxt {
 		super(semantext);
 	}
 
+	/**Build transact builder, initialize semantics in xtabl.
+	 * @param connId
+	 * @param xtabl
+	 */
 	public CheapTransBuild(String connId, XMLTable xtabl) {
 		super(connId);
 		try {

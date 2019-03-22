@@ -25,9 +25,9 @@ import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapEvent.Evtype;
-import io.odysz.sworkflow.EnginDesign.Instabl;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
+import io.odysz.sworkflow.EnginDesign.WfMeta.nodeInst;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
@@ -89,7 +89,7 @@ public class CheapEngin {
 				CheapWorkflow wf = new CheapWorkflow(
 						rs.getString(WfMeta.recId),
 						rs.getString(WfMeta.wfName),
-						rs.getString(WfMeta.nodeInstabl),
+						rs.getString(WfMeta.instabl),
 						busitabl, // tasks
 						bRecId, // tasks.taskId
 						busiState, // tasks.wfState
@@ -99,20 +99,24 @@ public class CheapEngin {
 				wfs.put(rs.getString(WfMeta.recId), wf);
 
 				// 2. append semantics for handling routes, etc.
-				// 2.1 node instance auto key, e.g. task_nodes.instId
-				String nodeInstabl = rs.getString(WfMeta.nodeInstabl);
-				DATranscxt.addSemantics(CheapEngin.trcs.basiconnId(), nodeInstabl, WfMeta.nodeInstId, smtype.autoInc, WfMeta.nodeInstId);
+				String conn = CheapEngin.trcs.basiconnId();
 
-				// 2.2 business task's current state ref, e.g. tasks.wfState -> task_nodes.instId
-				DATranscxt.addSemantics(CheapEngin.trcs.basiconnId(), busitabl, bRecId, smtype.fkIns,
-						String.format("%s,%s,%s", busiState, nodeInstabl, WfMeta.nodeInstId));
+				// 2.1 node instance auto key, e.g. task_nodes.instId
+				String nodeInstabl = rs.getString(WfMeta.instabl);
+				DATranscxt.addSemantics(conn, nodeInstabl, nodeInst.id, smtype.autoInc, nodeInst.id);
+
+				// 2.2 task_nodes.oper, opertime
+				DATranscxt.addSemantics(conn, nodeInstabl, nodeInst.id, smtype.opTime,
+						new String[] { nodeInst.oper, nodeInst.id });
 
 				// 2.3 node instance Fk to nodes.nodeId, e.g. task_nodes.nodeId -> oz_wfnodes.nodeId
-				DATranscxt.addSemantics(CheapEngin.trcs.basiconnId(), nodeInstabl, WfMeta.nodeInstId, smtype.fkIns,
-						String.format("%s,%s,%s", WfMeta.nodeInstNode, WfMeta.nodeTabl, WfMeta.nid));
+//				DATranscxt.addSemantics(conn, nodeInstabl, WfMeta.nodeInstId, smtype.fkIns,
+//						String.format("%s,%s,%s", WfMeta.nodeInstNode, WfMeta.nodeTabl, WfMeta.nid));
 
-				// usage:
-				// DASemantext smtx = new DASemantext(EnginDesign.connId, DATranscxt.smtCfonfigs(EnginDesign.connId));
+				// 2.4 business task's pk and current state ref, e.g. tasks.wfState -> task_nodes.instId
+				DATranscxt.addSemantics(conn, busitabl, bRecId, smtype.autoInc, bRecId);
+				DATranscxt.addSemantics(conn, busitabl, bRecId, smtype.fkIns,
+						new String[] {busiState, nodeInstabl, nodeInst.id});
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -373,10 +377,11 @@ public class CheapEngin {
 	 * @param busiPack nvs for task records
 	 * @param multireq  {tabl: tablename, del: dels, insert: eaches};
 	 * @param postreq
-	 * @return [0: {@link Insert} (for committing), <br>
-	 * 1: start/step event (new task ID must resolved), <br>
-	 * 2: {@link ICheapEventHandler} for req (step/deny/next) if there is one configured]<br>
-	 * 3: {@link ICheapEventHandler} for arriving event if there is one configured]
+	 * @return {stmt: {@link Insert}/{@link Update} (for committing), <br>
+	 * 	evt: start/step event (new task ID to be resolved), <br>
+	 *	stepHandler: {@link ICheapEventHandler} for req (step/deny/next) if there is one configured]<br>
+	 *	arriHandler: {@link ICheapEventHandler} for arriving event if there is one configured<br>
+	 * }
 	 * @throws SQLException
 	 * @throws TransException 
 	 */
@@ -426,19 +431,22 @@ public class CheapEngin {
 		postupClient = postreq;
 
 		// 3.3. handle multi-operation request 
-		Update upd3 = CheapEngin.trcs.update(wf.bTabl)
+		Update upd3 = CheapEngin.trcs.update(wf.bTabl, usr)
 				.where("=", wf.bRecId, busiId == null ?
-							trcs.basiContext().formatResulv(wf.instabl(), wf.bRecId) : busiId);
+						// FIXME trcs.basiContext().formatResulv() - this API should working but not a good design.
+						// It's violating principal of context as a processing instance.
+						trcs.basiContext().formatResulv(wf.instabl(), wf.bRecId) : busiId);
+
 		if (multireq != null) {
 			upd3.postChildren(multireq, trcs);
 		}
 		// IMPORTANT timeout checking depends on this (null is not handled for timeout checking)
 		// 3.2 save command name as current node's state (c_process_processing.nodeState = cmdName)
 		Update post32 = null;
-		if (currentNode != null && Req.start != req && EnginDesign.Instabl.handleCmd != null) {
+		if (currentNode != null && Req.start != req && WfMeta.nodeInst.handleCmd != null) {
 			post32 = CheapEngin.trcs.update(wf.instabl())
-					.where("=", Instabl.instId, currentInstId)
-					.nv(Instabl.handleCmd, currentNode.getReqText(req))
+					.where("=", WfMeta.nodeInst.id, currentInstId)
+					.nv(WfMeta.nodeInst.handleCmd, currentNode.getReqText(req))
 					.post(postupClient);
 		}
 		if (post32 == null)
@@ -461,18 +469,18 @@ public class CheapEngin {
 		// 2. create node
 		// starting a new wf at the beginning
 		// nodeId = new-id
-		Insert ins2 = CheapEngin.trcs.insert(wf.instabl());
+		Insert ins2 = CheapEngin.trcs.insert(wf.instabl(), usr);
 		ins2
 			// .nv(Instabl.instId, newInstancId)
-			// .nv(Instabl.nodeFk, nextNode.nodeId())
-			.nv(Instabl.descol, nodeDesc);
+			.nv(nodeInst.nodeFk, nextNode.nodeId())
+			.nv(nodeInst.descol, nodeDesc);
 
 		// 2.2 prevNode=current-nodeId;
 		if (currentInstId != null)
-			ins2.nv(Instabl.prevInstNode, currentInstId);
+			ins2.nv(nodeInst.prevInst, currentInstId);
 		// [OPTIONAL] nodeinstance.wfId = wf.wfId
-		if (Instabl.wfIdFk != null)
-			ins2.nv(Instabl.wfIdFk, wf.wfId);
+		if (nodeInst.wfIdFk != null)
+			ins2.nv(nodeInst.wfIdFk, wf.wfId);
 		// check: starting with null busiId
 		// check: busiId not null for step, timeout, ...
 		if (Req.start == req && busiId != null)
@@ -485,8 +493,8 @@ public class CheapEngin {
 
 		Insert ins1 = null; 
 		if (Req.start == req) {
-			// 1. create task
-			ins1 = CheapEngin.trcs.insert(wf.bTabl);
+			// start: create task
+			ins1 = CheapEngin.trcs.insert(wf.bTabl, usr);
 			ins1.nv(wf.bCateCol, wf.wfId);
 			if (busiPack != null) {
 				for (String[] nv : busiPack) {
@@ -494,30 +502,27 @@ public class CheapEngin {
 				}
 			}
 			ins1.post(ins2);
-		}
-		else {
-			ins1 = ins2;
-//			Act act = (nextNode.getAct(Evtype.arrive));
-//			if (act != null && act.eq(Act.close)) {
-//				// do nothing
-//			}
-//			else if (act != null)
-//				throw new SQLException("TODO..."); 
-		}
 
-		// stepping event or starting event
-		evt = new CheapEvent(currentNode.wfId(), Evtype.start,
+			evt = new CheapEvent(currentNode.wfId(), Evtype.start,
 						currentNode, nextNode,
 						// busiId is null for new task, resolved later
-						Req.start == req ? "AUTO" : busiId, req);
+						String.format("RESULVE %s.%s", WfMeta.bussTable, WfMeta.bRecId),
+						Req.start, Req.start.name());
+		}
+		else {
+			// step: insert node instance, update task as post updating.
+			ins1 = ins2;
+			evt = new CheapEvent(currentNode.wfId(), Evtype.step,
+						currentNode, nextNode,
+						busiId, req, cmd);
+		}
+
 		
-//		return new Object[] {ins1, evt, currentNode.stepEventHandler(req),
-//				nextNode.onEventHandler(Event.arrive)};
 		return new SemanticObject()
 				.put("stmt", ins1)
-				.put("startEvt", evt)
-				.put("stepEvt", currentNode.onEventHandler())
-				.put("arriEvt", nextNode.isArrived(currentNode) ? nextNode.onEventHandler() : null);
+				.put("evt", evt)
+				.put("stepHandler", currentNode.onEventHandler())
+				.put("arriHandler", nextNode.isArrived(currentNode) ? nextNode.onEventHandler() : null);
 	}
 
 	/**SHOUDN'T BE HERE
