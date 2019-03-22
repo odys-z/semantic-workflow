@@ -67,8 +67,8 @@ public class CheapApiTest {
 				.taskChildMulti("task_details", null, inserts)
 				.postupdates(postups)
 				.commit(usr, testTrans);
-		// FIXME user are not only used for check rights, but also for semantext
-		// TODO move commitment to engine
+		// FIXME move commitment to engine
+		// FIXME move commitment to engine
 		Insert ins = (Insert) res.get("stmt");
 		ArrayList<String> sqls = new ArrayList<String>();
 		ins.ins(testTrans.instancontxt(usr));

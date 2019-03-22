@@ -153,7 +153,7 @@ public class CheapWorkflow {
 	 * @param key
 	 * @return configured txt
 	 */
-	private String txt(String key) {
+	String txt(String key) {
 		return key + " zh: %s";
 	}
 

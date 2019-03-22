@@ -86,10 +86,11 @@ public class CheapEngin {
 				String busitabl = rs.getString(WfMeta.bussTable);
 				String busiState = rs.getString(WfMeta.bTaskState);
 				String bRecId = rs.getString(WfMeta.bRecId);
+				String instabl = rs.getString(WfMeta.instabl);
 				CheapWorkflow wf = new CheapWorkflow(
 						rs.getString(WfMeta.recId),
 						rs.getString(WfMeta.wfName),
-						rs.getString(WfMeta.instabl),
+						instabl,
 						busitabl, // tasks
 						bRecId, // tasks.taskId
 						busiState, // tasks.wfState
@@ -102,11 +103,10 @@ public class CheapEngin {
 				String conn = CheapEngin.trcs.basiconnId();
 
 				// 2.1 node instance auto key, e.g. task_nodes.instId
-				String nodeInstabl = rs.getString(WfMeta.instabl);
-				DATranscxt.addSemantics(conn, nodeInstabl, nodeInst.id, smtype.autoInc, nodeInst.id);
+				DATranscxt.addSemantics(conn, instabl, nodeInst.id, smtype.autoInc, nodeInst.id);
 
 				// 2.2 task_nodes.oper, opertime
-				DATranscxt.addSemantics(conn, nodeInstabl, nodeInst.id, smtype.opTime,
+				DATranscxt.addSemantics(conn, instabl, nodeInst.id, smtype.opTime,
 						new String[] { nodeInst.oper, nodeInst.id });
 
 				// 2.3 node instance Fk to nodes.nodeId, e.g. task_nodes.nodeId -> oz_wfnodes.nodeId
@@ -116,7 +116,7 @@ public class CheapEngin {
 				// 2.4 business task's pk and current state ref, e.g. tasks.wfState -> task_nodes.instId
 				DATranscxt.addSemantics(conn, busitabl, bRecId, smtype.autoInc, bRecId);
 				DATranscxt.addSemantics(conn, busitabl, bRecId, smtype.fkIns,
-						new String[] {busiState, nodeInstabl, nodeInst.id});
+						new String[] {busiState, instabl, nodeInst.id});
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -338,35 +338,16 @@ public class CheapEngin {
 	 */
 
 	/**step to next node according to current node and request.<br>
-	 * Use case 1: To create a new e_insp_task(start):<br>
-	 * 1. create task (just a virtual node stepping next and on arrive event = newBusi);<br>
-	 * 2.1. generate nodeId for new instance node;<br>
-	 * 2.2. create node - with node.taskId = AUTO;<br>
-	 * 3. update task.taskStatus = new-nodeId got in step 2<br>
-	 * 3.1. update task.startNode = new-nodeId when nodeId = 'f01' (ir_workflow.backRef = "f01:startNode")<br>
-	 * 3.2. update currentNode.nodeState = req-name (starting wf ignored)<br>
-	 * 3.3. handle multi-operation request (e.g. task-devices details)<br>
-	 * 3.4. any post update not related to 3.3 multi-update (with AUTO taskId)<br>
-	 * <p/>
-	 * Use case 2: update task state (next):<br>
-	 * 1. <br>
-	 * 2.1. generate nodeId for new instance node;<br>
-	 * 2.2. create node - with node.taskId = taskId, prevNode=current-nodeId;<br>
-	 * 3. update task.taskStatus = new-nodeId got in step 2<br>
-	 * 3.1. update task.startNode = new-nodeId when nodeId = 'f01' (ir_workflow.backRef = "f01:startNode")<br>
-	 * 3.2. update currentNode.nodeState = req-name (if not start)<br>
-	 * 3.3. handle multi-operation request (e.g. task-devices details)<br>
-	 * 3.4. any post update not related to 3.3 multi-update (providing taskId)<br>
-	 * <p/>
-	 * Use case 3: timeout step:<br>
-	 * 1. <br>
-	 * 2.1. generate nodeId for new instance node;<br>
-	 * 2.2. create node - with node.taskId = taskId, prevNode=current-nodeId;<br>
-	 * 3. update task.taskStatus = new-nodeId got in step 2<br>
-	 * 3.1. update task.startNode = new-nodeId when nodeId = 'f01' (ir_workflow.backRef = "f01:startNode")<br>
-	 * 3.2. update currentNode.nodeState = req-name ("timeout")<br>
-	 * 3.3. (null args) handle multi-operation request (e.g. task-devices details)<br>
-	 * 3.4. (null args) any post update not related to 3.3 multi-update (providing taskId)<br>
+	 * 1. create node instance;<br>
+	 * nv: currentNode.nodeState = cmd-name except start<br>
+	 * 2.1. create task, with busiPack as task nvs.<br>
+	 * semantics: autopk(tasks.taskId), fk(tasks.wfState - task_nodes.instId);<br>
+	 * add back-ref(nodeId:task.nodeBackRef);<br>
+	 * 2.2. or update task,<br>
+	 * semantics: fk(tasks.wfState - task_nodes.instId)<br>
+	 * add back-ref(nodeId:task.nodeBackRef);<br>
+	 * 3. handle multi-operation request, e.g. multireq &amp; postreq<br>
+	 * 
 	 * @param usr
 	 * @param wftype
 	 * @param currentInstId current workflow instance id, e.g. value of c_process_processing.recId
@@ -415,16 +396,13 @@ public class CheapEngin {
 				String.format(Configs.getCfg("cheap-workflow", "t-no-node"),
 				wftype, currentInstId, req));
 
-		// FIX: should checking exception when target node already exists?
+		// Check whether a target node already exists.
+		// In competition saturation, client error, timeout while user considering, target can be already exists.
 		// if (!Req.eq(Req.start, req))
 		//		checkExistance(nextNode, busiId);
 
 		wf.checkRights(usr, currentNode, nextNode, cmd);
 			
-		// 2.1 new node-id
-		// using semantic support instead - semantics all ready added.
-		// String newInstancId = transBuilder.genId(Instabl.tabl, Instabl.instId, null);
-
 		// 3 update task.taskStatus
 		// 3.4. postupdate requested by client
 		Update postupClient = null;
@@ -440,8 +418,9 @@ public class CheapEngin {
 		if (multireq != null) {
 			upd3.postChildren(multireq, trcs);
 		}
+
 		// IMPORTANT timeout checking depends on this (null is not handled for timeout checking)
-		// 3.2 save command name as current node's state (c_process_processing.nodeState = cmdName)
+		// 3.2 save command name as current node's state (task_nodes.nodeState = cmdName)
 		Update post32 = null;
 		if (currentNode != null && Req.start != req && WfMeta.nodeInst.handleCmd != null) {
 			post32 = CheapEngin.trcs.update(wf.instabl())
@@ -461,47 +440,47 @@ public class CheapEngin {
 			//	.nv(wf.bTaskStateRef, newInstancId) - fkIns already solved this semantics
 				.nv(wf.bCateCol, wf.wfId);
 
-			// - fkIns can't solve this semantics because it's not smart enough to find out that whether the data is appliable
+			// - fkIns can't solve this semantics because it's not smart enough to find out that whether the data is applicable
 			if (colname != null)
 				upd3.nv(colname, "FIXME: fk-if-ask");
 		}
 
-		// 2. create node
+		// 1. create node
 		// starting a new wf at the beginning
 		// nodeId = new-id
-		Insert ins2 = CheapEngin.trcs.insert(wf.instabl(), usr);
-		ins2
+		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr);
+		ins1
 			// .nv(Instabl.instId, newInstancId)
 			.nv(nodeInst.nodeFk, nextNode.nodeId())
 			.nv(nodeInst.descol, nodeDesc);
 
 		// 2.2 prevNode=current-nodeId;
 		if (currentInstId != null)
-			ins2.nv(nodeInst.prevInst, currentInstId);
+			ins1.nv(nodeInst.prevInst, currentInstId);
 		// [OPTIONAL] nodeinstance.wfId = wf.wfId
 		if (nodeInst.wfIdFk != null)
-			ins2.nv(nodeInst.wfIdFk, wf.wfId);
+			ins1.nv(nodeInst.wfIdFk, wf.wfId);
 		// check: starting with null busiId
 		// check: busiId not null for step, timeout, ...
 		if (Req.start == req && busiId != null)
 			Utils.warn("Wf: starting a new instance with existing business record '%s' ?", busiId);
 		else if (Req.start != req && busiId == null)
-			throw new CheapException(Configs.getCfg("cheap-workflow", "t-no-business"), wf.wfId);
+			throw new CheapException(wf.txt("no-btask"), wf.wfId);
 
 		// c_process_processing.baseProcessDataId = e_inspect_tasks.taskId
 		// ins2.nv(Instabl.busiFK, Req.start == req ? "AUTO" : busiId);
 
-		Insert ins1 = null; 
+		Insert ins2 = null; 
 		if (Req.start == req) {
 			// start: create task
-			ins1 = CheapEngin.trcs.insert(wf.bTabl, usr);
-			ins1.nv(wf.bCateCol, wf.wfId);
+			ins2 = CheapEngin.trcs.insert(wf.bTabl, usr);
+			ins2.nv(wf.bCateCol, wf.wfId);
 			if (busiPack != null) {
 				for (String[] nv : busiPack) {
-					ins1.nv(nv[0], nv[1]);
+					ins2.nv(nv[0], nv[1]);
 				}
 			}
-			ins1.post(ins2);
+			ins2.post(ins1);
 
 			evt = new CheapEvent(currentNode.wfId(), Evtype.start,
 						currentNode, nextNode,
@@ -511,7 +490,7 @@ public class CheapEngin {
 		}
 		else {
 			// step: insert node instance, update task as post updating.
-			ins1 = ins2;
+			ins2 = ins1;
 			evt = new CheapEvent(currentNode.wfId(), Evtype.step,
 						currentNode, nextNode,
 						busiId, req, cmd);
@@ -519,7 +498,7 @@ public class CheapEngin {
 
 		
 		return new SemanticObject()
-				.put("stmt", ins1)
+				.put("stmt", ins2)
 				.put("evt", evt)
 				.put("stepHandler", currentNode.onEventHandler())
 				.put("arriHandler", nextNode.isArrived(currentNode) ? nextNode.onEventHandler() : null);

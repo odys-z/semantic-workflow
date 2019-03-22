@@ -43,37 +43,6 @@ public class EnginDesign {
 		static final String bTabl = "btabl";
 	}
 
-	/**Workflow instance(task) and node instance (task state) information
-	 * a.k.a. columns and tables of business that must be handled by workflow engine.
-	 */
-//	static class Instabl {
-//		/**Workflow instance table's pk column name */
-//		static final String instId = "recId";
-//		
-//		/**Workflow instance table's node id fk to ir_wfdef.nodeId, e.g tasks.nodeId referering oz_wfnodes.nodeId */
-//		static final String nodeFk = "nodeId";
-//		
-//		/**<b>Optional</b> wf type id FK to Wftabl.recId (nodeWfId) */
-//		static final String wfIdFk = null;
-//
-//		/**Workflow instance reference to business record, e.g. e_inspect_tasks.taskId */
-//		// static final String busiFK = "baseProcessDataId";
-//
-//		/**Workflow instance table's node description column name */
-//		static final String descol = "descpt";
-//		
-//		/**update time in instance table*/
-//		static final String operTime = "oper";
-//		
-//		/**Workflow instance table's column that recording user's command handled this node,
-//		 * e.g. c_process_processing.nodeState used to record req name. */
-//		static final String handleCmd = "handlingCmd";
-//		
-//		/** Previous instance node cole: c_process_processing.prevRec<br>
-//		 * Reason? The last handled description is important to show in main list. */
-//		static final String prevInstNode = "prevRec";
-//	}
-
 	static class WfMeta {
 		/** virtual node code hard coded */
 		static final String wftabl = "oz_workflow";
@@ -81,6 +50,11 @@ public class EnginDesign {
 
 		static final String virtualNCode = "virt";
 		static final String recId = "wfId";
+
+		/**Column of node-instance-table-name<br>
+		 * This table name is configurable in oz_workflow.instabl,
+		 * for separating node instance table to improve performance
+		 * - this table can be large.*/
 		static final String instabl = "instabl";
 		static final String bussTable = "bussTable";
 		static final String bRecId = "bRecId";
@@ -109,14 +83,10 @@ public class EnginDesign {
 		static final String cmdTxt = "txt";
 		static final String cmdSort = "sort";
 
-		/** Node instance table, e.g task_nodes*/
+		/**Node instance table, e.g task_nodes.
+		 * Node instance table name is configured in WfMeta.instabl, e.g. oz_workflow.instabl.
+		 * */
 		static class nodeInst {
-			/** column of node-instance-table-name
-			 * This table name is configurable in oz_workflow.instabl,
-			 * for separating node instance table to improve performance
-			 * - this table can be large.*/
-			static final String tabl = "task_nodes";
-
 			/**e.g. task_nodes.instId */
 			static final String id = "instId";
 
