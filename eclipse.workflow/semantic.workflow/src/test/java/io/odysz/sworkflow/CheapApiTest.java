@@ -46,7 +46,6 @@ public class CheapApiTest {
 		}
 	}
 
-
 	@Test
 	public void testStart() throws SQLException, TransException {
 		// TODO test support dels with semantics.xml
@@ -121,7 +120,7 @@ public class CheapApiTest {
 					"  CONSTRAINT oz_logs_pk PRIMARY KEY (logId))");
 
 				sqls.add("CREATE TABLE oz_workflow (\n" +
-					 "nodeWfId varchar(50) NOT NULL,\n" +
+					 "wfId varchar(50) NOT NULL,\n" +
 					 "wfName varchar(50) NOT NULL,\n" +
 					 "instabl varchar(20) NOT NULL, -- node instance's table name\n" +
 					 "bussTable varchar(20) NOT NULL, -- e.g. task\n" +
@@ -131,18 +130,18 @@ public class CheapApiTest {
 					 "node1 varchar(50) NOT NULL , -- start node id in ir_wfdef,\n" +
 					 "backRefs varchar(200) DEFAULT NULL , -- node instance back reference to business task record pk, format [node-id]:[business-col],\n" +
 					 "sort int(11) DEFAULT NULL,\n" +
-					 "PRIMARY KEY (nodeWfId) )"
+					 "PRIMARY KEY (wfId) )"
 					);
 
 				sqls.add("CREATE TABLE oz_wfnodes (\n" +
-					 "nodeWfId varchar(50) NOT NULL,\n" +
+					 "wfId varchar(50) NOT NULL,\n" +
 					 "nodeId varchar(50) NOT NULL,\n" +
 					 "sort int default 1,\n" +
 					 "nodeName varchar(20) DEFAULT NULL,\n" +
 					 "nodeCode varchar(20) DEFAULT NULL,\n" +
 					 "arrivCondit varchar(200) DEFAULT NULL, -- '[TODO] previous node list. If not null, all previous node handlered can reach here . EX: a01 AND (a02 OR a03)',\n" +
 					 "cmdRights varchar(2000), -- rights view sql, args: $1s current id, $2s next id, $3s uid, $4s cmd (oz_wfnodes.cmd)\n" +
-					 "ntimeoutRoute varchar(500) NULL, -- 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)',\n" +
+					 "timeoutRoute varchar(500) NULL, -- 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)',\n" +
 					 "timeouts int(11) DEFAULT NULL, -- 'timeout minutes',\n" +
 					 "nonEvents varchar(200) DEFAULT NULL, -- the envent handler's class name\n" +
 					 "PRIMARY KEY (nodeId) )"
@@ -174,7 +173,7 @@ public class CheapApiTest {
 				sqls.add("CREATE TABLE tasks (\n" +
 					"-- business task\n" +
 					 "taskId varchar(20) NOT NULL,\n" +
-					 "nodeWfId varchar(20) NOT NULL,\n" +
+					 "wfId varchar(20) NOT NULL,\n" +
 					 "wfState varchar(20) NOT NULL,\n" +
 					 "oper varchar(20) NOT NULL,\n" +
 					 "opertime DATETIME,\n" +
@@ -194,11 +193,11 @@ public class CheapApiTest {
 				Connects.commit(usr, sqls, Connects.flag_nothing);
 				sqls.clear();
 
-				sqls.add("insert into oz_workflow (nodeWfId, wfName, instabl, bussTable, bRecId, bStateRef, bussCateCol, node1, backRefs, sort)\n" +
-					"values ('t01', 'workflow 01', 'task_nodes', 'tasks', 'taskId', 'wfState', 'nodeWfId', 't01.01', 't01.03:requireAllStep', '0')");
+				sqls.add("insert into oz_workflow (wfId, wfName, instabl, bussTable, bRecId, bStateRef, bussCateCol, node1, backRefs, sort)\n" +
+					"values ('t01', 'workflow 01', 'task_nodes', 'tasks', 'taskId', 'wfState', 'wfId', 't01.01', 't01.01:startNode,t01.03:requireAllStep', '0')");
 				
-				sqls.add("insert into oz_wfnodes( nodeWfId, nodeId, sort, nodeName, nodeCode,  \n" +
-					"	arrivCondit, cmdRights, ntimeoutRoute, timeouts, nonEvents )\n" +
+				sqls.add("insert into oz_wfnodes( wfId, nodeId, sort, nodeName, nodeCode,  \n" +
+					"	arrivCondit, cmdRights, timeoutRoute, timeouts, nonEvents )\n" +
 					"values\n" +
 					"('t01', 't01.01', 10, 'starting', 't01.01',  \n" +
 						"null, null, null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
@@ -223,7 +222,7 @@ public class CheapApiTest {
 					"('a_logs.logId', 0, 'log'),\n" +
 					"('task_nodes.instId', 0, 'node instances'),\n" +
 					"('tasks.taskId', 0, 'tasks'),\n" +
-					"('task_details.detailId', 0, 'task details')");
+					"('task_details.recId', 0, 'task details')");
 
 				Connects.commit(usr, sqls, Connects.flag_nothing);
 			} catch (Exception e) {

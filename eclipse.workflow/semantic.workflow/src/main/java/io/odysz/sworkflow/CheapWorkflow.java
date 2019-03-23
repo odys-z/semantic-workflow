@@ -43,7 +43,7 @@ public class CheapWorkflow {
 	private VirtualNode virtualNode;
 
 	/** node instance table name, configured in oz_workflow.instabl */
-	private String instabl;
+	String instabl;
 
 	private CheapNode startingNode;
 
@@ -75,7 +75,7 @@ public class CheapWorkflow {
 		// load configs
 		SResultset rs = (SResultset) CheapEngin.trcs
 				.select(WfMeta.nodeTabl)
-				.rs(CheapEngin.trcs.basiContext());
+				.rs(CheapEngin.trcs.basictx());
 		rs.beforeFirst();
 
 		nodes = new HashMap<String, CheapNode>(rs.getRowCount());

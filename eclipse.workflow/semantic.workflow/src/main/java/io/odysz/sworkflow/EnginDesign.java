@@ -70,7 +70,7 @@ public class EnginDesign {
 		static final String ncode = "nodeCode";
 		static final String nname = "nodeName";
 		static final String narriveCondit = "arrivCondit";
-		static final String nonEvents = "onEvents";
+		static final String nonEvents = "nonEvents";
 		/**time out in minute */
 		static final String noutTime = "timeouts";
 		/**timeout route (nodeId) */

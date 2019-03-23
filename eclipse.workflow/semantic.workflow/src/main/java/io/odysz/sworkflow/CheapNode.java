@@ -42,11 +42,6 @@ public class CheapNode {
 	public static class VirtualNode extends CheapNode {
 		private CheapNode toStartNode;
 
-//		VirtualNode(CheapWorkflow wf, String startId, int timeout, String ntimeoutRoute,
-//				String nonEvents, String rightView) throws SQLException, TransException {
-//			super(wf, "virt-" + startId, "start", "invisible", null, timeout, ntimeoutRoute, nonEvents, rightView);
-//		}
-
 		public VirtualNode(CheapWorkflow wf, CheapNode startNode)
 				throws SQLException, TransException {
 			super(wf, "virt-" + startNode.nid, "start", "invisible", null, 0, null, null, null);
@@ -129,7 +124,7 @@ public class CheapNode {
 				.col(WfMeta.cmdRoute, "route")
 				.col(WfMeta.cmdSort, "sort")
 				.where("=", WfMeta.nid, "'" + nodeId + "'")
-				.rs(CheapEngin.trcs.basiContext());
+				.rs(CheapEngin.trcs.basictx());
 		rs.beforeFirst();
 		while (rs.next()) {
 			String cmd = rs.getString("cmd");
