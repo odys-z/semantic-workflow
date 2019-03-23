@@ -53,7 +53,7 @@ public class CheapApi {
 
 	private String multiChildTabl;
 	private ArrayList<String[]> multiDels;
-	private ArrayList<String[]> multiInserts;
+	private ArrayList<ArrayList<String[]>> multiInserts;
 	private Update postups;
 	private String cmd;
 	
@@ -77,7 +77,7 @@ public class CheapApi {
 	}
 	
 	public CheapApi taskChildMulti(String tabl,
-			ArrayList<String[]> delConds, ArrayList<String[]> inserts) {
+			ArrayList<String[]> delConds, ArrayList<ArrayList<String[]>> inserts) {
 		multiChildTabl = tabl;
 		multiDels = delConds;
 		multiInserts = inserts;

@@ -60,9 +60,10 @@ public class CheapJReq extends SemanticObject {
 	 * @param delConds
 	 * @param inserts
 	 * @return formated SemanticObject
+	 * @throws TransException 
 	 */
 	public static SemanticObject formatMulti(CheapTransBuild st, String tabl,
-			ArrayList<String[]> delConds, ArrayList<String[]> inserts) {
+			ArrayList<String[]> delConds, ArrayList<ArrayList<String[]>> inserts) throws TransException {
 		SemanticObject jmultis = new SemanticObject();
 		// del
 		if (delConds != null) {
@@ -75,11 +76,12 @@ public class CheapJReq extends SemanticObject {
 		
 		// insert
 		if (inserts != null) {
-			Insert jinss = st.insert(tabl);
-			for (String[] nv : inserts) {
-				jinss.nv(nv[0], nv[1]);
+			for (ArrayList<String[]> nvs : inserts) {
+				Insert jinss = st.insert(tabl);
+				for (String[] nv : nvs) 
+					jinss.nv(nv[0], nv[1]);
+				jmultis.add("insert", jinss);
 			}
-			jmultis.put("insert", jinss);
 		}
 
 		return jmultis;

@@ -15,14 +15,14 @@
   		<args>oper,opertime</args>
   	</s>
   	<s> <id>02</id>
-  		<smtc>a-i</smtc>
-  		<smtc>task_details</smtc>
+  		<smtc>pk</smtc>
+  		<tabl>task_details</tabl>
   		<pk>recId</pk>
   		<args>recId</args>
   	</s>
   	<s> <id>03</id>
   		<smtc>fk-ins</smtc>
-  		<smtc>task_details</smtc>
+  		<tabl>task_details</tabl>
   		<pk>recId</pk>
   		<args>taskId,tasks,taskId</args>
   	</s>

@@ -69,9 +69,11 @@ public class CheapEngin {
 			LinkedHashMap<String, XMLTable> xtabs = loadXmeta(filepath);
 			XMLTable tb = xtabs.get("conn");
 			tb.beforeFirst().next();
-			String connId = tb.getString("conn");
+			String conn = tb.getString("conn");
 
-			trcs = new CheapTransBuild(connId, xtabs.get("semantics"));
+			trcs = new CheapTransBuild(conn, xtabs.get("semantics"));
+
+			// String conn = CheapEngin.trcs.basiconnId();
 
 			// select * from oz_wfworkflow;
 			SResultset rs = (SResultset) trcs
@@ -100,13 +102,12 @@ public class CheapEngin {
 				wfs.put(rs.getString(WfMeta.recId), wf);
 
 				// 2. append semantics for handling routes, etc.
-				String conn = CheapEngin.trcs.basiconnId();
 
 				// 2.1 node instance auto key, e.g. task_nodes.instId
-				DATranscxt.addSemantics(conn, instabl, nodeInst.id, smtype.autoInc, nodeInst.id);
+				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.autoInc, nodeInst.id);
 
 				// 2.2 node instance oper, opertime
-				DATranscxt.addSemantics(conn, instabl, nodeInst.id, smtype.opTime,
+				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.opTime,
 						new String[] { nodeInst.oper, nodeInst.opertime });
 
 				// 2.3 node instance Fk to nodes.nodeId, e.g. task_nodes.nodeId -> oz_wfnodes.nodeId
@@ -114,8 +115,8 @@ public class CheapEngin {
 //						String.format("%s,%s,%s", WfMeta.nodeInstNode, WfMeta.nodeTabl, WfMeta.nid));
 
 				// 2.4 business task's pk and current state ref, e.g. tasks.wfState -> task_nodes.instId
-				DATranscxt.addSemantics(conn, busitabl, bRecId, smtype.autoInc, bRecId);
-				DATranscxt.addSemantics(conn, busitabl, bRecId, smtype.fkIns,
+				CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.autoInc, bRecId);
+				CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.fkIns,
 						new String[] {busiState, instabl, nodeInst.id});
 			}
 		} catch (SQLException e) {
@@ -354,7 +355,7 @@ public class CheapEngin {
 					throws SQLException, TransException {
 
 		CheapNode currentNode; 
-		CheapEvent evt = null; 
+//		CheapEvent evt = null; 
 
 		if (wfs == null)
 			throw new SemanticException("Engine must be initialized");
@@ -454,6 +455,20 @@ public class CheapEngin {
 //		}
 //		ins1.post(upd3);
 		ins1.postChildren(multireq, trcs);
+		
+		CheapEvent evt = null;
+		if (Req.start == req)
+			// start: create task
+			evt = new CheapEvent(currentNode.wfId(), Evtype.start,
+						currentNode, nextNode,
+						// busiId is null for new task, resolved later
+						String.format("RESULVE %s.%s", WfMeta.bussTable, WfMeta.bRecId),
+						Req.start, Req.start.name());
+		else
+			// step: insert node instance, update task as post updating.
+			evt = new CheapEvent(currentNode.wfId(), Evtype.step,
+						currentNode, nextNode,
+						busiId, req, cmd);
 
 		return new SemanticObject()
 				.put("stmt", ins1)

@@ -13,7 +13,7 @@ import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.x.TransException;
 
 public class CheapWorkflow {
-	public static final String virtNodeSuffix = "-virt01";
+//	public static final String virtNodeSuffix = "-virt01";
 	
 	String wfId;  
 	String wfName;  

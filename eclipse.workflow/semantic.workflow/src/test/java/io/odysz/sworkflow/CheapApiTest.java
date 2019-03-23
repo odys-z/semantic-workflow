@@ -54,10 +54,18 @@ public class CheapApiTest {
 
 		// add some business details (not logic of workflow, but needing committed in same transaction)
 		// also check fkIns, task_details, , taskId, tasks, taskId configurations
-		ArrayList<String[]> inserts = new ArrayList<String[]>();
-		inserts.add(new String[] {"remarks", "detail-1"});
-		inserts.add(new String[] {"remarks", "detail-2"});
-		inserts.add(new String[] {"remarks", "detail-3"});
+		ArrayList<ArrayList<String[]>> inserts = new ArrayList<ArrayList<String[]>>();
+		ArrayList<String[]> row = new ArrayList<String[]>();
+		row.add(new String[] {"remarks", "detail-1"});
+		inserts.add(row);
+
+		row = new ArrayList<String[]>();
+		row.add(new String[] {"remarks", "detail-2"});
+		inserts.add(row);
+
+		row = new ArrayList<String[]>();
+		row.add(new String[] {"remarks", "detail-3"});
+		inserts.add(row);
 		
 		Update postups = null;
 		SemanticObject res = CheapApi.start(wftype)
