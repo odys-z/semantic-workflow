@@ -70,6 +70,7 @@ public class EnginDesign {
 		static final String ncode = "nodeCode";
 		static final String nname = "nodeName";
 		static final String narriveCondit = "arrivCondit";
+		static final String ncmdRigths = "cmdRights";
 		static final String nonEvents = "nonEvents";
 		/**time out in minute */
 		static final String noutTime = "timeouts";
@@ -100,7 +101,6 @@ public class EnginDesign {
 
 			static final String handleCmd = "handlingCmd";
 
-			static final String cmdRigths = "cmdRights";
 
 			static final String descol = "descpt";
 

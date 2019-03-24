@@ -7,6 +7,7 @@ import java.util.Set;
 
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
+import io.odysz.semantic.DA.DatasetCfg.Dataset;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.Req;
@@ -215,25 +216,40 @@ public class CheapNode {
 
 	public String arrivCondt() { return prevNodes; }
 
-	public Set<String> rights(CheapNode nextNode, String cmd, IUser usr) throws SQLException {
+	public Set<String> rights(CheapTransBuild trcs, CheapNode node, String cmd, IUser usr, String taskId)
+			throws SQLException, SemanticException {
 //		if (this instanceof VirtualNode)
 //			// FIXME What about the user can't start this workflow?
 //			return routes.keySet();
 //		else
 		if (rights != null) {
-			String vw = String.format(rights, nextNode.nid, usr.uid());
+			// args: [%1$s] wfid, [%2$s] node-id, [%3$s] user-id, [%4$s] task-id
+			String vw = String.format(rightDs(rights, trcs), node.wfId(), node.nid, usr.uid(), taskId);
 			SResultset rs = Connects.select(CheapEngin.trcs.basiconnId(), vw, Connects.flag_nothing);
 
 			rs.beforeFirst();
 			HashSet<String> set = new HashSet<String>();
 			while (rs.next()) {
-				set.add(rs.getString("to"));
+				set.add(rs.getString(1));
 			}
 			return set;
 		}
 		else {
 			return routes.keySet();
 		}
+	}
+
+	/**Get sql configured in workflow-meta.xml/table="rigth-ds"
+	 * @param dskey
+	 * @param trcs
+	 * @return configured sql template
+	 * @throws SemanticException
+	 * @throws SQLException
+	 */
+	public static String rightDs(String dskey, CheapTransBuild trcs) throws SemanticException, SQLException {
+		Dataset ds = CheapEngin.ritConfigs.get(dskey);
+		String sql = ds.getSql(Connects.driverType(trcs.basiconnId()));
+		return sql;
 	}
 
 }

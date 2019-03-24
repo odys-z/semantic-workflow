@@ -15,6 +15,7 @@ import io.odysz.common.DateFormat;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
+import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Update;
@@ -78,20 +79,21 @@ public class CheapApiTest {
 		// FIXME move commitment to engine
 		Insert ins = (Insert) res.get("stmt");
 		ArrayList<String> sqls = new ArrayList<String>();
-		ins.ins(testTrans.instancontxt(usr));
+		ISemantext smtxt = testTrans.instancontxt(usr);
+		ins.ins(smtxt);
 		
 		Utils.logi(sqls);
 
 		// Utils.logi(res.get("stepEvt").toString());
 		ICheapEventHandler eh = (ICheapEventHandler) res.get("stepHandler");
 		if (eh != null)
-			eh.onCmd((CheapEvent) res.get("evt"));
+			eh.onCmd(((CheapEvent) res.get("evt")).resulve(smtxt));
 		else Utils.logi("No stepping event");
 
 		eh = (ICheapEventHandler) res.get("arriHandler");
 		if (eh != null)
-			eh.onCmd((CheapEvent) res.get("evt"));
-		else Utils.logi("No arriving event");
+			eh.onArrive(((CheapEvent) res.get("evt")).resulve(smtxt));
+		else Utils.logi("No arriving event handler");
 	}
 
 	void testNext() {
@@ -228,9 +230,9 @@ public class CheapApiTest {
 
 				sqls.add("insert into oz_autoseq (sid, seq, remarks) values\n" +
 					"('a_logs.logId', 0, 'log'),\n" +
-					"('task_nodes.instId', 0, 'node instances'),\n" +
+					"('task_nodes.instId', 64, 'node instances'),\n" + // 64: for readable difference
 					"('tasks.taskId', 0, 'tasks'),\n" +
-					"('task_details.recId', 0, 'task details')");
+					"('task_details.recId', 128, 'task details')"); // 128: for readable difference
 
 				Connects.commit(usr, sqls, Connects.flag_nothing);
 			} catch (Exception e) {

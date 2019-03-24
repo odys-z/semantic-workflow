@@ -8,6 +8,7 @@ import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapNode.VirtualNode;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.x.TransException;
@@ -89,7 +90,7 @@ public class CheapWorkflow {
 					rs.getInt(WfMeta.noutTime, 0),
 					rs.getString(WfMeta.ntimeoutRoute),
 					rs.getString(WfMeta.nonEvents),
-					rs.getString(WfMeta.nodeInst.cmdRigths));
+					rs.getString(WfMeta.ncmdRigths));
 			nodes.put(rs.getString(WfMeta.nid), n);
 		}
 		
@@ -134,19 +135,26 @@ public class CheapWorkflow {
 	}
 
 	/**Check user rights for req.
+	 * @param trcs
 	 * @param usr
-	 * @param currentNode
-	 * @param nextNode
-	 * @param req
-	 * @throws CheapException no such right to commit a requested command
+	 * @param node
+	 * @param cmd
+	 * @param taskId
 	 * @throws SQLException Database accessing failed
+	 * @throws SemanticException 
 	 */
-	public void checkRights(IUser usr, CheapNode currentNode, CheapNode nextNode, String cmd) throws CheapException, SQLException {
+	public void checkRights(CheapTransBuild trcs, IUser usr, CheapNode node, String cmd, String taskId)
+			throws SemanticException {
 		if (usr instanceof CheapRobot)
 			return;
-		if (currentNode != null)
-			if (!currentNode.rights(nextNode, cmd, usr).contains(cmd))
-				throw new CheapException(txt("t-no-rights"), usr.uid());
+		if (node != null)
+			try {
+				if (!node.rights(trcs, node, cmd, usr, taskId).contains(cmd))
+					throw new CheapException(txt("t-no-rights"), usr.uid());
+			} catch (SQLException e) {
+				throw new CheapException(txt("t-rights-config-err"),
+						e.getMessage(), node, cmd, usr, taskId);
+			}
 	}
 
 	/**Get configured text string in workflow-meta.xml/table='txt'
