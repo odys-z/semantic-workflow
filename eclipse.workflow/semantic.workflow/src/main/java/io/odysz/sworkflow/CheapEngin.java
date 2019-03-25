@@ -112,12 +112,19 @@ public class CheapEngin {
 
 				// 2.1 node instance auto key, e.g. task_nodes.instId
 				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.autoInc, nodeInst.id);
+				
+				// 2.2 node instance fk-ins to tasks.taskId
+				// in case of step, task-id is not created, the ref string is kept untouched
+				// - this shall be improved, implicit semantics is not encouraged.
+				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.fkIns,
+						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
 
-				// 2.2 node instance oper, opertime
+
+				// 2.3 node instance oper, opertime
 				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.opTime,
 						new String[] { nodeInst.oper, nodeInst.opertime });
 
-				// 2.3 business task's pk and current state ref, e.g. tasks.wfState -> task_nodes.instId
+				// 2.4 business task's pk and current state ref, e.g. tasks.wfState -> task_nodes.instId
 				CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.autoInc, bRecId);
 				CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.fkIns,
 						new String[] {busiState, instabl, nodeInst.id});
@@ -169,7 +176,6 @@ public class CheapEngin {
 	 * 
 	 * @param usr
 	 * @param wftype
-	 * @param currentInstId current workflow instance id, e.g. value of c_process_processing.recId
 	 * @param req
 	 * @param cmd commands in the same as that configured in oz_wfcmds.cmd
 	 * @param busiId business record ID if exists, or null to create (providing piggyback)
@@ -185,25 +191,32 @@ public class CheapEngin {
 	 * @throws SQLException
 	 * @throws TransException 
 	 */
-	public static SemanticObject onReqCmd(IUser usr, String wftype, String currentInstId, Req req, String cmd,
+	public static SemanticObject onReqCmd(IUser usr, String wftype, Req req, String cmd,
 			String busiId, String nodeDesc, ArrayList<String[]> busiPack,
 			SemanticObject multireq, Update postreq)
 					throws SQLException, TransException {
-
+		String currentInstId = null;
 		CheapNode currentNode; 
-//		CheapEvent evt = null; 
 
 		if (wfs == null)
 			throw new SemanticException("Engine must be initialized");
 
+		// prepare current node
 		CheapWorkflow wf = wfs.get(wftype);
 		if (req == Req.start) {
 			currentNode = wf.start(); // a virtual node
 			cmd = Req.start.name();
 		}
 		else {
-			currentNode = wf.getNodeByInst(currentInstId);
+			if (busiId == null)
+				throw new CheapException("Command %s.%s needing find task/business record first. but busi-id is null",
+						req.name(), cmd);
+			String[] tskInf = wf.getInstByTask(trcs, busiId);
+			currentInstId = tskInf[1];
+			currentNode = wf.getNode(tskInf[2]); // FIXME can be simplified
 		}
+
+		// prepare next node
 		if (currentNode == null) throw new SQLException(
 				String.format(Configs.getCfg("cheap-workflow", "t-no-node"),
 				wftype, currentInstId, req));
@@ -214,16 +227,11 @@ public class CheapEngin {
 			throw new CheapException(wf.txt("t-no-node"), 
 				wftype, currentInstId, req);
 
-		// Check whether a target node already exists.
-		// In competition saturation, client error, timeout while user considering, target can be already exists.
-		// if (!Req.eq(Req.start, req))
-		//		checkExistance(nextNode, busiId);
-
 		if (req == Req.start)
-			// FIXME shall we use basic context?
-			wf.checkRights(trcs, usr, nextNode, cmd, busiId);
+			nextNode.checkRights(trcs, usr, cmd, busiId);
 		else
-			wf.checkRights(trcs, usr, currentNode, cmd, busiId);
+			// wf.checkRights(trcs, usr, currentNode, cmd, busiId);
+			currentNode.checkRights(trcs, usr, cmd, busiId);
 
 		// 1. create node instance;<br>
 		// post nv: nextInst.prevNode = current.id except start<br>
@@ -238,11 +246,12 @@ public class CheapEngin {
 		// with nv: currentInst.nodeState = cmd-name except start<br>
 		// post nv: nextInst.prevNode = current.id except start<br>
 		if (Req.start != req) {
-			ins1.nv(nodeInst.prevInst, currentInstId);
+			ins1.nv(nodeInst.prevInst, currentInstId)
+				.nv(nodeInst.busiFk, busiId); // busiId shouldn't resulved with fk-ins
 
 			ins1.post(trcs.update(wf.instabl)
 						.nv(nodeInst.handleCmd, cmd)
-						.where("=", nodeInst.id, currentInstId));
+						.where("=", nodeInst.id, "'" + currentInstId + "'"));
 		}
 
 		// 2.0. prepare back-ref(nodeId:task.nodeBackRef);
@@ -277,7 +286,8 @@ public class CheapEngin {
 			Update upd2 = trcs.update(wf.bTabl, usr)
 					.nv(wf.bTaskStateRef,
 							// trcs.basictx().formatResulv(wf.instabl, wf.bRecId));
-							newInstId);
+							newInstId)
+					.where("=", wf.bRecId, "'" + busiId + "'");
 
 			if (colname != null)
 				upd2.nv(colname, newInstId);

@@ -2,11 +2,19 @@ package io.odysz.sworkflow;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.concurrent.locks.ReentrantLock;
 
+import io.odysz.module.rs.SResultset;
+import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.EnginDesign.Req;
+import io.odysz.sworkflow.EnginDesign.WfMeta;
+import io.odysz.transact.sql.Insert;
+import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Update;
+import io.odysz.transact.sql.parts.Logic;
+import io.odysz.transact.sql.parts.condition.Condit;
 import io.odysz.transact.x.TransException;
 
 /**CheapEngine API for server side, equivalent to js/cheapwf.<br>
@@ -14,6 +22,7 @@ import io.odysz.transact.x.TransException;
  * @author ody
  */
 public class CheapApi {
+	static ReentrantLock lock = new ReentrantLock();
 	/**Get an API instance to start a new workflow of type wftype.
 	 * @param wftype
 	 * @return
@@ -22,9 +31,8 @@ public class CheapApi {
 		return new CheapApi(wftype, Req.start, null);
 	}
 
-	public static CheapApi next(String wftype, String currentNode, String taskId) {
-		CheapApi api = new CheapApi(wftype, Req.cmd, null);
-		api.currentNode = currentNode;
+	public static CheapApi next(String wftype, String taskId, String cmd) {
+		CheapApi api = new CheapApi(wftype, Req.cmd, cmd);
 		api.taskId = taskId;
 		return api;
 	}
@@ -36,9 +44,8 @@ public class CheapApi {
 	 * @param taskId
 	 * @return
 	 */
-	static CheapApi stepTimeout(String wftype, String currentNode, String taskId) {
+	static CheapApi stepTimeout(String wftype, String taskId) {
 		CheapApi api = new CheapApi(wftype, Req.timeout, null);
-		api.currentNode = currentNode;
 		api.taskId = taskId;
 		return api;
 	}
@@ -47,7 +54,6 @@ public class CheapApi {
 	private Req req;
 	private String taskId;
 	private String nodeDesc;
-	private String currentNode;
 	/** task table n-vs */
 	private ArrayList<String[]> nvs;
 
@@ -56,7 +62,6 @@ public class CheapApi {
 	private ArrayList<ArrayList<String[]>> multiInserts;
 	private Update postups;
 	private String cmd;
-	
 
 	protected CheapApi(String wftype, Req req, String cmd) {
 		this.wftype = wftype;
@@ -92,17 +97,51 @@ public class CheapApi {
 	/**Commit current request set in {@link #req}.
 	 * @param usr
 	 * @param st 
-	 * @return {stmt: {@link Update} (for committing), <br>
-	 * 		evt: {@link CheapEvent} for start event(new task ID must resolved), <br>
+	 * @return { evt: {@link CheapEvent} for start event(new task ID must resolved), <br>
 	 * 		stepHandler: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
-	 * 		arriHandler: {@link CheapEvent} for arriving event if there is one configured}
+	 * 		arriHandler: {@link CheapEvent} for arriving event if there is one configured<br>
+	 * }
 	 * @throws SQLException
 	 * @throws TransException 
 	 */
 	public SemanticObject commit(IUser usr, CheapTransBuild st) throws SQLException, TransException {
 		SemanticObject multireq = CheapJReq.formatMulti(st, multiChildTabl, multiDels, multiInserts);
-		return CheapEngin.onReqCmd(usr, wftype, currentNode, req, cmd,
+		SemanticObject jreq = CheapEngin.onReqCmd(usr, wftype, req, cmd,
 					taskId, nodeDesc, nvs, multireq, postups);
-	}
 
+		Insert ins = (Insert) jreq.get("stmt");
+		ISemantext smtxt = st.instancontxt(usr);
+
+		// prepare competition checking
+		CheapEvent evt = (CheapEvent) jreq.get("evt");
+		CheapWorkflow wf = CheapEngin.getWf(evt.wfId());
+
+		// select count(n.nodeId) from oz_wfnodes n 
+		// join task_nodes prv on n.nodeId = prv.nodeId
+		// join task_nodes nxt on n.nodeId = nxt.nodeId and nxt.prevRec = prv.instId
+		// where n.arrivCondit is null
+		Query q = st.select(WfMeta.nodeTabl, "n")
+				.col("count(n.nodeId)", "cnt")
+				.j(wf.instabl, "prv", "n.nodeId = prv.nodeId")
+				.j(wf.instabl, "nxt", "n.nodeId = nxt.nodeId and nxt.prevRec = prv.instId")
+				.where(new Condit(Logic.op.isnull, WfMeta.narriveCondit, null));
+
+		lock.lock();
+		try {
+			// check competition, commit
+			SResultset rs = (SResultset) q.rs(smtxt);
+			if (rs.beforeFirst().next()) {
+				if (rs.getInt("cnt") > 0)
+					throw new CheapException(
+						"Target instance already exists. wfid = %s, current state = %s, cmd = %s, business Id = %s",
+						wf.wfId, evt.currentNodeId(), evt.cmd(), evt.taskId());
+			}
+			ins.ins(smtxt);
+		} finally { lock.unlock(); }
+
+		((CheapEvent) jreq.get("evt")).resulve(smtxt);
+
+		jreq.remove("stmt");
+		return jreq;
+	}
 }

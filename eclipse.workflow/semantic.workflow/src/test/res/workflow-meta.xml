@@ -47,19 +47,19 @@
 	<s>
 		<!-- ds-allcmd is configured in oz_wfnodes.cmdRights -->
   		<sk>ds-allcmd</sk>
-  		<mysql>SELECT cmd, rightFilter from oz_wfcmds c
-  		join oz_wfnodes n on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'</mysql>
-  		<sqlit>SELECT cmd, rightFilter from oz_wfcmds c
-  		join oz_wfnodes n on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'</sqlit>
+  		<mysql>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'</mysql>
+  		<sqlit>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'</sqlit>
 	</s>
 
 	<s>
 		<!-- ds-v1 is configured in oz_wfnodes.cmdRights -->
   		<sk>ds-v1</sk>
-  		<mysql>SELECT cmd, rightFilter from oz_wfcmds c
-  		join oz_wfnodes n on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</mysql>
-  		<sqlit>SELECT cmd, rightFilter from oz_wfcmds c
-  		join oz_wfnodes n on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</sqlit>
+  		<mysql>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</mysql>
+  		<sqlit>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</sqlit>
 	</s>
   </t>
 </workflow>

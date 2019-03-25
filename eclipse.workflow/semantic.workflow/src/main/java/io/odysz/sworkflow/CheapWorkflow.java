@@ -5,17 +5,12 @@ import java.util.HashMap;
 
 import io.odysz.common.LangExt;
 import io.odysz.module.rs.SResultset;
-import io.odysz.semantic.DA.Connects;
-import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
-import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapNode.VirtualNode;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.x.TransException;
 
 public class CheapWorkflow {
-//	public static final String virtNodeSuffix = "-virt01";
-	
 	String wfId;  
 	String wfName;  
 	/**business table name */
@@ -110,16 +105,43 @@ public class CheapWorkflow {
 		return nodes == null ? null : nodes.get(nodeId);
 	}
 
-	public CheapNode getNodeByInst(String instId) throws SQLException {
-		String sql = String.format("select %s nodeId from %s i where i.%s = '%s'",
-				WfMeta.nodeInst.nodeFk, instabl(), WfMeta.nodeInst.id, instId);
-		SResultset rs = Connects.select(sql);
-		if (rs.beforeFirst().next()) {
-			String nodeId = rs.getString("nodeId");
-			return nodes.get(nodeId);
-		}
+	/**
+	 * @param trcs
+	 * @param busiId
+	 * @return 0: busiId(taskId), 1: instance-id (instabl.intId), 2: nodeId
+	 * @throws TransException
+	 * @throws SQLException
+	 */
+	public String[] getInstByTask(CheapTransBuild trcs, String busiId) throws TransException, SQLException {
+		SResultset rs = (SResultset) trcs
+				.select(bTabl, "b")
+				// join task_nodes i on i.taskId = b.taskId and i.taskId = '000004'
+				.j(instabl, "i",  String.format(
+						"i.taskId = b.%s and i.taskId = '%s' and b.wfState = i.instId",
+						bRecId, busiId))
+				.col("i.instId", "instId")
+				.col("b." + bRecId, "busiId")
+				.col("i.nodeId", "nodeId")
+				.rs(trcs.basictx());
+
+		if (rs.beforeFirst().next())
+			return new String[] {
+					rs.getString("busiId"),
+					rs.getString("instId"),
+					rs.getString("nodeId")};
 		return null;
 	}
+
+//	public CheapNode getNodeByInst(String nodeId) throws SQLException {
+//		String sql = String.format("select %s nodeId from %s i where i.%s = '%s'",
+//				WfMeta.nodeInst.nodeFk, instabl(), WfMeta.nodeInst.id, instId);
+//		SResultset rs = Connects.select(sql);
+//		if (rs.beforeFirst().next()) {
+//			String nodeId = rs.getString("nodeId");
+//			return nodes.get(nodeId);
+//		}
+//		return null;
+//	}
 
 	/**Different workflow can have different nodes instance table.
 	 * Use this to get correct instance table name.
@@ -132,29 +154,6 @@ public class CheapWorkflow {
 		if (virtualNode == null)
 			virtualNode = new VirtualNode(this, startingNode);
 		return virtualNode;
-	}
-
-	/**Check user rights for req.
-	 * @param trcs
-	 * @param usr
-	 * @param node
-	 * @param cmd
-	 * @param taskId
-	 * @throws SQLException Database accessing failed
-	 * @throws SemanticException 
-	 */
-	public void checkRights(CheapTransBuild trcs, IUser usr, CheapNode node, String cmd, String taskId)
-			throws SemanticException {
-		if (usr instanceof CheapRobot)
-			return;
-		if (node != null)
-			try {
-				if (!node.rights(trcs, node, cmd, usr, taskId).contains(cmd))
-					throw new CheapException(txt("t-no-rights"), usr.uid());
-			} catch (SQLException e) {
-				throw new CheapException(txt("t-rights-config-err"),
-						e.getMessage(), node, cmd, usr, taskId);
-			}
 	}
 
 	/**Get configured text string in workflow-meta.xml/table='txt'

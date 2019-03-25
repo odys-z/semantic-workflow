@@ -160,49 +160,16 @@ public class CheapNode {
 		return createHandler(timess[2]);
 	}
 
-	/**
-	 * @param strRoute e.g. next:f01,back:f02:com.ir.eventhandler
-	 * @return route map
-	 * @throws SQLException
-	private static HashMap<Req, CheapRoute> parseRoute(String strRoute) throws SQLException {
-		String[] ss = strRoute == null ? null : strRoute.split(",");
-		if (ss == null)
-			return null;
-
-		HashMap<Req, CheapRoute> rt = new HashMap<Req, CheapRoute>(ss.length);
-		for (String r : ss) {
-			String[] rss = r.split(":");
-			if (rss == null || rss.length <= 2 || rss[0] == null || rss[1] == null) {
-				System.err.println("Ignoring Route Config: " + r);
-				continue;
-			}
-			Req req = Req.valueOf(rss[0].trim());
-			// [req, [cmd, text, event-handler]]
-			rt.put(req, new CheapRoute(rss[1].trim(), rss[2].trim(), rss.length > 3 ? rss[3].trim() : null));
-		}
-		return rt;
-	}
-	 */
-
 	public String nodeId() { return nid; }
 	public String wfId() { return wf.wfId; }
+	public String nname() { return nname; }
+	public String ncode() { return ncode; }
 
-	public CheapRoute timeoutRoute() {
-		// return route != null && route.containsKey(Req.timeout) ? route.get(Req.timeout)[0] : null;
-		return timeoutRoute;
-	}
+	public CheapRoute timeoutRoute() { return timeoutRoute; }
 
-	public ICheapEventHandler timeoutHandler() {
-		return timeoutHandler;
-	}
+	public ICheapEventHandler timeoutHandler() { return timeoutHandler; }
 
-	public ICheapEventHandler onEventHandler() {
-		return eventHandler;
-	}
-
-	public String getReqText(Req req) {
-		return null;
-	}
+	public ICheapEventHandler onEventHandler() { return eventHandler; }
 
 	public boolean isArrived(CheapNode currentNode) {
 		return arriveCondt.isArrive(currentNode.nodeId());
@@ -216,7 +183,7 @@ public class CheapNode {
 
 	public String arrivCondt() { return prevNodes; }
 
-	public Set<String> rights(CheapTransBuild trcs, CheapNode node, String cmd, IUser usr, String taskId)
+	public Set<String> rights(CheapTransBuild trcs, String cmd, IUser usr, String taskId)
 			throws SQLException, SemanticException {
 //		if (this instanceof VirtualNode)
 //			// FIXME What about the user can't start this workflow?
@@ -224,7 +191,7 @@ public class CheapNode {
 //		else
 		if (rights != null) {
 			// args: [%1$s] wfid, [%2$s] node-id, [%3$s] user-id, [%4$s] task-id
-			String vw = String.format(rightDs(rights, trcs), node.wfId(), node.nid, usr.uid(), taskId);
+			String vw = String.format(rightDs(rights, trcs), wfId(), nid, usr.uid(), taskId);
 			SResultset rs = Connects.select(CheapEngin.trcs.basiconnId(), vw, Connects.flag_nothing);
 
 			rs.beforeFirst();
@@ -252,4 +219,25 @@ public class CheapNode {
 		return sql;
 	}
 
+	/**Check user rights for req.
+	 * @param trcs
+	 * @param usr
+	 * @param node
+	 * @param cmd
+	 * @param taskId
+	 * @throws SQLException Database accessing failed
+	 * @throws SemanticException 
+	 */
+	public void checkRights(CheapTransBuild trcs, IUser usr, String cmd, String taskId)
+			throws SemanticException {
+		if (usr instanceof CheapRobot)
+			return;
+		try {
+			if (!rights(trcs, cmd, usr, taskId).contains(cmd))
+				throw new CheapException(wf.txt("t-no-rights"), usr.uid());
+		} catch (SQLException e) {
+			throw new CheapException(wf.txt("t-rights-config-err"),
+					e.getMessage(), nid, cmd, usr, taskId);
+		}
+	}
 }

@@ -96,6 +96,10 @@ public class EnginDesign {
 			/**<b>Optional</b> wf type id FK to Wftabl.recId (nodeWfId) */
 			static final String wfIdFk = null;
 
+			/**TODO modify tables<br>
+			 * task-id fk to tasks */
+			static final String busiFk = "taskId";
+
 			static final String oper ="oper";
 			static final String opertime ="opertime";
 

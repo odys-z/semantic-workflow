@@ -1,7 +1,5 @@
 package io.odysz.sworkflow;
 
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -15,9 +13,7 @@ import io.odysz.common.DateFormat;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
-import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.SemanticObject;
-import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
@@ -47,12 +43,11 @@ public class CheapApiTest {
 		}
 	}
 
-	@Test
-	public void testStart() throws SQLException, TransException {
-		// TODO test support dels with semantics.xml
-		// ArrayList<String[]> delConds = new ArrayList<String[]>();
-		// delConds.add(new String[] {});
+	private String newInstId;
+	private String newTaskId;
 
+	@Test
+	public void test_1_Start() throws SQLException, TransException {
 		// add some business details (not logic of workflow, but needing committed in same transaction)
 		// also check fkIns, task_details, , taskId, tasks, taskId configurations
 		ArrayList<ArrayList<String[]>> inserts = new ArrayList<ArrayList<String[]>>();
@@ -70,34 +65,52 @@ public class CheapApiTest {
 		
 		Update postups = null;
 		SemanticObject res = CheapApi.start(wftype)
-				.nodeDesc("node desc " + DateFormat.formatime(new Date()))
+				.nodeDesc("desc: starting " + DateFormat.formatime(new Date()))
 				.taskNv("remarks", "testing")
 				.taskChildMulti("task_details", null, inserts)
 				.postupdates(postups)
 				.commit(usr, testTrans);
-		// FIXME move commitment to engine
-		// FIXME move commitment to engine
-		Insert ins = (Insert) res.get("stmt");
-		ArrayList<String> sqls = new ArrayList<String>();
-		ISemantext smtxt = testTrans.instancontxt(usr);
-		ins.ins(smtxt);
-		
-		Utils.logi(sqls);
 
-		// Utils.logi(res.get("stepEvt").toString());
+		// simulating business layer handling events
 		ICheapEventHandler eh = (ICheapEventHandler) res.get("stepHandler");
-		if (eh != null)
-			eh.onCmd(((CheapEvent) res.get("evt")).resulve(smtxt));
+		if (eh != null) {
+			CheapEvent evt = (CheapEvent) res.get("evt");
+			eh.onCmd(evt);
+			newInstId = evt.instId();
+			newTaskId = evt.taskId();
+		}
 		else Utils.logi("No stepping event");
 
 		eh = (ICheapEventHandler) res.get("arriHandler");
 		if (eh != null)
-			eh.onArrive(((CheapEvent) res.get("evt")).resulve(smtxt));
+			eh.onArrive(((CheapEvent) res.get("evt")));
 		else Utils.logi("No arriving event handler");
 	}
 
-	void testNext() {
-		fail("Not yet implemented");
+	@Test
+	public void test_2_Next() throws SQLException, TransException {
+		test_1_Start();
+
+		// A post updating mocking the case that only business handlings knows the semantics.
+		Update postups = testTrans.update("task_details")
+				.nv("remakrs", newInstId) // new node instance auto created in test-start.
+				.where("=", "taskId", newTaskId);
+
+		SemanticObject res = CheapApi.next(wftype, newTaskId, "t01.01.stepA")
+				.nodeDesc("desc: next " + DateFormat.formatime(new Date()))
+				.postupdates(postups)
+				.commit(usr, testTrans);
+
+		// simulating business layer handling events
+		ICheapEventHandler eh = (ICheapEventHandler) res.get("stepHandler");
+		if (eh != null)
+			eh.onCmd(((CheapEvent) res.get("evt")));
+		else Utils.logi("No stepping event");
+
+		eh = (ICheapEventHandler) res.get("arriHandler");
+		if (eh != null)
+			eh.onArrive(((CheapEvent) res.get("evt")));
+		else Utils.logi("No arriving event handler");
 	}
 
 	private static void initSqlite() throws SQLException {
@@ -150,7 +163,7 @@ public class CheapApiTest {
 					 "nodeName varchar(20) DEFAULT NULL,\n" +
 					 "nodeCode varchar(20) DEFAULT NULL,\n" +
 					 "arrivCondit varchar(200) DEFAULT NULL, -- '[TODO] previous node list. If not null, all previous node handlered can reach here . EX: a01 AND (a02 OR a03)',\n" +
-					 "cmdRights varchar(2000), -- rights view sql, args: $1s current id, $2s next id, $3s uid, $4s cmd (oz_wfnodes.cmd)\n" +
+					 "cmdRights varchar(20), -- rights view sql key, see engine-meta.xml/table=rights-ds\n" +
 					 "timeoutRoute varchar(500) NULL, -- 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)',\n" +
 					 "timeouts int(11) DEFAULT NULL, -- 'timeout minutes',\n" +
 					 "nonEvents varchar(200) DEFAULT NULL, -- the envent handler's class name\n" +
@@ -161,6 +174,7 @@ public class CheapApiTest {
 					 "-- workflow commnads\n" +
 					 "nodeId varchar(20) NOT NULL, -- fkIns: oz_wfnodes.nodeId\n" +
 					 "cmd varchar(20) NOT NULL, -- command / req id\n" +
+					 "rightFilter varchar(20), -- flag lick read, update that can be used as command type when filtering rights\n" +
 					 "txt varchar(50), -- readable command text\n" +
 					 "route varchar(20) NOT NULL, -- route: next nodeId for cmd\n" +
 					 "sort int default 0,\n" +
@@ -171,6 +185,7 @@ public class CheapApiTest {
 					"-- work flow node instances, table name is configured in oz_workflow.instabl (separating table for performance)\n" +
 					 "instId varchar(20) NOT NULL,\n" +
 					 "nodeId varchar(20) NOT NULL, -- node FK\n" +
+					 "taskId varchar(20) NOT NULL, -- fk to tasks.taskId\n" +
 					 "oper varchar(20) NOT NULL,\n" +
 					 "opertime DATETIME,\n" +
 					 "descpt varchar(200),\n" + 
@@ -179,6 +194,14 @@ public class CheapApiTest {
 					 "prevRec varchar(20),\n" +
 					 "PRIMARY KEY (instId) )"
 					);
+
+				sqls.add("CREATE TABLE task_rights (\n" +
+						"-- user's workflow rights configuration.\n" + 
+						"-- Engine use workflow-meta.xml/rights-ds/sql to find user's rights.\n" + 
+						"	wfId varchar(20),\n" + 
+						"	nodeId varchar(20) NOT NULL,\n" + 
+						"	userId varchar(20) NOT NULL, -- Its more commonly using role id here. Using user id here for simplifying testing.\n" + 
+						"	cmdFilter varchar(20))\n");
 
 				sqls.add("CREATE TABLE tasks (\n" +
 					"-- business task\n" +
@@ -210,29 +233,37 @@ public class CheapApiTest {
 					"	arrivCondit, cmdRights, timeoutRoute, timeouts, nonEvents )\n" +
 					"values\n" +
 					"('t01', 't01.01', 10, 'starting', 't01.01',  \n" +
-						"null, null, null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"null, 'ds-allcmd', null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.02A', 20, 'plan A', 't01.02A',\n" +
-						"null, null, 't03:Time Out:', 15, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"null, 'ds-allcmd', 't03:Time Out:', 15, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.02B', 30, 'plan B', 't01.02B',\n" +
-						"null, null, 't03:Time Out:', 25, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"null, 'ds-allcmd', 't03:Time Out:', 25, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.03', 90, 'abort', 't01.03',\n" +
-						"'t01.02 AND t01.02B', null, null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"'t01.02 AND t01.02B', 'ds-v1', null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.04', 99, 'finished', 't01.04',\n" +
-						"null, null, null, null, 'io.odysz.sworkflow.CheapHandler')\n");
+						"null, 'ds-allcmd', null, null, 'io.odysz.sworkflow.CheapHandler')\n");
 
-				sqls.add("insert into oz_wfcmds (nodeId, cmd, txt, route, sort)\n" +
+				sqls.add("insert into oz_wfcmds (nodeId, cmd, rightFilter, txt, route, sort)\n" +
 					"values\n" +
-					"('t01.01',  't01.01.stepA', 'Go A(t01.02A)', 't01.02A', 0),\n" +
-					"('t01.01',  't01.01.stepB', 'Go B(t01.02B)', 't01.02B', 1),\n" +
-					"('t01.02A', 't01.02.go03',  'A To 03',       't01.03', 2),\n" +
-					"('t01.02B', 't01.02B.go03', 'B To 03',       't01.03', 3),\n" +
-					"('t01.03',  't01.03.go-end','03 Go End',     't01.04', 9)\n");
+					"	('t01.01',  'start',        'a', 'start check',   '', 0),\n" +
+					"	('t01.01',  't01.01.stepA', 'a', 'Go A(t01.02A)', 't01.02A', 1),\n" +
+					"	('t01.01',  't01.01.stepB', 'b', 'Go B(t01.02B)', 't01.02B', 2),\n" +
+					"	('t01.02A', 't01.02.go03',  'a', 'A To 03',       't01.03', 1),\n" +
+					"	('t01.02B', 't01.02B.go03', 'a', 'B To 03',       't01.03', 2),\n" +
+					"	('t01.03',  't01.03.go-end','a', '03 Go End',     't01.04', 9)\n");
+
+				sqls.add("insert into task_rights (wfId, nodeId, userId, cmdFilter)\n" +
+					"	values\n" +
+					"	('t01', 't01.01', 'CheapApiTest', 'a'),\n" +
+					"	('t01', 't01.02A', 'CheapApiTest', 'a'),\n" +
+					"	('t01', 't01.02B', 'CheapApiTest', 'a'),\n" +
+					"	('t01', 't01.03', 'CheapApiTest', 'a')\n");
 
 				sqls.add("insert into oz_autoseq (sid, seq, remarks) values\n" +
 					"('a_logs.logId', 0, 'log'),\n" +
-					"('task_nodes.instId', 64, 'node instances'),\n" + // 64: for readable difference
+					"('task_nodes.instId', 64, 'node instances'),\n" +	// 64: for readable difference
 					"('tasks.taskId', 0, 'tasks'),\n" +
-					"('task_details.recId', 128, 'task details')"); // 128: for readable difference
+					"('task_details.recId', 128, 'task details')\n");	// 128: for readable difference
 
 				Connects.commit(usr, sqls, Connects.flag_nothing);
 			} catch (Exception e) {
