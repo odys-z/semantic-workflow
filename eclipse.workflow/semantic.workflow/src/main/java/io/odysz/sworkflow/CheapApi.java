@@ -10,6 +10,7 @@ import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
+import io.odysz.transact.sql.Delete;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Update;
@@ -104,8 +105,9 @@ public class CheapApi {
 	 * @throws SQLException
 	 * @throws TransException 
 	 */
-	public SemanticObject commit(IUser usr, CheapTransBuild st) throws SQLException, TransException {
-		SemanticObject multireq = CheapJReq.formatMulti(st, multiChildTabl, multiDels, multiInserts);
+	public SemanticObject commit(IUser usr) throws SQLException, TransException {
+		CheapTransBuild st = CheapEngin.trcs;
+		SemanticObject multireq = formatMulti(st, multiChildTabl, multiDels, multiInserts);
 		SemanticObject jreq = CheapEngin.onReqCmd(usr, wftype, req, cmd,
 					taskId, nodeDesc, nvs, multireq, postups);
 
@@ -128,7 +130,7 @@ public class CheapApi {
 
 		lock.lock();
 		try {
-			// check competition, commit
+			// check competition, commit. FIXME performance problem?
 			SResultset rs = (SResultset) q.rs(smtxt);
 			if (rs.beforeFirst().next()) {
 				if (rs.getInt("cnt") > 0)
@@ -143,5 +145,37 @@ public class CheapApi {
 
 		jreq.remove("stmt");
 		return jreq;
+	}
+	
+	/**Format multi-details request into SemanticObject.
+	 * @param st
+	 * @param tabl
+	 * @param delConds
+	 * @param inserts
+	 * @return formated SemanticObject
+	 * @throws TransException 
+	 */
+	private static SemanticObject formatMulti(CheapTransBuild st, String tabl,
+			ArrayList<String[]> delConds, ArrayList<ArrayList<String[]>> inserts) throws TransException {
+		SemanticObject jmultis = new SemanticObject();
+		// del
+		if (delConds != null) {
+			Delete jdel = st.delete(tabl);
+			for (String[] cond : delConds) {
+				jdel.where(cond[0], cond[1], cond[2]);
+			}
+			jmultis.put("del", jdel);
+		}
+		
+		// insert
+		if (inserts != null) {
+			for (ArrayList<String[]> nvs : inserts) {
+				Insert jinss = st.insert(tabl);
+				for (String[] nv : nvs) 
+					jinss.nv(nv[0], nv[1]);
+				jmultis.add("insert", jinss);
+			}
+		}
+		return jmultis;
 	}
 }

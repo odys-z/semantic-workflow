@@ -21,8 +21,7 @@ public class EnginDesign {
 
 	/**Keywords used to communicate with client
 	 * @author odys-z@github.com
-	 */
-	static class WfProtocol {
+	public static class WfProtocol {
 		public static String reqBody = "wfreq";
 
 		public static String ok = "ok";
@@ -42,6 +41,7 @@ public class EnginDesign {
 		static final String wfnode1 = "node1";
 		static final String bTabl = "btabl";
 	}
+	 */
 
 	static class WfMeta {
 		/** virtual node code hard coded */

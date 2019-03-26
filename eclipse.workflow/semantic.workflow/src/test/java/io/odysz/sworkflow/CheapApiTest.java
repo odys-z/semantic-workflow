@@ -20,7 +20,7 @@ import io.odysz.transact.x.TransException;
 public class CheapApiTest {
 	static final String wftype = "t01";
 
-	static CheapTransBuild testTrans;
+//	static CheapTransBuild testTrans;
 
 	static TestUser usr;
 	static {
@@ -36,7 +36,7 @@ public class CheapApiTest {
 		try {
 			initSqlite();
 			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
-			testTrans = CheapEngin.trcs;
+//			testTrans = CheapEngin.trcs;
 			usr = new TestUser("CheapApiTest", jo);
 		} catch (SQLException | TransException | IOException | SAXException e) {
 			e.printStackTrace();
@@ -69,7 +69,7 @@ public class CheapApiTest {
 				.taskNv("remarks", "testing")
 				.taskChildMulti("task_details", null, inserts)
 				.postupdates(postups)
-				.commit(usr, testTrans);
+				.commit(usr);
 
 		// simulating business layer handling events
 		ICheapEventHandler eh = (ICheapEventHandler) res.get("stepHandler");
@@ -92,14 +92,14 @@ public class CheapApiTest {
 		test_1_Start();
 
 		// A post updating mocking the case that only business handlings knows the semantics.
-		Update postups = testTrans.update("task_details")
+		Update postups = CheapEngin.trcs.update("task_details")
 				.nv("remakrs", newInstId) // new node instance auto created in test-start.
 				.where("=", "taskId", newTaskId);
 
 		SemanticObject res = CheapApi.next(wftype, newTaskId, "t01.01.stepA")
 				.nodeDesc("desc: next " + DateFormat.formatime(new Date()))
 				.postupdates(postups)
-				.commit(usr, testTrans);
+				.commit(usr);
 
 		// simulating business layer handling events
 		ICheapEventHandler eh = (ICheapEventHandler) res.get("stepHandler");

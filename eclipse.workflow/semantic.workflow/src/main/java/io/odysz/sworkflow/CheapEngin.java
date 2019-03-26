@@ -50,7 +50,8 @@ public class CheapEngin {
 
 	static HashMap<String, Dataset> ritConfigs;
 
-	/**Init cheep engine configuration, schedual a timeout checker. 
+	/**Init cheap engine configuration, schedule a timeout checker. 
+	 * @param configPath 
 	 * @param customChecker 
 	 * @throws TransException 
 	 * @throws IOException 
