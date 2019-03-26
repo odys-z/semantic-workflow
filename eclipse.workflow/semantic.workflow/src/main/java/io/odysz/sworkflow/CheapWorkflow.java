@@ -5,7 +5,6 @@ import java.util.HashMap;
 
 import io.odysz.common.LangExt;
 import io.odysz.module.rs.SResultset;
-import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.CheapNode.VirtualNode;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.x.TransException;
