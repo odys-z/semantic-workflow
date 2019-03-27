@@ -131,17 +131,6 @@ public class CheapWorkflow {
 		return null;
 	}
 
-//	public CheapNode getNodeByInst(String nodeId) throws SQLException {
-//		String sql = String.format("select %s nodeId from %s i where i.%s = '%s'",
-//				WfMeta.nodeInst.nodeFk, instabl(), WfMeta.nodeInst.id, instId);
-//		SResultset rs = Connects.select(sql);
-//		if (rs.beforeFirst().next()) {
-//			String nodeId = rs.getString("nodeId");
-//			return nodes.get(nodeId);
-//		}
-//		return null;
-//	}
-
 	/**Different workflow can have different nodes instance table.
 	 * Use this to get correct instance table name.
 	 * @return instance table name for this workflow template.

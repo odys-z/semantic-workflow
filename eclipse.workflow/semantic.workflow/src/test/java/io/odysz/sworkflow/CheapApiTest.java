@@ -20,8 +20,6 @@ import io.odysz.transact.x.TransException;
 public class CheapApiTest {
 	static final String wftype = "t01";
 
-//	static CheapTransBuild testTrans;
-
 	static TestUser usr;
 	static {
 		Utils.printCaller(false);
@@ -36,7 +34,6 @@ public class CheapApiTest {
 		try {
 			initSqlite();
 			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
-//			testTrans = CheapEngin.trcs;
 			usr = new TestUser("CheapApiTest", jo);
 		} catch (SQLException | TransException | IOException | SAXException e) {
 			e.printStackTrace();
