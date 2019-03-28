@@ -125,7 +125,7 @@ public class CheapNode {
 				.col(WfMeta.cmdRoute, "route")
 				.col(WfMeta.cmdSort, "sort")
 				.where("=", WfMeta.nid, "'" + nodeId + "'")
-				.rs(CheapEngin.trcs.basictx());
+				.rs(CheapEngin.basictx);
 		rs.beforeFirst();
 		while (rs.next()) {
 			String cmd = rs.getString("cmd");

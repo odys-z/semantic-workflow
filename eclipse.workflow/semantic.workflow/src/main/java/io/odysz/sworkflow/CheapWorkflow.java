@@ -70,7 +70,7 @@ public class CheapWorkflow {
 		// load configs
 		SResultset rs = (SResultset) CheapEngin.trcs
 				.select(WfMeta.nodeTabl)
-				.rs(CheapEngin.trcs.basictx());
+				.rs(CheapEngin.basictx);
 		rs.beforeFirst();
 
 		nodes = new HashMap<String, CheapNode>(rs.getRowCount());
@@ -121,7 +121,7 @@ public class CheapWorkflow {
 				.col("i.instId", "instId")
 				.col("b." + bRecId, "busiId")
 				.col("i.nodeId", "nodeId")
-				.rs(trcs.basictx());
+				.rs(CheapEngin.basictx);
 
 		if (rs.beforeFirst().next())
 			return new String[] {

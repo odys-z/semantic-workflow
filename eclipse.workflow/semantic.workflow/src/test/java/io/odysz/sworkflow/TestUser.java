@@ -75,8 +75,7 @@ public class TestUser implements IUser {
 				.nv("funcName", action.getString("funcName"))
 				.nv("funcId", action.getString("funcId"))
 				.nv("txt", txt(sqls))
-				.ins(logSemantic.basictx());
-			//Connects.commitLog(sql); // reporting commit failed in err console
+				.ins(logSemantic.instancontxt(this));
 		} catch (SQLException e) {
 			// failed case must be a bug - commitLog()'s exception already caught.
 			e.printStackTrace();

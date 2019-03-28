@@ -17,6 +17,31 @@ public class EnginDesign {
 			Req c = valueOf(Req.class, code);
 			return this == c;
 		}
+
+		public static Req parse(String t) {
+			if (t == null)
+				return null;
+			t = t.trim();
+			if (heartbeat.name().equals(t))
+				return heartbeat;
+			if (session.name().equals(t))
+				return session;
+			if (TgetDef.name().equals(t))
+				return TgetDef;
+			if (findRoute.name().equals(t))
+				return findRoute;
+			if (Ttest.name().equals(t))
+				return Ttest;
+			if (start.name().equals(t))
+				return start;
+			if (cmd.name().equals(t))
+				return cmd;
+			if (close.name().equals(t))
+				return close;
+			if (timeout.name().equals(t))
+				return timeout;
+			return null;
+		}
 	};
 
 	/**Keywords used to communicate with client

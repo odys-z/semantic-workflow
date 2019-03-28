@@ -22,6 +22,7 @@ import io.odysz.module.xtable.XMLTable;
 import io.odysz.semantic.DASemantics.smtype;
 import io.odysz.semantic.DA.DatasetCfg;
 import io.odysz.semantic.DA.DatasetCfg.Dataset;
+import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
@@ -50,6 +51,8 @@ public class CheapEngin {
 
 	static HashMap<String, Dataset> ritConfigs;
 
+	static ISemantext basictx;
+
 	/**Init cheap engine configuration, schedule a timeout checker. 
 	 * @param configPath 
 	 * @param customChecker 
@@ -58,11 +61,11 @@ public class CheapEngin {
 	 * @throws SAXException */
 	public static void initCheap(String configPath, ICustomChecker customChecker)
 			throws TransException, IOException, SAXException {
-		reloadCheap(configPath);
-
 		// worker thread 
 		stopCheap();
 		
+		reloadCheap(configPath);
+
 		scheduler = Executors.newScheduledThreadPool(0);
 		schedualed = scheduler.scheduleAtFixedRate(
 				new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
@@ -82,11 +85,12 @@ public class CheapEngin {
 
 			// table = semantics
 			trcs = new CheapTransBuild(conn, xtabs.get("semantics"));
+			basictx = trcs.instancontxt(new CheapRobot());
 
 			// select * from oz_wfworkflow;
 			SResultset rs = (SResultset) trcs
 					.select(WfMeta.wftabl)
-					.rs(trcs.basictx()); // static context is enough to load cheap configs
+					.rs(basictx); // static context is enough to load cheap configs
 
 			rs.beforeFirst();
 
@@ -240,7 +244,7 @@ public class CheapEngin {
 		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr);
 		ins1.nv(nodeInst.nodeFk, nextNode.nodeId())
 			.nv(nodeInst.descol, nodeDesc);
-		String newInstId = trcs.basictx().formatResulv(wf.instabl, nodeInst.id);
+		String newInstId = basictx.formatResulv(wf.instabl, nodeInst.id);
 		if (nodeInst.wfIdFk != null)
 			ins1.nv(nodeInst.wfIdFk, wf.wfId);
 
@@ -305,7 +309,7 @@ public class CheapEngin {
 			evt = new CheapEvent(currentNode.wfId(), Evtype.start,
 						currentNode, nextNode,
 						// busiId is null for new task, resolved later
-						trcs.basictx().formatResulv(wf.bTabl, wf.bRecId),
+						basictx.formatResulv(wf.bTabl, wf.bRecId),
 						newInstId,
 						Req.start, Req.start.name());
 		else
