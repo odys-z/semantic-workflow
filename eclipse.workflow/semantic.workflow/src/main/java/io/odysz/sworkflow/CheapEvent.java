@@ -8,8 +8,8 @@ public class CheapEvent {
 
 	@Override
 	public String toString() {
-		return String.format("CheapEvent wf: %s,\ncurrentNodeId: %s, nextNode: %s, instId: %s, taskId: %s, req: %s",
-				wfId, currentNode, nextNode, instId, taskId, req);
+		return String.format("{CheapEvent wf: %s,\ncurrentNodeId: %s, nextNode: %s, instId: %s, taskId: %s, req: %s, cmd: %s}",
+				wfId, currentNode.nodeId(), nextNode.nodeId(), instId, taskId, req, cmd);
 	}
 
 	private String wfId;

@@ -5,9 +5,8 @@ import java.io.IOException;
 import org.xml.sax.SAXException;
 
 import io.odysz.module.xtable.XMLTable;
+import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
-import io.odysz.semantic.DA.DATranscxt;
-import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
@@ -33,9 +32,9 @@ public class CheapTransBuild extends DATranscxt {
 		return u;
 	}
 
-	public CheapTransBuild(ISemantext semantext) {
-		super(semantext);
-	}
+//	public CheapTransBuild(ISemantext semantext) {
+//		super(semantext);
+//	}
 
 	/**Build transact builder, initialize semantics in xtabl.
 	 * @param connId

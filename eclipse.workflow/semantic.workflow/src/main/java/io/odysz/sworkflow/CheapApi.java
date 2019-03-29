@@ -130,7 +130,7 @@ public class CheapApi {
 
 		lock.lock();
 		try {
-			// check competition, commit. FIXME performance problem?
+			// check competition, commit. FIXME performance problem? But only supported with RDBMS?
 			SResultset rs = (SResultset) q.rs(smtxt);
 			if (rs.beforeFirst().next()) {
 				if (rs.getInt("cnt") > 0)

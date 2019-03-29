@@ -12,6 +12,7 @@ import org.xml.sax.SAXException;
 import io.odysz.common.DateFormat;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
+import io.odysz.semantic.LoggingUser;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.transact.sql.Update;
@@ -20,7 +21,7 @@ import io.odysz.transact.x.TransException;
 public class CheapApiTest {
 	static final String wftype = "t01";
 
-	static TestUser usr;
+	static LoggingUser usr;
 	static {
 		Utils.printCaller(false);
 		
@@ -34,7 +35,7 @@ public class CheapApiTest {
 		try {
 			initSqlite();
 			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
-			usr = new TestUser("CheapApiTest", jo);
+			usr = new LoggingUser("local-sqlite", "src/test/res/semantic-log.xml", "CheapApiTest", jo);
 		} catch (SQLException | TransException | IOException | SAXException e) {
 			e.printStackTrace();
 		}
@@ -131,11 +132,12 @@ public class CheapApiTest {
 					"  CONSTRAINT oz_autoseq_pk PRIMARY KEY (sid) )");
 
 				sqls.add("CREATE TABLE a_logs (\n" +
-					"  logId text(20),\n" + 
+					"  logId text(20) NOT NULL,\n" + 
 					"  funcId text(20),\n" + 
 					"  funcName text(50),\n" + 
 					"  oper text(20),\n" + 
 					"  logTime text(20),\n" + 
+					"  sqlCount INTEGER,\n" +
 					"  txt text(4000),\n" + 
 					"  CONSTRAINT oz_logs_pk PRIMARY KEY (logId))");
 

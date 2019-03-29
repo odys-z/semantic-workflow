@@ -24,4 +24,6 @@ public class CheapRobot implements IUser {
 	@Override public IUser set(String prop, Object v) { return this; }
 	@Override public SemanticObject logout() { return null; }
 	@Override public void writeJsonRespValue(Object writer) throws IOException { }
+
+	@Override public IUser logAct(String funcName, String funcId) { return this; }
 }

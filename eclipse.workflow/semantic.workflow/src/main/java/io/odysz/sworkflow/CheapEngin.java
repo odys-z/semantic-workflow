@@ -51,6 +51,7 @@ public class CheapEngin {
 
 	static HashMap<String, Dataset> ritConfigs;
 
+	/**<b>Important Note: This context can not handle semantics</b> */
 	static ISemantext basictx;
 
 	/**Init cheap engine configuration, schedule a timeout checker. 
