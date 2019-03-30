@@ -54,6 +54,8 @@ public class CheapEngin {
 	/**<b>Important Note: This context can not handle semantics</b> */
 	static ISemantext basictx;
 
+	public static String confpath;
+
 	/**Init cheap engine configuration, schedule a timeout checker. 
 	 * @param configPath 
 	 * @param customChecker 
@@ -66,6 +68,7 @@ public class CheapEngin {
 		stopCheap();
 		
 		reloadCheap(configPath);
+		confpath = configPath;
 
 		scheduler = Executors.newScheduledThreadPool(0);
 		schedualed = scheduler.scheduleAtFixedRate(

@@ -2,8 +2,6 @@ package io.odysz.sworkflow;
 
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 
 import io.odysz.common.LangExt;
 import io.odysz.module.rs.SResultset;
@@ -58,11 +56,14 @@ public class CheapNode {
 	}
 
 	public static class VirtualNode extends CheapNode {
+		public static final String prefix = "virt-";
+		public static final String virtualName = "invisible";
+
 		private CheapNode toStartNode;
 
 		public VirtualNode(CheapWorkflow wf, CheapNode startNode)
 				throws SQLException, TransException {
-			super(wf, "virt-" + startNode.nid, "start", "invisible", null, 0, null, null, null);
+			super(wf, prefix + startNode.nid, "start", virtualName, null, 0, null, null, null);
 			this.toStartNode = startNode;
 			super.routes = new HashMap<String, CheapRoute>(1);
 			super.routes.put(Req.start.name(), new CheapRoute(super.nid,
@@ -198,27 +199,27 @@ public class CheapNode {
 
 	public String arrivCondt() { return prevNodes; }
 
-	public Set<String> rights(CheapTransBuild trcs, String usrId, String taskId)
+	public HashMap<String, String> rights(CheapTransBuild trcs, String usrId, String taskId)
 			throws SQLException, SemanticException {
-//		if (this instanceof VirtualNode)
+		//		if (this instanceof VirtualNode)
 //			// FIXME What about the user can't start this workflow?
 //			return routes.keySet();
 //		else
-		if (rights != null) {
-			// args: [%1$s] wfid, [%2$s] node-id, [%3$s] user-id, [%4$s] task-id
-			String vw = String.format(rightDs(rights, trcs), wfId(), nid, usrId, taskId);
-			SResultset rs = Connects.select(CheapEngin.trcs.basiconnId(), vw, Connects.flag_nothing);
 
-			rs.beforeFirst();
-			HashSet<String> set = new HashSet<String>();
-			while (rs.next()) {
-				set.add(rs.getString(1));
-			}
-			return set;
+		String dskey;
+		if (rights != null) 
+			dskey = rights;
+		else dskey = "ds-allcmd";
+
+		// args: [%1$s] wfid, [%2$s] node-id, [%3$s] user-id, [%4$s] task-id
+		String vw = String.format(rightDs(dskey, trcs), wfId(), nid, usrId, taskId);
+		SResultset rs = Connects.select(CheapEngin.trcs.basiconnId(), vw, Connects.flag_nothing);
+		rs.beforeFirst();
+		HashMap<String, String> set = new HashMap<String, String>();
+		while (rs.next()) {
+			set.put(rs.getString(1), rs.getString(2));
 		}
-		else {
-			return routes.keySet();
-		}
+		return set;
 	}
 
 	/**Get sql configured in workflow-meta.xml/table="rigth-ds"
@@ -230,6 +231,8 @@ public class CheapNode {
 	 */
 	public static String rightDs(String dskey, CheapTransBuild trcs) throws SemanticException, SQLException {
 		Dataset ds = CheapEngin.ritConfigs.get(dskey);
+		if (ds == null)
+			ds = CheapEngin.ritConfigs.get("ds-allcmd");
 		String sql = ds.getSql(Connects.driverType(trcs.basiconnId()));
 		return sql;
 	}
@@ -248,7 +251,7 @@ public class CheapNode {
 		if (usr instanceof CheapRobot)
 			return;
 		try {
-			if (!rights(trcs, usr.uid(), taskId).contains(cmd))
+			if (!rights(trcs, usr.uid(), taskId).keySet().contains(cmd))
 				throw new CheapException(wf.txt("t-no-rights"), usr.uid());
 		} catch (SQLException e) {
 			throw new CheapException(wf.txt("t-rights-config-err"),

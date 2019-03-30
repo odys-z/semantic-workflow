@@ -9,6 +9,7 @@ import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
+import io.odysz.sworkflow.CheapNode.VirtualNode;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.sql.Delete;
@@ -41,10 +42,21 @@ public class CheapApi {
 	
 	public static SemanticObject right(String wftype, String usrId, String nodeId, String taskId)
 			throws SemanticException, SQLException {
+		if (nodeId == null)
+			throw new SemanticException("Node Id is null");
+
 		SemanticObject sobj = new SemanticObject();
 		
 		CheapWorkflow wf = CheapEngin.wfs.get(wftype);
+
+		// take virtual node as starting node.
+		// this logic changed when virtual id composing is changed.
+		nodeId = nodeId.replace(VirtualNode.prefix, "");
+
 		CheapNode n = wf.getNode(nodeId);
+		if (n == null)
+			throw new SemanticException("Node not found: ", nodeId);
+
 		sobj.put("rights", n.rights(CheapEngin.trcs, usrId, taskId));
 		return sobj;
 	}

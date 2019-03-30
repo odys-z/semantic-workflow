@@ -45,7 +45,10 @@
 		Note: for a start command, task-id is null. If you are checking task-id on a starting node, that's a semantic error.
 	 -->
 	<s>
-		<!-- ds-allcmd is configured in oz_wfnodes.cmdRights -->
+		<!-- ds-allcmd is configured in oz_wfnodes.cmdRights
+			Tip: to make CheapEngin working more stable, keep at leas one rights configure rule, with sk = ds-allcmd.
+			CheapEngin will use this as default if the workflow configured nothing for a node rights.
+		-->
   		<sk>ds-allcmd</sk>
   		<mysql>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
   		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'</mysql>
