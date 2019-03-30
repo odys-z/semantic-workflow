@@ -207,22 +207,31 @@ public class CheapEngin {
 		if (wfs == null)
 			throw new SemanticException("Engine must be initialized");
 
-		// prepare current node
+		// 0 prepare current node
 		CheapWorkflow wf = wfs.get(wftype);
 		if (req == Req.start) {
+			// 0.1 start
 			currentNode = wf.start(); // a virtual node
 			cmd = Req.start.name();
 		}
 		else {
+			// 0.2 step, find the task and the current state node
 			if (busiId == null)
 				throw new CheapException("Command %s.%s needing find task/business record first. but busi-id is null",
 						req.name(), cmd);
 			String[] tskInf = wf.getInstByTask(trcs, busiId);
+			if (tskInf == null || tskInf.length == 0) {
+				// may a server error
+				Utils.warn("Can't find task's information. taskId = %s, wfId = %s", busiId, wf.wfId);
+				// may be a client error
+				throw new CheapException("Can't find task's information. taskId = %s, wfId = %s",
+						busiId, wf.wfId);
+			}
 			currentInstId = tskInf[1];
 			currentNode = wf.getNode(tskInf[2]); // FIXME can be simplified
 		}
 
-		// prepare next node
+		// 0.3 prepare next node
 		if (currentNode == null) throw new SQLException(
 				String.format(Configs.getCfg("cheap-workflow", "t-no-node"),
 				wftype, currentInstId, req));
@@ -236,7 +245,6 @@ public class CheapEngin {
 		if (req == Req.start)
 			nextNode.checkRights(trcs, usr, cmd, busiId);
 		else
-			// wf.checkRights(trcs, usr, currentNode, cmd, busiId);
 			currentNode.checkRights(trcs, usr, cmd, busiId);
 
 		// 1. create node instance;<br>

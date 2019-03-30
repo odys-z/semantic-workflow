@@ -8,6 +8,7 @@ import io.odysz.module.rs.SResultset;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.sql.Delete;
@@ -36,6 +37,16 @@ public class CheapApi {
 		CheapApi api = new CheapApi(wftype, Req.cmd, cmd);
 		api.taskId = taskId;
 		return api;
+	}
+	
+	public static SemanticObject right(String wftype, String usrId, String nodeId, String taskId)
+			throws SemanticException, SQLException {
+		SemanticObject sobj = new SemanticObject();
+		
+		CheapWorkflow wf = CheapEngin.wfs.get(wftype);
+		CheapNode n = wf.getNode(nodeId);
+		sobj.put("rights", n.rights(CheapEngin.trcs, usrId, taskId));
+		return sobj;
 	}
 
 	/**Get next route node according to ntimeoutRoute (no time checking).<br>

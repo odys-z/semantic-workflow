@@ -91,14 +91,14 @@ public class CheapWorkflow {
 		startingNode = nodes.get(node1);
 	}
 
-//	public SemanticObject getDef() {
-//		SemanticObject bDef = new SemanticObject();
-//		bDef.put(EnginDesign.WfProtocol.wfid, wfId);
-//		bDef.put(EnginDesign.WfProtocol.wfName, wfName);
-//		bDef.put(EnginDesign.WfProtocol.wfnode1, node1);
-//		bDef.put(EnginDesign.WfProtocol.bTabl, bTabl);
-//		return bDef;
-//	}
+	/**A cheap version for json protocol (contructed at client side)
+	 * @param wfId
+	 * @param wfName
+	 */
+	public CheapWorkflow(String wfId, String wfName) {
+		this.wfId = wfId;
+		this.wfName = wfName;
+	}
 
 	public CheapNode getNode(String nodeId) {
 		return nodes == null ? null : nodes.get(nodeId);

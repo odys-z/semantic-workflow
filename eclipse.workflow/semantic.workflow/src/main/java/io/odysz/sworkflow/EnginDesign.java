@@ -3,12 +3,13 @@ package io.odysz.sworkflow;
 public class EnginDesign {
 	/**Request types, heartbeat, session, test, find-route, ... */
 	public enum Req { heartbeat("ping.serv"),
-		session("login.serv"), TgetDef("get-def"), findRoute("findroute"),
+		// session("login.serv"),
+		TgetDef("get-def"), findRoute("findroute"),
+		cmdsRight("right"),
 		/** client use this to ask plausible operation using 't' */
-		Ttest("test"),
-		start("start"),
-		cmd("cmd"), // request stepping according to cmds configured in oz_wfcmds
-		close("close"), timeout("timeout");
+		Ttest("test"), start("start"),
+		/**request stepping according to cmds configured in oz_wfcmds */
+		cmd("cmd"), close("close"), timeout("timeout");
 		@SuppressWarnings("unused")
 		private String rq;
 		Req(String req) { this.rq = req; }
@@ -25,12 +26,14 @@ public class EnginDesign {
 			t = t.trim();
 			if (heartbeat.name().equals(t))
 				return heartbeat;
-			if (session.name().equals(t))
-				return session;
+//			if (session.name().equals(t))
+//				return session;
 			if (TgetDef.name().equals(t))
 				return TgetDef;
 			if (findRoute.name().equals(t))
 				return findRoute;
+			if (cmdsRight.name().equals(t))
+				return cmdsRight;
 			if (Ttest.name().equals(t))
 				return Ttest;
 			if (start.name().equals(t))

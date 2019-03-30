@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import io.odysz.common.LangExt;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DatasetCfg.Dataset;
@@ -38,6 +39,22 @@ public class CheapNode {
 			this.cmd = cmd;
 			this.sort = sort;
 		}
+		
+		/////// JSON Helpers /////////////////////////////////////////////////////////////
+		@Override
+		public String toString() {
+			return LangExt.toString(new String[] {from, to, txt, cmd, String.valueOf(timeoutsnd), String.valueOf(sort)});
+		}
+		
+		public CheapRoute(String js) {
+			String[] jss = LangExt.toArray(js);
+			this.from = jss[0];
+			this.to= jss[1];
+			this.txt = jss[2];
+			this.cmd = jss[3];
+			this.timeoutsnd = Integer.valueOf(jss[4]);
+			this.sort = Integer.valueOf(jss[5]);
+		}
 	}
 
 	public static class VirtualNode extends CheapNode {
@@ -54,9 +71,7 @@ public class CheapNode {
 
 		@Override
 		public CheapNode findRoute(String req) throws SemanticException {
-//			if (req == Req.start)
-				return toStartNode;
-//			else throw new SemanticException("Can't step from virutal node to start node on req %s", req.name());
+			return toStartNode;
 		}
 	}
 
@@ -183,7 +198,7 @@ public class CheapNode {
 
 	public String arrivCondt() { return prevNodes; }
 
-	public Set<String> rights(CheapTransBuild trcs, String cmd, IUser usr, String taskId)
+	public Set<String> rights(CheapTransBuild trcs, String usrId, String taskId)
 			throws SQLException, SemanticException {
 //		if (this instanceof VirtualNode)
 //			// FIXME What about the user can't start this workflow?
@@ -191,7 +206,7 @@ public class CheapNode {
 //		else
 		if (rights != null) {
 			// args: [%1$s] wfid, [%2$s] node-id, [%3$s] user-id, [%4$s] task-id
-			String vw = String.format(rightDs(rights, trcs), wfId(), nid, usr.uid(), taskId);
+			String vw = String.format(rightDs(rights, trcs), wfId(), nid, usrId, taskId);
 			SResultset rs = Connects.select(CheapEngin.trcs.basiconnId(), vw, Connects.flag_nothing);
 
 			rs.beforeFirst();
@@ -233,11 +248,32 @@ public class CheapNode {
 		if (usr instanceof CheapRobot)
 			return;
 		try {
-			if (!rights(trcs, cmd, usr, taskId).contains(cmd))
+			if (!rights(trcs, usr.uid(), taskId).contains(cmd))
 				throw new CheapException(wf.txt("t-no-rights"), usr.uid());
 		} catch (SQLException e) {
 			throw new CheapException(wf.txt("t-rights-config-err"),
 					e.getMessage(), nid, cmd, usr, taskId);
 		}
+	}
+	
+	/////// JSON Protocol helper //////////////////////////////////////////////
+	@Override
+	public String toString() {
+		return LangExt.toString(new String[] {wf.wfId, wf.wfName, nid, ncode, nname});
+								// LangExt.toString((HashMap<String, ?>)routes)});
+	}
+	
+	public CheapNode(String nodeStr) throws SQLException, TransException {
+		String[] ss = LangExt.toArray(nodeStr);
+		wf = new CheapWorkflow(ss[0], ss[1]);
+		nid = ss[2];
+		ncode = ss[3];
+		nname = ss[4];
+//		HashMap<String, String> smap = LangExt.parseMap(ss[4]);
+//		if (smap != null) {
+//			routes = new HashMap<String, CheapRoute>(smap.size());
+//			for (String k : smap.keySet())
+//				routes.put(k, new CheapRoute(smap.get(k)));
+//		}
 	}
 }
