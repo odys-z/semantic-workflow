@@ -3,6 +3,7 @@ package io.odysz.sworkflow;
 public class EnginDesign {
 	/**Request types, heartbeat, session, test, find-route, ... */
 	public enum Req { heartbeat("ping.serv"),
+		load("load"),
 		// session("login.serv"),
 		TgetDef("get-def"), findRoute("findroute"),
 		cmdsRight("right"),
@@ -26,8 +27,8 @@ public class EnginDesign {
 			t = t.trim();
 			if (heartbeat.name().equals(t))
 				return heartbeat;
-//			if (session.name().equals(t))
-//				return session;
+			if (load.name().equals(t))
+				return load;
 			if (TgetDef.name().equals(t))
 				return TgetDef;
 			if (findRoute.name().equals(t))
@@ -47,30 +48,6 @@ public class EnginDesign {
 			return null;
 		}
 	};
-
-	/**Keywords used to communicate with client
-	 * @author odys-z@github.com
-	public static class WfProtocol {
-		public static String reqBody = "wfreq";
-
-		public static String ok = "ok";
-
-		static final String wfid = "wfid";
-		static final String cmd = "cmd";
-		static final String busid = "busid";
-		static final String current = "current";
-		static final String ndesc = "nodeDesc";
-		static final String nvs = "nvs";
-		static final String busiMulti = "multi";
-		static final String busiPostupdate = "post";
-		
-		static final String routes = "routes";
-
-		static final String wfName = "wfname";
-		static final String wfnode1 = "node1";
-		static final String bTabl = "btabl";
-	}
-	 */
 
 	static class WfMeta {
 		/** virtual node code hard coded */

@@ -61,6 +61,28 @@ public class CheapApi {
 		return sobj;
 	}
 
+	public static SemanticObject loadFlow(String wftype, String taskid, String usrid)
+			throws TransException, SQLException {
+		SemanticObject sobj = new SemanticObject();
+		
+		CheapWorkflow wf = CheapEngin.wfs.get(wftype);
+
+		// select sort, n.nodeName, i.* from oz_wfnodes n 
+		// left outer join task_nodes i on i.nodeId = n.nodeId and i.taskId = '000001'
+		// where n.wfId = 't01'
+		// order by n.sort;
+		SResultset lst = (SResultset) CheapEngin.trcs
+				.select(WfMeta.nodeTabl, "n")
+				.col("sort").col("n.nodeName").col("i.*")
+				.l(wf.instabl, "i", "i.nodeId = n.nodeId and i.taskId = '" + taskid + "'")
+				.where("=", "n.wfId", "'" + wftype + "'")
+				.orderby("n.sort")
+				.rs(CheapEngin.trcs.basictx());
+
+		sobj.put("data", lst);
+		return sobj;
+	}
+
 	/**Get next route node according to ntimeoutRoute (no time checking).<br>
 	 * Only called by CheapChecker?
 	 * @param wftype
