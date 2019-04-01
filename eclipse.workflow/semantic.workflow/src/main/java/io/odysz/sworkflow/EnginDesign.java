@@ -2,7 +2,7 @@ package io.odysz.sworkflow;
 
 public class EnginDesign {
 	/**Request types, heartbeat, session, test, find-route, ... */
-	public enum Req { heartbeat("ping.serv"),
+	public enum Req { heartbeat("ping"),
 		load("load"),
 		// session("login.serv"),
 		TgetDef("get-def"), findRoute("findroute"),
