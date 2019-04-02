@@ -73,8 +73,9 @@ public class CheapApi {
 		// order by n.sort;
 		SResultset lst = (SResultset) CheapEngin.trcs
 				.select(WfMeta.nodeTabl, "n")
-				.col("sort").col("n.nodeName").col("i.*")
+				.col("n.sort").col("n.nodeName").col("i.*").col("c.txt", "handleTxt")
 				.l(wf.instabl, "i", "i.nodeId = n.nodeId and i.taskId = '" + taskid + "'")
+				.l(WfMeta.cmdTabl, "c", "i.handlingCmd = c.cmd")
 				.where("=", "n.wfId", "'" + wftype + "'")
 				.orderby("n.sort")
 				.rs(CheapEngin.trcs.basictx());
