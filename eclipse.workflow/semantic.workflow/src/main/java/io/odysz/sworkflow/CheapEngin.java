@@ -70,7 +70,7 @@ public class CheapEngin {
 		reloadCheap(configPath);
 		confpath = configPath;
 
-		scheduler = Executors.newScheduledThreadPool(0);
+		scheduler = Executors.newScheduledThreadPool(1);
 		schedualed = scheduler.scheduleAtFixedRate(
 				new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
 	}
@@ -158,7 +158,7 @@ public class CheapEngin {
 		// stop worker
 		Utils.logi("cancling WF-Checker ... ");
 		schedualed.cancel(true);
-		scheduler.shutdown();
+//		scheduler.shutdown();
 		try {
 		    if (!scheduler.awaitTermination(200, TimeUnit.MILLISECONDS)) {
 		        scheduler.shutdownNow();
