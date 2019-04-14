@@ -26,7 +26,6 @@ public class CheapNode {
 		public CheapRoute(int timeout, String timeoutRoute) throws SemanticException {
 			if (timeout <= 0)
 				throw new SemanticException("Timeout Route consturctor can't been called if timeout is not defined");
-			// TODO Auto-generated constructor stub
 		}
 
 		public CheapRoute(String from, String cmd, String to, String text, int sort) {
@@ -201,11 +200,6 @@ public class CheapNode {
 
 	public HashMap<String, String> rights(CheapTransBuild trcs, String usrId, String taskId)
 			throws SQLException, SemanticException {
-		//		if (this instanceof VirtualNode)
-//			// FIXME What about the user can't start this workflow?
-//			return routes.keySet();
-//		else
-
 		String dskey;
 		if (rights != null) 
 			dskey = rights;
@@ -272,11 +266,5 @@ public class CheapNode {
 		nid = ss[2];
 		ncode = ss[3];
 		nname = ss[4];
-//		HashMap<String, String> smap = LangExt.parseMap(ss[4]);
-//		if (smap != null) {
-//			routes = new HashMap<String, CheapRoute>(smap.size());
-//			for (String k : smap.keySet())
-//				routes.put(k, new CheapRoute(smap.get(k)));
-//		}
 	}
 }
