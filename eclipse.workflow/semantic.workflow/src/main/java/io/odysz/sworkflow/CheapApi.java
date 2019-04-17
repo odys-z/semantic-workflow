@@ -80,7 +80,7 @@ public class CheapApi {
 				.orderby("n.sort")
 				.rs(CheapEngin.trcs.basictx());
 
-		sobj.rs(lst);
+		sobj.rs(lst, lst.getRowCount());
 		return sobj;
 	}
 
