@@ -62,7 +62,7 @@ public class CheapEngin {
 	 * @throws TransException 
 	 * @throws IOException 
 	 * @throws SAXException */
-	public static void initCheap(String configPath, ICustomChecker customChecker)
+	public static void initCheap(String configPath, ICheapChecker customChecker)
 			throws TransException, IOException, SAXException {
 		// worker thread 
 		stopCheap();
