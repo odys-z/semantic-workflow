@@ -9,6 +9,7 @@ import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
 public class CheapChecker implements Runnable {
+	@SuppressWarnings("unused")
 	private final HashMap<String, CheapWorkflow> wfs;
 
 	private ICustomChecker customChker;
@@ -31,6 +32,7 @@ public class CheapChecker implements Runnable {
 	}
 	
 	private void checkTimeout() throws SQLException {
+		@SuppressWarnings("unused")
 		ArrayList<CheapEvent> evts = new ArrayList<CheapEvent>();
 		/* let's rock
 			// select TIMESTAMPDIFF(minute, disposalTime, now()) idled, n.timeoutmm, n.timeoutRoute,
@@ -81,6 +83,7 @@ public class CheapChecker implements Runnable {
 	 * @throws IOException
 	 * @throws TransException 
 	 */
+	@SuppressWarnings("unused")
 	private static void timeout(CheapEvent evt)
 			throws SQLException, IOException, TransException {
 		// current node id means current instance
