@@ -234,7 +234,6 @@ public class CheapNode {
 	/**Check user rights for req.
 	 * @param trcs
 	 * @param usr
-	 * @param node
 	 * @param cmd
 	 * @param taskId
 	 * @throws SQLException Database accessing failed
