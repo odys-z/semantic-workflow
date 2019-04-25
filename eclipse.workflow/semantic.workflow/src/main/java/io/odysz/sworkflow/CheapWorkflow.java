@@ -43,7 +43,7 @@ public class CheapWorkflow {
 	private CheapNode startingNode;
 
 	/**
-	 * @param nodeWfId
+	 * @param wfId
 	 * @param wfName
 	 * @param nInstabl node instance table name, configured in oz_workflow.instabl
 	 * @param bTabl

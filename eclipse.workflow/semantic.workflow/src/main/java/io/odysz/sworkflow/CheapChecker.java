@@ -12,9 +12,9 @@ public class CheapChecker implements Runnable {
 	@SuppressWarnings("unused")
 	private final HashMap<String, CheapWorkflow> wfs;
 
-	private ICustomChecker customChker;
+	private ICheapChecker customChker;
 
-	public CheapChecker(HashMap<String,CheapWorkflow> wfs, ICustomChecker usrChker) {
+	public CheapChecker(HashMap<String,CheapWorkflow> wfs, ICheapChecker usrChker) {
 		this.wfs = wfs;
 		this.customChker = usrChker;
 	}

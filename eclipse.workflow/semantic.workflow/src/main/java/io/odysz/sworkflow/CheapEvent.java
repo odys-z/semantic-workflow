@@ -41,7 +41,7 @@ public class CheapEvent extends SemanticObject {
 
 	/**When this is creating by cheap engine, there is not node instance id.
 	 * After sqls be committed, resolve it from semantext.
-	 * @param nodeWfId
+	 * @param wfId
 	 * @param evtype event type
 	 * @param current
 	 * @param next
@@ -91,7 +91,7 @@ public class CheapEvent extends SemanticObject {
 
 	/**Resulve taskId, instance Id, etc.
 	 * @param smtxt
-	 * @return
+	 * @return this
 	 */
 	public CheapEvent resulve(ISemantext smtxt) {
 		String taskId = taskId();

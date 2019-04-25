@@ -28,7 +28,7 @@ public class CheapApi {
 	static ReentrantLock lock = new ReentrantLock();
 	/**Get an API instance to start a new workflow of type wftype.
 	 * @param wftype
-	 * @return
+	 * @return new CheapApi instance
 	 */
 	public static CheapApi start(String wftype) {
 		return new CheapApi(wftype, Req.start, null);
@@ -143,7 +143,6 @@ public class CheapApi {
 
 	/**Commit current request set in {@link #req}.
 	 * @param usr
-	 * @param st 
 	 * @return { evt: {@link CheapEvent} for start event(new task ID must resolved), <br>
 	 * 		stepHandler: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
 	 * 		arriHandler: {@link CheapEvent} for arriving event if there is one configured<br>

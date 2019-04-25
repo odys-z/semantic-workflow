@@ -2,9 +2,8 @@ package io.odysz.sworkflow;
 
 /**User of CheapEngine implement this to check any auto starting tasks
  * @author ody
- *
  */
-public interface ICustomChecker {
+public interface ICheapChecker {
 
 	void check();
 
