@@ -18,6 +18,122 @@ import io.odysz.semantics.SemanticObject;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
+/**This class use sqlite for test.
+ * To initialize mysql tables, use:<pre>
+CREATE TABLE oz_workflow (
+	wfId varchar(50) NOT NULL,
+	wfName varchar(50) NOT NULL,
+	instabl varchar(20) comment 'node instance''s table name' NOT NULL, 
+	bussTable varchar(20) comment 'e.g. task' NOT NULL, 
+	bRecId varchar(50) comment 'e.g. task.taskId' NOT NULL , 
+	bStateRef varchar(20) comment ' task.state (node instance id ref in business table)' DEFAULT NULL , 
+	bussCateCol varchar(20) comment 'cate id in business table, e.g. task.tasktype.  The value is one of ir_workflow.wfId.' DEFAULT NULL ,
+	node1 varchar(50) comment 'start node id in ir_wfdef' NOT NULL ,
+	backRefs varchar(200) comment 'node instance back reference to business task record pk, format [node-id]:[business-col]' DEFAULT NULL ,
+	sort int(11) DEFAULT NULL,
+	PRIMARY KEY (wfId) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 collate utf8mb4_bin;
+
+CREATE TABLE oz_wfnodes (
+	wfId varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+	nodeId varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+	sort int default 1,
+	nodeName varchar(20) DEFAULT NULL,
+	nodeCode varchar(20) DEFAULT NULL,
+	arrivCondit varchar(200) comment '[TODO] previous node list. If not null, all previous node handlered can reach here . EX: a01 AND (a02 OR a03)' DEFAULT NULL, 
+	cmdRights varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin comment 'rights view sql key, see engine-meta.xml/table=rights-ds',
+	timeoutRoute varchar(500) comment 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)' NULL,
+	timeouts int(11) comment 'timeout minutes' DEFAULT NULL,
+	nonEvents varchar(200) comment 'the envent handler''s class name' DEFAULT NULL, 
+	PRIMARY KEY (nodeId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE oz_wfcmds (
+	nodeId varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin comment 'fkIns: oz_wfnodes.nodeId'  NOT NULL ,
+	cmd varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin comment 'command / req id' NOT NULL ,
+	rightFilter varchar(20) comment 'flag lick read, update that can be used as command type when filtering rights',
+	txt varchar(50) comment 'readable command text',
+	route varchar(20) comment 'route: next nodeId for cmd' NOT NULL ,
+	sort int default 0,
+	PRIMARY KEY (cmd) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+comment 'workflow commnads';
+
+CREATE TABLE oz_wfrights (
+	wfId varchar(20),
+	nodeId varchar(20),
+	roleId varchar(20),
+	cmdFilter varchar(20)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_bin
+comment 'user''s workflow rights configuration.
+Engine use workflow-meta.xml/rights-ds/sql to find user''s rights.';
+
+CREATE TABLE oz_autoseqs (
+  sid varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  seq int(11) NOT NULL,
+  remarks varchar(50) DEFAULT NULL,
+  PRIMARY KEY (sid) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE r_expense (
+  expenseId varchar(45) COLLATE utf8mb4_bin NOT NULL,
+  expenseType varchar(1) COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'daily expense',
+  projectId varchar(45) COLLATE utf8mb4_bin DEFAULT NULL,
+  expenseDate date DEFAULT NULL,
+  expenseUser varchar(45) COLLATE utf8mb4_bin DEFAULT NULL,
+  totalAccount float DEFAULT NULL,
+  billscount int(11) DEFAULT NULL,
+  orgId varchar(45) COLLATE utf8mb4_bin DEFAULT NULL,
+  currentNode varchar(45) COLLATE utf8mb4_bin DEFAULT NULL,
+  startNode varchar(45) COLLATE utf8mb4_bin DEFAULT NULL,
+  addUser varchar(50) COLLATE utf8mb4_bin NOT NULL,
+  addDate date DEFAULT NULL,
+  attachment varchar(255) COLLATE utf8mb4_bin DEFAULT NULL,
+  PRIMARY KEY (expenseId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+insert into oz_workflow (wfId, wfName, instabl, bussTable, bRecId, bStateRef,
+	bussCateCol, node1, backRefs, sort)
+values 
+	('t01', 'expense x 1', 'oz_ninsts', 'r_expens', 'expenseId', 'currentNode',
+	 'wfId', 't01.01', 't01.01:startNode,t01.03:requireAllStep', '0');
+
+insert into oz_wfnodes( wfId, nodeId, sort, nodeName, nodeCode,  
+	arrivCondit, cmdRights, timeoutRoute, timeouts, nonEvents )
+values
+	('t01', 't01.01', 10, 'starting', 't01.01',  
+	null, 'ds-allcmd', null, null, 'io.odysz.sworkflow.CheapHandler'),
+	('t01', 't01.02A', 20, 'plan A', 't01.02A',
+	null, 'ds-allcmd', 't03:Time Out:', 15, 'io.odysz.sworkflow.CheapHandler'),
+	('t01', 't01.02B', 30, 'plan B', 't01.02B',
+	null, 'ds-allcmd', 't03:Time Out:', 25, 'io.odysz.sworkflow.CheapHandler'),
+	('t01', 't01.03', 90, 'abort', 't01.03',
+	't01.02 AND t01.02B', 'ds-v1', null, null, 'io.odysz.sworkflow.CheapHandler'),
+	('t01', 't01.04', 99, 'finished', 't01.04',
+	null, 'ds-allcmd', null, null, 'io.odysz.sworkflow.CheapHandler');
+
+insert into oz_wfcmds (nodeId, cmd, rightFilter, txt, route, sort)
+values
+	('t01.01',  'start',        'a', 'start check',   '', 0),
+	('t01.01',  't01.01.stepA', 'a', 'Go A(t01.02A)', 't01.02A', 1),
+	('t01.01',  't01.01.stepB', 'b', 'Go B(t01.02B)', 't01.02B', 2),
+	('t01.02A', 't01.02.go03',  'a', 'A To 03',       't01.03', 1),
+	('t01.02B', 't01.02B.go03', 'a', 'B To 03',       't01.03', 2),
+	('t01.03',  't01.03.go-end','a', '03 Go End',     't01.04', 9);
+	
+insert into oz_wfrights (wfId, nodeId, roleId, cmdFilter)
+	values
+	('t01', 't01.01', 'CheapApiTest', 'a'),
+	('t01', 't01.02A', 'CheapApiTest', 'a'),
+	('t01', 't01.02B', 'CheapApiTest', 'a'),
+	('t01', 't01.03', 'CheapApiTest', 'a');
+	
+insert into oz_autoseqs (sid, seq, remarks) values
+('a_logs.logId', 0, 'log'),
+('oz_ninsts.instId', 64, 'node instances'),
+('r_expense.expenseId', 0, 'tasks expense');</pre>
+ * @author odys-z@github.com
+ */
 public class CheapApiTest {
 	static final String wftype = "t01";
 
