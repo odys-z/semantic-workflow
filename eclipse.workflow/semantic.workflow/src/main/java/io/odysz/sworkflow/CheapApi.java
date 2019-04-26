@@ -152,7 +152,7 @@ public class CheapApi {
 	 */
 	public SemanticObject commit(IUser usr) throws SQLException, TransException {
 		CheapTransBuild st = CheapEngin.trcs;
-		SemanticObject multireq = formatMulti(st, multiChildTabl, multiDels, multiInserts);
+		SemanticObject multireq = formatMulti(st, usr, multiChildTabl, multiDels, multiInserts);
 		SemanticObject jreq = CheapEngin.onReqCmd(usr, wftype, req, cmd,
 					taskId, nodeDesc, nvs, multireq, postups);
 
@@ -194,18 +194,19 @@ public class CheapApi {
 	
 	/**Format multi-details request into SemanticObject.
 	 * @param st
+	 * @param usr 
 	 * @param tabl
 	 * @param delConds
 	 * @param inserts
 	 * @return formated SemanticObject
 	 * @throws TransException 
 	 */
-	private static SemanticObject formatMulti(CheapTransBuild st, String tabl,
+	private static SemanticObject formatMulti(CheapTransBuild st, IUser usr, String tabl,
 			ArrayList<String[]> delConds, ArrayList<ArrayList<String[]>> inserts) throws TransException {
 		SemanticObject jmultis = new SemanticObject();
 		// del
 		if (delConds != null) {
-			Delete jdel = st.delete(tabl);
+			Delete jdel = st.delete(tabl, usr);
 			for (String[] cond : delConds) {
 				jdel.where(cond[0], cond[1], cond[2]);
 			}
@@ -215,7 +216,7 @@ public class CheapApi {
 		// insert
 		if (inserts != null) {
 			for (ArrayList<String[]> nvs : inserts) {
-				Insert jinss = st.insert(tabl);
+				Insert jinss = st.insert(tabl, usr);
 				for (String[] nv : nvs) 
 					jinss.nv(nv[0], nv[1]);
 				jmultis.add("insert", jinss);
