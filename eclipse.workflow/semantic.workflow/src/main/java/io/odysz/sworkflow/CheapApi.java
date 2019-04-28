@@ -106,7 +106,8 @@ public class CheapApi {
 
 	private String multiChildTabl;
 	private ArrayList<String[]> multiDels;
-	private ArrayList<ArrayList<String[]>> multiInserts;
+	/** 3d array ArrayList<ArrayList<String[]>>*/
+	private ArrayList<ArrayList<?>> multiInserts;
 	private Update postups;
 	private String cmd;
 
@@ -129,7 +130,7 @@ public class CheapApi {
 	}
 	
 	public CheapApi taskChildMulti(String tabl,
-			ArrayList<String[]> delConds, ArrayList<ArrayList<String[]>> inserts) {
+			ArrayList<String[]> delConds, ArrayList<ArrayList<?>> inserts) {
 		multiChildTabl = tabl;
 		multiDels = delConds;
 		multiInserts = inserts;
@@ -197,12 +198,13 @@ public class CheapApi {
 	 * @param usr 
 	 * @param tabl
 	 * @param delConds
-	 * @param inserts
+	 * @param multiInserts
 	 * @return formated SemanticObject
 	 * @throws TransException 
 	 */
+	@SuppressWarnings("unchecked")
 	private static SemanticObject formatMulti(CheapTransBuild st, IUser usr, String tabl,
-			ArrayList<String[]> delConds, ArrayList<ArrayList<String[]>> inserts) throws TransException {
+			ArrayList<String[]> delConds, ArrayList<ArrayList<?>> multiInserts) throws TransException {
 		SemanticObject jmultis = new SemanticObject();
 		// del
 		if (delConds != null) {
@@ -214,10 +216,10 @@ public class CheapApi {
 		}
 		
 		// insert
-		if (inserts != null) {
-			for (ArrayList<String[]> nvs : inserts) {
+		if (multiInserts != null) {
+			for (ArrayList<?> nvs : multiInserts) {
 				Insert jinss = st.insert(tabl, usr);
-				for (String[] nv : nvs) 
+				for (String[] nv : (ArrayList<String[]>)nvs) 
 					jinss.nv(nv[0], nv[1]);
 				jmultis.add("insert", jinss);
 			}

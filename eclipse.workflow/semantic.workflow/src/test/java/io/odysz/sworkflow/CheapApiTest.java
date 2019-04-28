@@ -164,7 +164,7 @@ public class CheapApiTest {
 	public void test_1_Start() throws SQLException, TransException {
 		// add some business details (not logic of workflow, but needing committed in same transaction)
 		// also check fkIns, task_details, , taskId, tasks, taskId configurations
-		ArrayList<ArrayList<String[]>> inserts = new ArrayList<ArrayList<String[]>>();
+		ArrayList<ArrayList<?>> inserts = new ArrayList<ArrayList<?>>();
 		ArrayList<String[]> row = new ArrayList<String[]>();
 		row.add(new String[] {"remarks", "detail-1"});
 		inserts.add(row);
