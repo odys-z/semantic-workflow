@@ -111,7 +111,6 @@ public class EnginDesign {
 
 			static final String handleCmd = "handlingCmd";
 
-
 			static final String descol = "descpt";
 
 			static final String prevInst = "prevRec";

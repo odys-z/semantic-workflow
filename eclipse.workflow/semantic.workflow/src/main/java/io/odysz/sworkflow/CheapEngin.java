@@ -158,7 +158,6 @@ public class CheapEngin {
 		// stop worker
 		Utils.logi("cancling WF-Checker ... ");
 		schedualed.cancel(true);
-//		scheduler.shutdown();
 		try {
 		    if (!scheduler.awaitTermination(200, TimeUnit.MILLISECONDS)) {
 		        scheduler.shutdownNow();

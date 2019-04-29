@@ -30,14 +30,6 @@ public class CheapEvent extends SemanticObject {
 			put("__nextNode", new CheapNode(nextnd));
 
 	}
-//	private String wfId;
-//	private Evtype etype;
-//	private CheapNode currentNode;
-//	private CheapNode nextNode;
-//	private String instId;
-//	private String taskId;
-//	private Req req;
-//	private String cmd;
 
 	/**When this is creating by cheap engine, there is not node instance id.
 	 * After sqls be committed, resolve it from semantext.
@@ -52,15 +44,6 @@ public class CheapEvent extends SemanticObject {
 	 */
 	public CheapEvent(String wfId, Evtype evtype, CheapNode current,
 			CheapNode next, String taskId, String instId, Req rq, String cmd) {
-//		this.wfId = wfId;
-//		this.etype = evtype;
-//		this.currentNode = current;
-//		this.nextNode = next;
-//		this.taskId = taskId;
-//		this.instId = instId;
-//		this.req = rq;
-//		this.cmd = cmd;
-
 		put("__wfId", wfId);
 		put("__etype", evtype);
 		put("__currentNode", current);
@@ -102,11 +85,5 @@ public class CheapEvent extends SemanticObject {
 			put("__instId", smtxt.resulvedVal(instId));
 		return this;
 	}
-
-//	public static CheapEvent fromJson(String json) {
-//
-//		CheapEvent evt = new CheapEvent(object, etype, currentNode, currentNode, object, object, req, object);
-//		return evt;
-//	}
 
 }

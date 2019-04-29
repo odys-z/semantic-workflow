@@ -92,7 +92,6 @@ public class CheapChecker implements Runnable {
 		if (jreq != null) {
 			ArrayList<String> sqls = new ArrayList<String>();
 			jreq.commit(sqls, CheapEngin.checkUser);
-//			Connects.commit(CheapEngin.checkUser, sqls);
 		}
 		
 	}
