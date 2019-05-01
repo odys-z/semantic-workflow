@@ -16,25 +16,21 @@ public class CheapTransBuild extends DATranscxt {
 	@Override
 	public Query select(String tabl, String... alias) {
 		Query q = super.select(tabl, alias);
-		q.doneOp((conn, sqls) -> Connects.select(conn, sqls.get(0)));
+		q.doneOp((conn, sqls) -> Connects.select(conn.connId(), sqls.get(0)));
 		return q;
 	}
 	
 	public Insert insert(String tabl, IUser usr) {
 		Insert i = super.insert(tabl);
-		i.doneOp((conn, sqls) -> Connects.commit(conn, usr, sqls));
+		i.doneOp((conn, sqls) -> Connects.commit(conn.connId(), usr, sqls));
 		return i;
 	}
 	
 	public Update update(String tabl, IUser usr) {
 		Update u = super.update(tabl);
-		u.doneOp((conn, sqls) -> Connects.commit(conn, usr, sqls));
+		u.doneOp((conn, sqls) -> Connects.commit(conn.connId(), usr, sqls));
 		return u;
 	}
-
-//	public CheapTransBuild(ISemantext semantext) {
-//		super(semantext);
-//	}
 
 	/**Build transact builder, initialize semantics in xtabl.
 	 * @param connId
