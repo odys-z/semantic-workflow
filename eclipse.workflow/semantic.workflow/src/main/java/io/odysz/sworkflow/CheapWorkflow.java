@@ -5,6 +5,7 @@ import java.util.HashMap;
 
 import io.odysz.common.LangExt;
 import io.odysz.module.rs.SResultset;
+import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.CheapNode.VirtualNode;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.x.TransException;
@@ -68,9 +69,11 @@ public class CheapWorkflow {
 		this.bNodeInstRefs = LangExt.parseMap(bNodeInstRefs);
 
 		// load configs
-		SResultset rs = (SResultset) CheapEngin.trcs
+		SemanticObject s = CheapEngin.trcs
 				.select(WfMeta.nodeTabl)
 				.rs(CheapEngin.basictx);
+		
+		SResultset rs = (SResultset) s.rs(0);
 		rs.beforeFirst();
 
 		nodes = new HashMap<String, CheapNode>(rs.getRowCount());
@@ -112,7 +115,7 @@ public class CheapWorkflow {
 	 * @throws SQLException
 	 */
 	public String[] getInstByTask(CheapTransBuild trcs, String busiId) throws TransException, SQLException {
-		SResultset rs = (SResultset) trcs
+		SemanticObject s = trcs
 				.select(bTabl, "b")
 				// join task_nodes i on i.taskId = b.taskId and i.taskId = '000004'
 				.j(instabl, "i",  String.format(
@@ -122,7 +125,7 @@ public class CheapWorkflow {
 				.col("b." + bRecId, "busiId")
 				.col("i.nodeId", "nodeId")
 				.rs(CheapEngin.basictx);
-
+		SResultset rs = (SResultset) s.rs(0);
 		if (rs.beforeFirst().next())
 			return new String[] {
 					rs.getString("busiId"),

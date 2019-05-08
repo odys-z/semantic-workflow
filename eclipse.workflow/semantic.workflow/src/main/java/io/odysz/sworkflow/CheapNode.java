@@ -8,6 +8,7 @@ import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DatasetCfg.Dataset;
 import io.odysz.semantics.IUser;
+import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
@@ -133,7 +134,7 @@ public class CheapNode {
 
 	private HashMap<String, CheapRoute> loadRoutes(String nodeId) throws TransException, SQLException {
 		HashMap<String, CheapRoute> routs = new HashMap<String, CheapRoute>();
-		SResultset rs = (SResultset) CheapEngin.trcs
+		SemanticObject s = CheapEngin.trcs
 				.select(WfMeta.cmdTabl)
 				.col(WfMeta.cmdCmd, "cmd")
 				.col(WfMeta.cmdTxt, "txt")
@@ -141,6 +142,7 @@ public class CheapNode {
 				.col(WfMeta.cmdSort, "sort")
 				.where("=", WfMeta.nid, "'" + nodeId + "'")
 				.rs(CheapEngin.basictx);
+		SResultset rs = (SResultset) s.rs(0);
 		rs.beforeFirst();
 		while (rs.next()) {
 			String cmd = rs.getString("cmd");

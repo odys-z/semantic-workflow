@@ -4,7 +4,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
-import io.odysz.semantics.IResults;
+import io.odysz.module.rs.SResultset;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
@@ -71,7 +71,7 @@ public class CheapApi {
 		// left outer join task_nodes i on i.nodeId = n.nodeId and i.taskId = '000001'
 		// where n.wfId = 't01'
 		// order by n.sort;
-		IResults lst = CheapEngin.trcs
+		SemanticObject list = CheapEngin.trcs
 				.select(WfMeta.nodeTabl, "n")
 				.col("n.sort").col("n.nodeName").col("i.*").col("c.txt", "handleTxt")
 				.l(wf.instabl, "i", "i.nodeId = n.nodeId and i.taskId = '" + taskid + "'")
@@ -79,6 +79,7 @@ public class CheapApi {
 				.where("=", "n.wfId", "'" + wftype + "'")
 				.orderby("n.sort")
 				.rs(CheapEngin.trcs.basictx());
+		SResultset lst = (SResultset) list.rs(0);
 
 		sobj.rs(lst, lst.getRowCount());
 		return sobj;
@@ -177,7 +178,8 @@ public class CheapApi {
 		lock.lock();
 		try {
 			// check competition, commit. FIXME performance problem? But only supported with RDBMS?
-			IResults rs = (IResults) q.rs(smtxt);
+			SemanticObject s = q.rs(smtxt);
+			SResultset rs = (SResultset) s.rs(0);
 			if (rs.beforeFirst().next()) {
 				if (rs.getInt("cnt") > 0)
 					throw new CheapException(

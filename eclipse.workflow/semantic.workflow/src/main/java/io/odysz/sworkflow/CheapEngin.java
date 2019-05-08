@@ -92,10 +92,10 @@ public class CheapEngin {
 			basictx = trcs.instancontxt(new CheapRobot());
 
 			// select * from oz_wfworkflow;
-			SResultset rs = (SResultset) trcs
+			SemanticObject s = trcs
 					.select(WfMeta.wftabl)
 					.rs(basictx); // static context is enough to load cheap configs
-
+			SResultset rs = (SResultset) s.rs(0); 
 			rs.beforeFirst();
 
 			wfs = new HashMap<String, CheapWorkflow>(rs.getRowCount());
