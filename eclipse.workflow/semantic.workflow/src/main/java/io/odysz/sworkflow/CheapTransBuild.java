@@ -1,6 +1,7 @@
 package io.odysz.sworkflow;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 import org.xml.sax.SAXException;
 
@@ -10,6 +11,7 @@ import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Update;
@@ -46,9 +48,12 @@ public class CheapTransBuild extends DATranscxt {
 	/**Build transact builder, initialize semantics in xtabl.
 	 * @param connId
 	 * @param xtabl
+	 * @throws SQLException 
+	 * @throws SemanticException 
 	 */
-	public CheapTransBuild(String connId, XMLTable xtabl) {
-		super(connId);
+	public CheapTransBuild(String connId, XMLTable xtabl) throws SemanticException, SQLException {
+		super(connId, Connects.loadMeta(connId));
+		// super(connId, null);
 		try {
 			initConfigs(connId, xtabl);
 		} catch (SAXException | IOException e) {

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 import org.junit.Test;
 import org.xml.sax.SAXException;
@@ -15,6 +16,8 @@ import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.LoggingUser;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.meta.TableMeta;
+import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
@@ -138,6 +141,9 @@ public class CheapApiTest {
 	static final String wftype = "t01";
 
 	static LoggingUser usr;
+
+	private static HashMap<String, TableMeta> metas;
+
 	static {
 		Utils.printCaller(false);
 		
@@ -227,10 +233,11 @@ public class CheapApiTest {
 		else Utils.logi("No arriving event handler");
 	}
 
-	private static void initSqlite() throws SQLException {
+	private static void initSqlite() throws SQLException, SemanticException {
 		File file = new File("src/test/res");
 		String path = file.getAbsolutePath();
 		Connects.init(path);
+		metas = Connects.loadMeta("local-sqlite");
 
 		// testxt = new Transcxt(null);
 		
