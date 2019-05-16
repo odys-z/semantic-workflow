@@ -197,12 +197,12 @@ public class CheapApi {
 	
 	/**Format multi-details request into SemanticObject.
 	 * @param st
-	 * @param usr 
+	 * @param usr
 	 * @param tabl
 	 * @param delConds
 	 * @param multiInserts
 	 * @return formated SemanticObject
-	 * @throws TransException 
+	 * @throws TransException
 	 */
 	@SuppressWarnings("unchecked")
 	private static SemanticObject formatMulti(CheapTransBuild st, IUser usr, String tabl,
