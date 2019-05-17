@@ -155,9 +155,11 @@ public class CheapApiTest {
 		jo.put("usrAct", usrAct);
 
 		try {
-			initSqlite();
-			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
-			usr = new LoggingUser("local-sqlite", "src/test/res/semantic-log.xml", "CheapApiTest", jo);
+			String conn = "local-sqlite";
+			initSqlite(conn);
+			metas = Connects.loadMeta(conn);
+			CheapEngin.initCheap("src/test/res/workflow-meta.xml", metas, null);
+			usr = new LoggingUser(conn, "src/test/res/semantic-log.xml", "CheapApiTest", jo);
 		} catch (SQLException | TransException | IOException | SAXException e) {
 			e.printStackTrace();
 		}
@@ -233,11 +235,10 @@ public class CheapApiTest {
 		else Utils.logi("No arriving event handler");
 	}
 
-	private static void initSqlite() throws SQLException, SemanticException {
+	private static void initSqlite(String conn) throws SQLException, SemanticException {
 		File file = new File("src/test/res");
 		String path = file.getAbsolutePath();
 		Connects.init(path);
-		metas = Connects.loadMeta("local-sqlite");
 
 		// testxt = new Transcxt(null);
 		

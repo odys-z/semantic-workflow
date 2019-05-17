@@ -25,6 +25,7 @@ import io.odysz.semantic.DA.DatasetCfg.Dataset;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.meta.TableMeta;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapEvent.Evtype;
 import io.odysz.sworkflow.EnginDesign.Req;
@@ -56,18 +57,20 @@ public class CheapEngin {
 
 	public static String confpath;
 
-	/**Init cheap engine configuration, schedule a timeout checker. 
+	/**Init cheap engine configuration, schedule a timeout checker.<br>
+	 * <b>Note:</b> Calling this only after 
 	 * @param configPath 
 	 * @param customChecker 
+	 * @param meta 
 	 * @throws TransException 
 	 * @throws IOException 
 	 * @throws SAXException */
-	public static void initCheap(String configPath, ICheapChecker customChecker)
+	public static void initCheap(String configPath, HashMap<String, TableMeta> meta, ICheapChecker customChecker)
 			throws TransException, IOException, SAXException {
 		// worker thread 
 		stopCheap();
 		
-		reloadCheap(configPath);
+		reloadCheap(configPath, meta);
 		confpath = configPath;
 
 		scheduler = Executors.newScheduledThreadPool(1);
@@ -75,7 +78,7 @@ public class CheapEngin {
 				new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
 	}
 
-	private static void reloadCheap(String filepath) throws TransException, IOException, SAXException {
+	private static void reloadCheap(String filepath, HashMap<String, TableMeta> meta) throws TransException, IOException, SAXException {
 		try {
 			LinkedHashMap<String, XMLTable> xtabs = loadXmeta(filepath);
 			// table = conn
@@ -88,7 +91,7 @@ public class CheapEngin {
 			DatasetCfg.parseConfigs(ritConfigs, xtabs.get("right-ds"));
 
 			// table = semantics
-			trcs = new CheapTransBuild(conn, xtabs.get("semantics"));
+			trcs = new CheapTransBuild(conn, meta, xtabs.get("semantics"));
 			basictx = trcs.instancontxt(new CheapRobot());
 
 			// select * from oz_wfworkflow;

@@ -2,6 +2,7 @@ package io.odysz.sworkflow;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.HashMap;
 
 import org.xml.sax.SAXException;
 
@@ -11,6 +12,7 @@ import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.meta.TableMeta;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
@@ -45,14 +47,16 @@ public class CheapTransBuild extends DATranscxt {
 		return u;
 	}
 
-	/**Build transact builder, initialize semantics in xtabl.
+	/**Build transact builder, initialize semantics in xtabl.<br>
+	 * This constructor can only been called after super class {@link DATranscxt} initialized with DB metas.
 	 * @param connId
 	 * @param xtabl
 	 * @throws SQLException 
 	 * @throws SemanticException 
 	 */
-	public CheapTransBuild(String connId, XMLTable xtabl) throws SemanticException, SQLException {
-		super(connId, Connects.loadMeta(connId));
+	public CheapTransBuild(String connId, HashMap<String, TableMeta> meta, XMLTable xtabl) throws SemanticException, SQLException {
+		// super(connId, Connects.loadMeta(connId));
+		super(connId, meta); // metas must already loaded
 		try {
 			initConfigs(connId, xtabl);
 		} catch (SAXException | IOException e) {
