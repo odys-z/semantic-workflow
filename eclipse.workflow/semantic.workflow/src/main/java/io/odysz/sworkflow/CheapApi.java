@@ -143,7 +143,7 @@ public class CheapApi {
 		return this;
 	}
 
-	/**Commit current request set in {@link #req}.
+	/**Commit current request set in {@link #req}. TODO how about rename this as doCmd()?
 	 * @param usr
 	 * @return { evt: {@link CheapEvent} for start event(new task ID must resolved), <br>
 	 * 		stepHandler: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
@@ -173,7 +173,7 @@ public class CheapApi {
 				.col("count(n.nodeId)", "cnt")
 				.j(wf.instabl, "prv", "n.nodeId = prv.nodeId")
 				.j(wf.instabl, "nxt", "n.nodeId = nxt.nodeId and nxt.prevRec = prv.instId")
-				.where(new Condit(Logic.op.isnull, WfMeta.narriveCondit, null));
+				.where(new Condit(Logic.op.isnull, WfMeta.narriveCondit, ""));
 
 		lock.lock();
 		try {

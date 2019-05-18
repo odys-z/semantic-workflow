@@ -20,6 +20,7 @@ import io.odysz.module.xtable.Log4jWrapper;
 import io.odysz.module.xtable.XMLDataFactoryEx;
 import io.odysz.module.xtable.XMLTable;
 import io.odysz.semantic.DASemantics.smtype;
+import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.DatasetCfg;
 import io.odysz.semantic.DA.DatasetCfg.Dataset;
 import io.odysz.semantics.ISemantext;
@@ -58,27 +59,41 @@ public class CheapEngin {
 	public static String confpath;
 
 	/**Init cheap engine configuration, schedule a timeout checker.<br>
-	 * <b>Note:</b> Calling this only after 
+	 * @param string
+	 * @param metas
+	 * @param object
+	 * @throws SAXException 
+	 * @throws IOException 
+	 * @throws TransException 
+	 */
+	public static void initCheap(String configPath, HashMap<String, TableMeta> metas,
+			ICheapChecker customChecker) throws TransException, IOException, SAXException {
+		// worker thread 
+		stopCheap();
+		
+		reloadCheap(configPath, metas);
+		confpath = configPath;
+
+		scheduler = Executors.newScheduledThreadPool(1);
+		schedualed = scheduler.scheduleAtFixedRate(
+				new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
+
+	}
+
+	/**Init cheap engine configuration, schedule a timeout checker.<br>
+	 * <b>Note:</b> Calling this only after DAStranscxt initialized with metas.
 	 * @param configPath 
 	 * @param customChecker 
 	 * @param meta 
 	 * @throws TransException 
 	 * @throws IOException 
 	 * @throws SAXException */
-	public static void initCheap(String configPath, HashMap<String, TableMeta> meta, ICheapChecker customChecker)
+	public static void initCheap(String configPath, ICheapChecker customChecker)
 			throws TransException, IOException, SAXException {
-		// worker thread 
-		stopCheap();
-		
-		reloadCheap(configPath, meta);
-		confpath = configPath;
-
-		scheduler = Executors.newScheduledThreadPool(1);
-		schedualed = scheduler.scheduleAtFixedRate(
-				new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
+		initCheap(configPath, null, customChecker);
 	}
 
-	private static void reloadCheap(String filepath, HashMap<String, TableMeta> meta) throws TransException, IOException, SAXException {
+	private static void reloadCheap(String filepath, HashMap<String, TableMeta> metas) throws TransException, IOException, SAXException {
 		try {
 			LinkedHashMap<String, XMLTable> xtabs = loadXmeta(filepath);
 			// table = conn
@@ -91,7 +106,7 @@ public class CheapEngin {
 			DatasetCfg.parseConfigs(ritConfigs, xtabs.get("right-ds"));
 
 			// table = semantics
-			trcs = new CheapTransBuild(conn, meta, xtabs.get("semantics"));
+			trcs = new CheapTransBuild(conn, metas != null ? metas : DATranscxt.meta(conn), xtabs.get("semantics"));
 			basictx = trcs.instancontxt(new CheapRobot());
 
 			// select * from oz_wfworkflow;
@@ -128,7 +143,10 @@ public class CheapEngin {
 				// 2.2 node instance fk-ins to tasks.taskId
 				// in case of step, task-id is not created, the ref string is kept untouched
 				// - this shall be improved, implicit semantics is not encouraged.
-				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.fkIns,
+
+//				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.fkIns,
+//						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
+				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.postFk,
 						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
 
 
@@ -222,7 +240,7 @@ public class CheapEngin {
 		else {
 			// 0.2 step, find the task and the current state node
 			if (busiId == null)
-				throw new CheapException("Command %s.%s needing find task/business record first. but busi-id is null",
+				throw new CheapException("Command %s.%s need to find task/business record first. but busi-id is null",
 						req.name(), cmd);
 			String[] tskInf = wf.getInstByTask(trcs, busiId);
 			if (tskInf == null || tskInf.length == 0) {
@@ -272,6 +290,10 @@ public class CheapEngin {
 						.nv(nodeInst.handleCmd, cmd)
 						.where("=", nodeInst.id, "'" + currentInstId + "'"));
 		}
+		else
+			// place holder (not null column) for semantics postFk(tasks.wfState - task_nodes.instId) 
+			// resulved by postFk
+			ins1.nv(nodeInst.busiFk , "?");
 
 		// 2.0. prepare back-ref(nodeId:task.nodeBackRef);
 		// e.g. oz_workflow.bacRefs = 't01.03:requireAllStep', so set tasks.requireAll = new-inst-id if nodeId = 't01.03';<br>
@@ -287,7 +309,6 @@ public class CheapEngin {
 		if (Req.start == req) {
 			Insert ins2 = trcs
 					.insert(wf.bTabl, usr)
-					// TODO check semantics fkIns(tasks.wfState - task_nodes.instId) 
 					.nv(wf.bCateCol, wf.wfId);
 			if (busiPack != null)
 				for (String[] nv : busiPack)
