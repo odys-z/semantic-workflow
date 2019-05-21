@@ -198,8 +198,8 @@ public class CheapApiTest {
 		if (eh != null) {
 			CheapEvent evt = (CheapEvent) res.get("evt");
 			eh.onCmd(evt);
-			newInstId = evt.instId();
-			newTaskId = evt.taskId();
+			newInstId = (String) evt.instId();
+			newTaskId = (String) evt.taskId();
 		}
 		else Utils.logi("No stepping event");
 

@@ -87,7 +87,8 @@ public class CheapChecker implements Runnable {
 	private static void timeout(CheapEvent evt)
 			throws SQLException, IOException, TransException {
 		// current node id means current instance
-		CheapApi wfapi = CheapApi.stepTimeout(evt.wfId(), evt.taskId());
+		CheapApi wfapi = CheapApi.stepTimeout(evt.wfId(),
+				(String)evt.taskId()); // string: event must already resulved.
 		Update jreq = (Update) wfapi.commit(CheapEngin.checkUser).get("res"); // NOT NULLLL!!!!
 		if (jreq != null) {
 			ArrayList<String> sqls = new ArrayList<String>();

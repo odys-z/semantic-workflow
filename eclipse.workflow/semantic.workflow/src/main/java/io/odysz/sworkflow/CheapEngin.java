@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import org.xml.sax.SAXException;
 
 import io.odysz.common.Configs;
+import io.odysz.common.LangExt;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
 import io.odysz.module.xtable.IXMLStruct;
@@ -34,6 +35,7 @@ import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.sworkflow.EnginDesign.WfMeta.nodeInst;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Update;
+import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.x.TransException;
 
 /**A simple work flow engine
@@ -228,7 +230,7 @@ public class CheapEngin {
 		CheapNode currentNode; 
 
 		if (wfs == null)
-			throw new SemanticException("Engine must be initialized");
+			throw new SemanticException("Cheap engine must been initialized.");
 
 		// 0 prepare current node
 		CheapWorkflow wf = wfs.get(wftype);
@@ -236,6 +238,10 @@ public class CheapEngin {
 			// 0.1 start
 			currentNode = wf.start(); // a virtual node
 			cmd = Req.start.name();
+			// sometimes a task alread exists
+			String[] tskInf = wf.getInstByTask(trcs, busiId);
+			if (tskInf != null && tskInf.length > 0)
+				currentInstId = tskInf[1];
 		}
 		else {
 			// 0.2 step, find the task and the current state node
@@ -244,7 +250,7 @@ public class CheapEngin {
 						req.name(), cmd);
 			String[] tskInf = wf.getInstByTask(trcs, busiId);
 			if (tskInf == null || tskInf.length == 0) {
-				// may a server error
+				// may be a server error
 				Utils.warn("Can't find task's information. taskId = %s, wfId = %s", busiId, wf.wfId);
 				// may be a client error
 				throw new CheapException("Can't find task's information. taskId = %s, wfId = %s",
@@ -276,7 +282,8 @@ public class CheapEngin {
 		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr);
 		ins1.nv(nodeInst.nodeFk, nextNode.nodeId())
 			.nv(nodeInst.descol, nodeDesc);
-		String newInstId = basictx.formatResulv(wf.instabl, nodeInst.id);
+		// String newInstId = basictx.formatResulv(wf.instabl, nodeInst.id);
+		Resulving newInstId = new Resulving(wf.instabl, nodeInst.id);
 		if (nodeInst.wfIdFk != null)
 			ins1.nv(nodeInst.wfIdFk, wf.wfId);
 
@@ -306,7 +313,7 @@ public class CheapEngin {
 		//  2.1. create task, with busiPack as task nvs.<br>
 		//  semantics: autopk(tasks.taskId), fk(tasks.wfState - task_nodes.instId);<br>
 		//  add back-ref(nodeId:task.nodeBackRef),
-		if (Req.start == req) {
+		if (Req.start == req && LangExt.isblank(busiId)) {
 			Insert ins2 = trcs
 					.insert(wf.bTabl, usr)
 					.nv(wf.bCateCol, wf.wfId);
@@ -319,15 +326,18 @@ public class CheapEngin {
 			
 			ins1.post(ins2);
 		}
-		//  2.2. or update task,<br>
+		//  2.2. or task exists, update task,<br>
 		//  semantics: fk(tasks.wfState - task_nodes.instId)<br>
 		//  add back-ref(nodeId:task.nodeBackRef),
-		else if (Req.cmd == req) {
+		else if (Req.cmd == req || Req.start == req) {
 			Update upd2 = trcs.update(wf.bTabl, usr)
 					.nv(wf.bTaskStateRef,
 							// trcs.basictx().formatResulv(wf.instabl, wf.bRecId));
 							newInstId)
 					.where("=", wf.bRecId, "'" + busiId + "'");
+			if (busiPack != null)
+				for (String[] nv : busiPack)
+					upd2.nv(nv[0], nv[1]);
 
 			if (colname != null)
 				upd2.nv(colname, newInstId);
@@ -344,7 +354,8 @@ public class CheapEngin {
 			evt = new CheapEvent(currentNode.wfId(), Evtype.start,
 						currentNode, nextNode,
 						// busiId is null for new task, resolved later
-						basictx.formatResulv(wf.bTabl, wf.bRecId),
+						// basictx.formatResulv(wf.bTabl, wf.bRecId),
+						new Resulving(wf.bTabl, wf.bRecId),
 						newInstId,
 						Req.start, Req.start.name());
 		else

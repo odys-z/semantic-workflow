@@ -2,9 +2,11 @@ package io.odysz.sworkflow;
 
 import java.sql.SQLException;
 
+import io.odysz.common.Utils;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.EnginDesign.Req;
+import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.x.TransException;
 
 public class CheapEvent extends SemanticObject {
@@ -37,19 +39,19 @@ public class CheapEvent extends SemanticObject {
 	 * @param evtype event type
 	 * @param current
 	 * @param next
-	 * @param taskId
-	 * @param instId
+	 * @param taskId a {@link Resulving} value to be resulved or a known task id value
+	 * @param newInstId a {@link Resulving} value to be resulved or a known instance id value
 	 * @param rq
 	 * @param cmd
 	 */
 	public CheapEvent(String wfId, Evtype evtype, CheapNode current,
-			CheapNode next, String taskId, String instId, Req rq, String cmd) {
+			CheapNode next, Object taskId, Object newInstId, Req rq, String cmd) {
 		put("__wfId", wfId);
 		put("__etype", evtype);
 		put("__currentNode", current);
 		put("__nextNode", next);
 		put("__taskId", taskId);
-		put("__instId", instId);
+		put("__instId", newInstId);
 		put("__req", rq);
 		put("__cmd", cmd);
 	}
@@ -60,9 +62,23 @@ public class CheapEvent extends SemanticObject {
 
 	public String nextNodeId() { return ((CheapNode)get("__nextNode")).nodeId(); }
 
-	public String instId() { return (String) get("__instId"); }
+	public String instId() { 
+		Object v = get("__instId");
+		if (v instanceof Resulving) {
+			Utils.warn("Instance Id must been resulved before being used, there must logic error in caller");
+			return ((Resulving)v).resulved(null);
+		}
+		else return (String)v;
+	}
 
-	public String taskId() { return (String) get("__taskId"); }
+	public String taskId() {
+		Object v = get("__taskId");
+		if (v instanceof Resulving) {
+			Utils.warn("Task Id must been resulved before being used, there must logic error in caller");
+			return ((Resulving)v).resulved(null);
+		}
+		else return (String)v;
+	}
 
 	public String arriveCondt() { return ((CheapNode)get("__nextNode")).arrivCondt(); }
 
@@ -75,7 +91,6 @@ public class CheapEvent extends SemanticObject {
 	/**Resulve taskId, instance Id, etc.
 	 * @param smtxt
 	 * @return this
-	 */
 	public CheapEvent resulve(ISemantext smtxt) {
 		String taskId = taskId();
 		String instId = instId();
@@ -83,6 +98,22 @@ public class CheapEvent extends SemanticObject {
 			put("__taskId", smtxt.resulvedVal(taskId));
 		if (instId != null)
 			put("__instId", smtxt.resulvedVal(instId));
+		return this;
+	}
+	 */
+
+	/**resulve value
+	 * @param smtxt
+	 * @return this
+	 */
+	public CheapEvent resulve(ISemantext smtxt) {
+		Object taskId = get("__taskId");
+		if (taskId instanceof Resulving)
+			put("__taskId", ((Resulving)taskId).resulved(smtxt));
+
+		Object instId = get("__instId");
+		if (instId instanceof Resulving)
+			put("__instId", ((Resulving)instId).resulved(smtxt));
 		return this;
 	}
 

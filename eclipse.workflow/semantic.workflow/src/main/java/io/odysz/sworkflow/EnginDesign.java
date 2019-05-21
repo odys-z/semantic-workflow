@@ -6,7 +6,7 @@ public class EnginDesign {
 		load("load"),
 		// session("login.serv"),
 		TgetDef("get-def"), findRoute("findroute"),
-		cmdsRight("right"),
+		rights("rights"),
 		/** client use this to ask plausible operation using 't' */
 		Ttest("test"), start("start"),
 		/**request stepping according to cmds configured in oz_wfcmds */
@@ -33,8 +33,8 @@ public class EnginDesign {
 				return TgetDef;
 			if (findRoute.name().equals(t))
 				return findRoute;
-			if (cmdsRight.name().equals(t))
-				return cmdsRight;
+			if (rights.name().equals(t))
+				return rights;
 			if (Ttest.name().equals(t))
 				return Ttest;
 			if (start.name().equals(t))
