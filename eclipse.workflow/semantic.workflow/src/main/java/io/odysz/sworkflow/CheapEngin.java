@@ -239,9 +239,11 @@ public class CheapEngin {
 			currentNode = wf.start(); // a virtual node
 			cmd = Req.start.name();
 			// sometimes a task alread exists
-			String[] tskInf = wf.getInstByTask(trcs, busiId);
-			if (tskInf != null && tskInf.length > 0)
-				currentInstId = tskInf[1];
+			if (!LangExt.isblank(busiId, "\\s*null\\s*")) {
+				String[] tskInf = wf.getInstByTask(trcs, busiId);
+				if (tskInf != null && tskInf.length > 0)
+					currentInstId = tskInf[1];
+			}
 		}
 		else {
 			// 0.2 step, find the task and the current state node
@@ -272,9 +274,9 @@ public class CheapEngin {
 				wftype, currentInstId, req);
 
 		if (req == Req.start)
-			nextNode.checkRights(trcs, usr, cmd, busiId);
+			nextNode.checkRights(trcs, usr, req, cmd, busiId);
 		else
-			currentNode.checkRights(trcs, usr, cmd, busiId);
+			currentNode.checkRights(trcs, usr, req, cmd, busiId);
 
 		// 1. create node instance;<br>
 		// post nv: nextInst.prevNode = current.id except start<br>

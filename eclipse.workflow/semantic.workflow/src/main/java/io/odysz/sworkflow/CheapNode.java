@@ -95,7 +95,6 @@ public class CheapNode {
 	private CheapLogic arriveCondt;
 	
 	private String rights;
-	/**Default rights if the right is configured as all next nodes without relationship to user, roles, ... */
 
 	/**
 	 * @param wf
@@ -200,10 +199,18 @@ public class CheapNode {
 
 	public String arrivCondt() { return prevNodes; }
 
+	/**Get the node's command filtered by the nodes.cmdRights (view sql).
+	 * @param trcs
+	 * @param usrId
+	 * @param taskId
+	 * @return right map [cmd, cmd-txt]
+	 * @throws SQLException
+	 * @throws SemanticException
+	 */
 	public HashMap<String, String> rights(CheapTransBuild trcs, String usrId, String taskId)
 			throws SQLException, SemanticException {
 		String dskey;
-		if (rights != null) 
+		if (!LangExt.isblank(rights)) 
 			dskey = rights;
 		else dskey = "ds-allcmd";
 
@@ -211,11 +218,13 @@ public class CheapNode {
 		String vw = String.format(rightDs(dskey, trcs), wfId(), nid, usrId, taskId);
 		SResultset rs = Connects.select(CheapEngin.trcs.basiconnId(), vw, Connects.flag_nothing);
 		rs.beforeFirst();
-		HashMap<String, String> set = new HashMap<String, String>();
-		while (rs.next()) {
-			set.put(rs.getString(1), rs.getString(2));
+		HashMap<String, String> map = new HashMap<String, String>();
+		while (rs.next()) { 
+			// TODO add contract document to xml
+			// 1: cmd, 2: nodeId, 3, roleId, 4, userId
+			map.put(rs.getString(1), rs.getString(2));
 		}
-		return set;
+		return map;
 	}
 
 	/**Get sql configured in workflow-meta.xml/table="rigth-ds"
@@ -236,18 +245,24 @@ public class CheapNode {
 	/**Check user rights for req.
 	 * @param trcs
 	 * @param usr
+	 * @param req 
 	 * @param cmd
 	 * @param taskId
 	 * @throws SQLException Database accessing failed
 	 * @throws SemanticException 
 	 */
-	public void checkRights(CheapTransBuild trcs, IUser usr, String cmd, String taskId)
+	public void checkRights(CheapTransBuild trcs, IUser usr, Req req, String cmd, String taskId)
 			throws SemanticException {
 		if (usr instanceof CheapRobot)
 			return;
 		try {
-			if (!rights(trcs, usr.uid(), taskId).keySet().contains(cmd))
-				throw new CheapException(wf.txt("t-no-rights"), usr.uid());
+//			if (!rights(trcs, usr.uid(), taskId).keySet().contains(cmd))
+//				throw new CheapException(CheapException.ERR_WF_Rights, wf.txt("t-no-rights"), usr.uid());
+
+			HashMap<String, String> rts = rights(trcs, usr.uid(), taskId);
+			if (req == Req.start && rts.size() == 0
+				|| req != Req.start && !rts.keySet().contains(cmd))
+				throw new CheapException(CheapException.ERR_WF_Rights, wf.txt("t-no-rights"), usr.uid());
 		} catch (SQLException e) {
 			throw new CheapException(wf.txt("t-rights-config-err"),
 					e.getMessage(), nid, cmd, usr, taskId);

@@ -2,6 +2,7 @@ package io.odysz.sworkflow;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 import io.odysz.module.rs.SResultset;
@@ -122,6 +123,13 @@ public class CheapApi {
 		if (nvs == null)
 			nvs = new ArrayList<String[]>();
 		nvs.add(new String[] {n, v});
+		return this;
+	}
+
+	public CheapApi taskNv(List<String[]>nvs) {
+		if (nvs != null)
+			for (String[] nv : nvs)
+				taskNv(nv[0], nv[1]);
 		return this;
 	}
 
