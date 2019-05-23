@@ -3,8 +3,10 @@ package io.odysz.sworkflow;
 public class EnginDesign {
 	/**Request types, heartbeat, session, test, find-route, ... */
 	public enum Req { heartbeat("ping"),
+		/** load workflow */
 		load("load"),
-		// session("login.serv"),
+		/** load node's commands */
+		nodeCmds("node-cmds"),
 		TgetDef("get-def"), findRoute("findroute"),
 		rights("rights"),
 		/** client use this to ask plausible operation using 't' */
@@ -29,6 +31,8 @@ public class EnginDesign {
 				return heartbeat;
 			if (load.name().equals(t))
 				return load;
+			if (nodeCmds.name().equals(t))
+				return nodeCmds;
 			if (TgetDef.name().equals(t))
 				return TgetDef;
 			if (findRoute.name().equals(t))

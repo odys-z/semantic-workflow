@@ -209,10 +209,7 @@ public class CheapNode {
 	 */
 	public HashMap<String, String> rights(CheapTransBuild trcs, String usrId, String taskId)
 			throws SQLException, SemanticException {
-		String dskey;
-		if (!LangExt.isblank(rights)) 
-			dskey = rights;
-		else dskey = "ds-allcmd";
+		String dskey = rightSk();
 
 		// args: [%1$s] wfid, [%2$s] node-id, [%3$s] user-id, [%4$s] task-id
 		String vw = String.format(rightDs(dskey, trcs), wfId(), nid, usrId, taskId);
@@ -225,6 +222,12 @@ public class CheapNode {
 			map.put(rs.getString(1), rs.getString(2));
 		}
 		return map;
+	}
+
+	String rightSk() {
+		if (!LangExt.isblank(rights)) 
+			return rights;
+		else return "ds-allcmd";
 	}
 
 	/**Get sql configured in workflow-meta.xml/table="rigth-ds"

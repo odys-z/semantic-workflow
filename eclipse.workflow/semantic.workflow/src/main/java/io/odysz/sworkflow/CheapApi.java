@@ -18,7 +18,9 @@ import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.sql.parts.Logic;
+import io.odysz.transact.sql.parts.Sql;
 import io.odysz.transact.sql.parts.condition.Condit;
+import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
 
 /**CheapEngine API for server side, equivalent to js/cheapwf.<br>
@@ -84,6 +86,31 @@ public class CheapApi {
 
 		sobj.rs(lst, lst.getRowCount());
 		return sobj;
+	}
+
+	public static SemanticObject loadCmds(String wftype, String nId, String iId, String uid)
+			throws TransException, SQLException {
+		CheapTransBuild t = CheapEngin.trcs;
+		CheapNode n = CheapEngin.getWf(wftype).getNode(nId);
+		// select c.nodeId, c.cmd, _v.cmd from oz_wfnodes n 
+		// join oz_wfcmds c  on n.wfId = 'chg01' and n.nodeId = c.nodeId and n.nodeId = 'chg01.10'
+		// 		left outer join (	
+		// 			select c.cmd, c.txt from oz_wfrights r
+		// 			join a_user u on u.userId = 'admin'
+		// 			join oz_wfcmds c on r.cmd = c.cmd and r.roleId = u.roleId and r.wfId = 'chg01' and r.nodeId = 'chg01.10'
+		// 		) _v on c.cmd = _v.cmd
+		SemanticObject list = t.select(WfMeta.nodeTabl, "n")
+				.col("c.nodeId").col("c.cmd")
+				// .col("_v.cmd")
+				.col(Funcall.ifNullElse("_v.cmd", true, false))
+				.j(WfMeta.cmdTabl, "c", Sql.condt(String.format(
+						"n.wfId = '%s' and n.nodeId = c.nodeId and n.nodeId = '%s'",
+						wftype, nId)))
+				.l(t.select(CheapNode.rightDs(n.rightSk(), t), "_v"), "", "c.cmd = _v.cmd")
+				.rs(CheapEngin.trcs.basictx());
+		SResultset lst = (SResultset) list.rs(0);
+
+		return new SemanticObject().rs(lst, lst.getRowCount());
 	}
 
 	/**Get next route node according to ntimeoutRoute (no time checking).<br>

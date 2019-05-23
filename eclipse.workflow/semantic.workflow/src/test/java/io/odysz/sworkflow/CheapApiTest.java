@@ -261,7 +261,7 @@ public class CheapApiTest {
 					"  funcName text(50),\n" + 
 					"  oper text(20),\n" + 
 					"  logTime text(20),\n" + 
-					"  sqlCount INTEGER,\n" +
+					"  cnt INTEGER,\n" +
 					"  txt text(4000),\n" + 
 					"  CONSTRAINT oz_logs_pk PRIMARY KEY (logId))");
 
@@ -289,7 +289,7 @@ public class CheapApiTest {
 					 "cmdRights varchar(20), -- rights view sql key, see engine-meta.xml/table=rights-ds\n" +
 					 "timeoutRoute varchar(500) NULL, -- 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)',\n" +
 					 "timeouts int(11) DEFAULT NULL, -- 'timeout minutes',\n" +
-					 "nonEvents varchar(200) DEFAULT NULL, -- the envent handler's class name\n" +
+					 "onEvents varchar(200) DEFAULT NULL, -- the envent handler's class name\n" +
 					 "PRIMARY KEY (nodeId) )"
 					);
 
@@ -324,7 +324,8 @@ public class CheapApiTest {
 						"	wfId varchar(20),\n" + 
 						"	nodeId varchar(20) NOT NULL,\n" + 
 						"	userId varchar(20) NOT NULL, -- Its more commonly using role id here. Using user id here for simplifying testing.\n" + 
-						"	cmdFilter varchar(20))\n");
+						"	cmdFilter varchar(20)), -- only used by client for UI\n" +
+						"	roleId varchar(20)");
 
 				sqls.add("CREATE TABLE tasks (\n" +
 					"-- business task\n" +
@@ -377,10 +378,10 @@ public class CheapApiTest {
 
 				sqls.add("insert into task_rights (wfId, nodeId, userId, cmdFilter)\n" +
 					"	values\n" +
-					"	('t01', 't01.01', 'CheapApiTest', 'a'),\n" +
-					"	('t01', 't01.02A', 'CheapApiTest', 'a'),\n" +
-					"	('t01', 't01.02B', 'CheapApiTest', 'a'),\n" +
-					"	('t01', 't01.03', 'CheapApiTest', 'a')\n");
+					"	('t01', 't01.01', 'CheapApiTest', 'a', 'r01'),\n" +
+					"	('t01', 't01.02A', 'CheapApiTest', 'a', 'r01'),\n" +
+					"	('t01', 't01.02B', 'CheapApiTest', 'a', 'r01'),\n" +
+					"	('t01', 't01.03', 'CheapApiTest', 'a', 'r01')\n");
 
 				sqls.add("insert into oz_autoseq (sid, seq, remarks) values\n" +
 					"('a_logs.logId', 0, 'log'),\n" +
