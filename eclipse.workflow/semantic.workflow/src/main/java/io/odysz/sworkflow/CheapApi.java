@@ -31,10 +31,14 @@ public class CheapApi {
 	static ReentrantLock lock = new ReentrantLock();
 	/**Get an API instance to start a new workflow of type wftype.
 	 * @param wftype
+	 * @param existask optional, if not exists, cheap engine will create a task record. 
 	 * @return new CheapApi instance
 	 */
-	public static CheapApi start(String wftype) {
-		return new CheapApi(wftype, Req.start, null);
+	public static CheapApi start(String wftype, String... existask) {
+		CheapApi api = new CheapApi(wftype, Req.start, null);
+
+		api.taskId = existask == null || existask.length == 0 ? null : existask[0];
+		return api;
 	}
 
 	public static CheapApi next(String wftype, String taskId, String cmd) {
@@ -206,7 +210,7 @@ public class CheapApi {
 		// where n.arrivCondit is null
 		Query q = st.select(WfMeta.nodeTabl, "n")
 				.col("count(n.nodeId)", "cnt")
-				.j(wf.instabl, "prv", "n.nodeId = prv.nodeId")
+				.j(wf.instabl, "prv", String.format("n.nodeId = prv.nodeId and prv.taskId = '%s'", taskId))
 				.j(wf.instabl, "nxt", "n.nodeId = nxt.nodeId and nxt.prevRec = prv.instId")
 				.where(new Condit(Logic.op.isnull, WfMeta.narriveCondit, ""));
 
