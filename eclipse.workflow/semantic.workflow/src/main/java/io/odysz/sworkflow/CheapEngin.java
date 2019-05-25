@@ -148,17 +148,21 @@ public class CheapEngin {
 
 //				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.fkIns,
 //						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
-				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.postFk,
+				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.postFk))
+					CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.postFk,
 						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
 
 
 				// 2.3 node instance oper, opertime
-				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.opTime,
+				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.opTime))
+					CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.opTime,
 						new String[] { nodeInst.oper, nodeInst.opertime });
 
 				// 2.4 business task's pk and current state ref, e.g. tasks.wfState -> task_nodes.instId
-				CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.autoInc, bRecId);
-				CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.fkIns,
+				if (!CheapTransBuild.hasSemantics(conn, busitabl, smtype.autoInc))
+					CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.autoInc, bRecId);
+				if (!CheapTransBuild.hasSemantics(conn, busitabl, smtype.fkIns))
+					CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.fkIns,
 						new String[] {busiState, instabl, nodeInst.id});
 			}
 		} catch (SQLException e) {
