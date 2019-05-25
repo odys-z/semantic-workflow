@@ -14,6 +14,9 @@ public class CheapException extends SemanticException {
 	public static final String ERR_WF = "wf_err";
 	public static final String ERR_WF_Rights = "wf_err_rights";
 
+	// TODO add js client
+	public static final String ERR_WF_INTERNAL = "wf_err_internal";
+
 	private String code;
 
 	public CheapException(String code, String tmpl, Object... args) {

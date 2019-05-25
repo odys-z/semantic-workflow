@@ -119,8 +119,8 @@ public class CheapWorkflow {
 				.select(bTabl, "b")
 				// join task_nodes i on i.taskId = b.taskId and i.taskId = '000004'
 				.j(instabl, "i",  String.format(
-						"i.taskId = b.%s and i.taskId = '%s' and b.wfState = i.instId",
-						bRecId, busiId))
+						"i.taskId = b.%s and i.taskId = '%s' and b.%s = i.instId",
+						bRecId, busiId, bTaskStateRef))
 				.col("i.instId", "instId")
 				.col("b." + bRecId, "busiId")
 				.col("i.nodeId", "nodeId")
@@ -150,9 +150,9 @@ public class CheapWorkflow {
 	/**Get configured text string in workflow-meta.xml/table='txt'
 	 * @param key
 	 * @return configured txt
-	 */
 	String txt(String key) {
 		return key + " zh: %s";
 	}
+	 */
 
 }

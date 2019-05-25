@@ -259,16 +259,16 @@ public class CheapNode {
 		if (usr instanceof CheapRobot)
 			return;
 		try {
-//			if (!rights(trcs, usr.uid(), taskId).keySet().contains(cmd))
-//				throw new CheapException(CheapException.ERR_WF_Rights, wf.txt("t-no-rights"), usr.uid());
-
 			HashMap<String, String> rts = rights(trcs, usr.uid(), taskId);
 			if (req == Req.start && rts.size() == 0
 				|| req != Req.start && !rts.keySet().contains(cmd))
-				throw new CheapException(CheapException.ERR_WF_Rights, wf.txt("t-no-rights"), usr.uid());
+				throw new CheapException(CheapException.ERR_WF_Rights, "wf %s, user %s, node %s, task: %s",
+						wf.wfId, usr.uid(), nid, taskId);
 		} catch (SQLException e) {
-			throw new CheapException(wf.txt("t-rights-config-err"),
-					e.getMessage(), nid, cmd, usr, taskId);
+			e.printStackTrace();
+			throw new CheapException(CheapException.ERR_WF_INTERNAL,
+					"CheapNode#checkRights() internal error: %s\nwf %s, user %s, node %s, task: %s, cmd: %s",
+					e.getMessage(), wf.wfId, usr.uid(), nid, taskId, cmd);
 		}
 	}
 	

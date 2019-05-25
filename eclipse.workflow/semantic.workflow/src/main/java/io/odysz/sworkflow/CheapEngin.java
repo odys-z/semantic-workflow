@@ -270,7 +270,8 @@ public class CheapEngin {
 		
 		if (nextNode == null)
 			// a configuration problem?
-			throw new CheapException(wf.txt("t-no-node"), 
+			throw new CheapException(CheapException.ERR_WF,
+					"Node not found: wfId %s, instId %s, req %s", 
 				wftype, currentInstId, req);
 
 		if (req == Req.start)
