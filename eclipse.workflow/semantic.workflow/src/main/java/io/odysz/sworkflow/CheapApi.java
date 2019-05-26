@@ -135,7 +135,7 @@ public class CheapApi {
 	private String taskId;
 	private String nodeDesc;
 	/** task table n-vs */
-	private ArrayList<String[]> nvs;
+	private ArrayList<Object[]> nvs;
 
 	private String multiChildTabl;
 	private ArrayList<String[]> multiDels;
@@ -150,17 +150,17 @@ public class CheapApi {
 		this.cmd = cmd;
 	}
 	
-	public CheapApi taskNv(String n, String v) {
+	public CheapApi taskNv(String n, Object v) {
 		if (nvs == null)
-			nvs = new ArrayList<String[]>();
-		nvs.add(new String[] {n, v});
+			nvs = new ArrayList<Object[]>();
+		nvs.add(new Object[] {n, v});
 		return this;
 	}
 
-	public CheapApi taskNv(List<String[]>nvs) {
+	public CheapApi taskNv(List<Object[]>nvs) {
 		if (nvs != null)
-			for (String[] nv : nvs)
-				taskNv(nv[0], nv[1]);
+			for (Object[] nv : nvs)
+				taskNv((String)nv[0], nv[1]);
 		return this;
 	}
 

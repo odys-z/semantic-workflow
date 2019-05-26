@@ -95,7 +95,8 @@ public class CheapEngin {
 		initCheap(configPath, null, customChecker);
 	}
 
-	private static void reloadCheap(String filepath, HashMap<String, TableMeta> metas) throws TransException, IOException, SAXException {
+	private static void reloadCheap(String filepath, HashMap<String, TableMeta> metas)
+			throws TransException, IOException, SAXException {
 		try {
 			LinkedHashMap<String, XMLTable> xtabs = loadXmeta(filepath);
 			// table = conn
@@ -227,7 +228,7 @@ public class CheapEngin {
 	 * @throws TransException 
 	 */
 	public static SemanticObject onReqCmd(IUser usr, String wftype, Req req, String cmd,
-			String busiId, String nodeDesc, ArrayList<String[]> busiPack,
+			String busiId, String nodeDesc, ArrayList<Object[]> busiPack,
 			SemanticObject multireq, Update postreq)
 					throws SQLException, TransException {
 		String currentInstId = null;
@@ -307,7 +308,10 @@ public class CheapEngin {
 		else
 			// place holder (not null column) for semantics postFk(tasks.wfState - task_nodes.instId) 
 			// resulved by postFk
-			ins1.nv(nodeInst.busiFk , "?");
+			// ins1.nv(nodeInst.busiFk , "?");
+			
+			// nideInst.busiFk is resulved by postFk
+			;
 
 		// 2.0. prepare back-ref(nodeId:task.nodeBackRef);
 		// e.g. oz_workflow.bacRefs = 't01.03:requireAllStep', so set tasks.requireAll = new-inst-id if nodeId = 't01.03';<br>
@@ -325,8 +329,8 @@ public class CheapEngin {
 					.insert(wf.bTabl, usr)
 					.nv(wf.bCateCol, wf.wfId);
 			if (busiPack != null)
-				for (String[] nv : busiPack)
-					ins2.nv(nv[0], nv[1]);
+				for (Object[] nv : busiPack)
+					ins2.nv((String)nv[0], nv[1]);
 			
 			if (colname != null)
 				ins2.nv(colname, newInstId);
@@ -343,8 +347,8 @@ public class CheapEngin {
 							newInstId)
 					.where("=", wf.bRecId, "'" + busiId + "'");
 			if (busiPack != null)
-				for (String[] nv : busiPack)
-					upd2.nv(nv[0], nv[1]);
+				for (Object[] nv : busiPack)
+					upd2.nv((String)nv[0], nv[1]);
 
 			if (colname != null)
 				upd2.nv(colname, newInstId);
