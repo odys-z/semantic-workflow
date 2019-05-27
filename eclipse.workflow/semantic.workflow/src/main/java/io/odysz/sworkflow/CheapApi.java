@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
+import io.odysz.common.LangExt;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
@@ -204,26 +205,60 @@ public class CheapApi {
 		CheapEvent evt = (CheapEvent) jreq.get("evt");
 		CheapWorkflow wf = CheapEngin.getWf(evt.wfId());
 
+		Query q;
+		if (req == Req.start && !LangExt.isblank(taskId)) {
+			// CheapEngin only support 1 starting node
+//			String startCol = wf.bNodeInstRefs == null ?
+//					null : wf.bNodeInstRefs.get(wf.node1);
+//			if (startCol == null) {
+//				Utils.warn("Can't find starting instance referencing column in business table %s, task %s.\n"
+//						+ "Checking starting competation ignored.\n"
+//						+ "In oz_workflow.node1, define the starting node, e.g. 'n01';\n"
+//						+ "in backRefs define at lest 1 back ref, e.g. 'n01:startNode', where 'startNode' is the task's column name.",
+//						wf.bTabl, taskId);
+//				q = null;
+//			}
+//			else 
+				// FIXME This checking is not safe
+				q = st.select(wf.bTabl, "b")
+					.col("count(*)", "cnt")
+					.where_("=", wf.bRecId, taskId)
+					// .where("=", wf.bTaskStateRef, startCol)
+					.where(new Condit(Logic.op.isNotnull, wf.bTaskStateRef, wf.bTaskStateRef)) 	// alread started
+					.where(new Condit(Logic.op.notin, wf.bTaskStateRef, st.select(wf.bTabl)		// not finish yet
+													.col(WfMeta.nodeInst.id)
+													.j(withTabl, onCondit)
+													.where_("=", WfMeta.nisFinish, "1")))
+					;
+		}
 		// select count(n.nodeId) from oz_wfnodes n 
 		// join task_nodes prv on n.nodeId = prv.nodeId
 		// join task_nodes nxt on n.nodeId = nxt.nodeId and nxt.prevRec = prv.instId
 		// where n.arrivCondit is null
-		Query q = st.select(WfMeta.nodeTabl, "n")
+		else if (req != Req.start) {
+			q = st.select(WfMeta.nodeTabl, "n")
 				.col("count(n.nodeId)", "cnt")
 				.j(wf.instabl, "prv", String.format("n.nodeId = prv.nodeId and prv.taskId = '%s'", taskId))
 				.j(wf.instabl, "nxt", "n.nodeId = nxt.nodeId and nxt.prevRec = prv.instId")
 				.where(new Condit(Logic.op.isnull, WfMeta.narriveCondit, ""));
+		}
+		else {
+			q = null;
+		}
 
+		// check competition, commit.
+		// FIXME Is this a performance problem? But only supported with RDBMS that have stored processes?
 		lock.lock();
 		try {
-			// check competition, commit. FIXME performance problem? But only supported with RDBMS?
-			SemanticObject s = q.rs(smtxt);
-			SResultset rs = (SResultset) s.rs(0);
-			if (rs.beforeFirst().next()) {
-				if (rs.getInt("cnt") > 0)
-					throw new CheapException(
-						"Target instance already exists. wfid = %s, current state = %s, cmd = %s, business Id = %s",
-						wf.wfId, evt.currentNodeId(), evt.cmd(), evt.taskId());
+			if (q != null) {
+				SemanticObject s = q.rs(smtxt);
+				SResultset rs = (SResultset) s.rs(0);
+				if (rs.beforeFirst().next()) {
+					if (rs.getInt("cnt") > 0)
+						throw new CheapException(CheapException.ERR_WF_COMPETATION,
+							"Target instance already exists. wfid = %s, current state = %s, cmd = %s, business Id = %s",
+							wf.wfId, evt.currentNodeId(), evt.cmd(), taskId);
+				}
 			}
 			ins.ins(smtxt);
 		} finally { lock.unlock(); }

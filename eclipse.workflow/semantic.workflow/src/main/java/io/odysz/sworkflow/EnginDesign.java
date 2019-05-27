@@ -81,11 +81,12 @@ public class EnginDesign {
 		static final String nname = "nodeName";
 		static final String narriveCondit = "arrivCondit";
 		static final String ncmdRigths = "cmdRights";
-		static final String nonEvents = "nonEvents";
+		static final String nonEvents = "onEvents";
 		/**time out in minute */
 		static final String noutTime = "timeouts";
 		/**timeout route (nodeId) */
 		static final String ntimeoutRoute = "timeoutRoute";
+		static final String nisFinish = "isFinish";
 		
 		//////// oz_wfcmds
 		static final String cmdTabl = "oz_wfcmds";

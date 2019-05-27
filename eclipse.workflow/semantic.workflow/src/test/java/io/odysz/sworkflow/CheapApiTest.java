@@ -1,5 +1,9 @@
 package io.odysz.sworkflow;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -11,13 +15,16 @@ import org.junit.Test;
 import org.xml.sax.SAXException;
 
 import io.odysz.common.DateFormat;
+import io.odysz.common.LangExt;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.LoggingUser;
 import io.odysz.semantic.DA.Connects;
+import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.meta.TableMeta;
 import io.odysz.semantics.x.SemanticException;
+import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
@@ -170,6 +177,7 @@ public class CheapApiTest {
 
 	@Test
 	public void test_1_Start() throws SQLException, TransException {
+		// case 1 start new task, without task record exists
 		// add some business details (not logic of workflow, but needing committed in same transaction)
 		// also check fkIns, task_details, , taskId, tasks, taskId configurations
 		ArrayList<ArrayList<?>> inserts = new ArrayList<ArrayList<?>>();
@@ -186,7 +194,7 @@ public class CheapApiTest {
 		inserts.add(row);
 		
 		Update postups = null;
-		SemanticObject res = CheapApi.start(wftype)
+		SemanticObject res1 = CheapApi.start(wftype)
 				.nodeDesc("desc: starting " + DateFormat.formatime(new Date()))
 				.taskNv("remarks", "testing")
 				.taskChildMulti("task_details", null, inserts)
@@ -194,19 +202,55 @@ public class CheapApiTest {
 				.commit(usr);
 
 		// simulating business layer handling events
-		ICheapEventHandler eh = (ICheapEventHandler) res.get("stepHandler");
+		ICheapEventHandler eh = (ICheapEventHandler) res1.get("stepHandler");
 		if (eh != null) {
-			CheapEvent evt = (CheapEvent) res.get("evt");
+			CheapEvent evt = (CheapEvent) res1.get("evt");
 			eh.onCmd(evt);
 			newInstId = (String) evt.instId();
 			newTaskId = (String) evt.taskId();
 		}
 		else Utils.logi("No stepping event");
 
-		eh = (ICheapEventHandler) res.get("arriHandler");
+		eh = (ICheapEventHandler) res1.get("arriHandler");
 		if (eh != null)
-			eh.onArrive(((CheapEvent) res.get("evt")));
+			eh.onArrive(((CheapEvent) res1.get("evt")));
 		else Utils.logi("No arriving event handler");
+		
+		// case 2 start new task, with task record exists
+		ISemantext tr2 = CheapEngin.trcs.instancontxt(usr);
+		CheapWorkflow wf = CheapEngin.getWf(wftype);
+		SemanticObject res2 = (SemanticObject) CheapEngin.trcs
+				.insert(wf.bTabl, usr)
+				.nv("remarks", "testing case 2")
+				.nv(wf.bTaskStateRef, null)
+				.nv("wfId", wftype)
+				.ins(tr2);
+		String task2 = (String) tr2.resulvedVal(wf.bTabl, wf.bRecId);
+
+		res2 = CheapApi.start(wftype, task2)
+				.nodeDesc("desc: starting " + task2)
+				.taskNv("remarks", "testing case 2")
+				.commit(usr);
+		
+		res2 = CheapEngin.trcs.select(wf.instabl)
+				.col(WfMeta.nodeInst.nodeFk, "nid")
+				.where_("=", WfMeta.nodeInst.busiFk, task2)
+				.rs(CheapEngin.trcs.basictx());
+		
+		SResultset rs = (SResultset) res2.rs(0);
+		rs.beforeFirst().next();
+		assertTrue(!LangExt.isblank(rs.getString("nid")));
+	
+		// case 3 trying start task2 should failed because tasks already started
+		try {
+			res2 = CheapApi.start(wftype, task2)
+				.nodeDesc("desc: starting " + task2)
+				.taskNv("remarks", "testing case 2")
+				.commit(usr);
+			fail("task2 started again");
+		} catch (CheapException x) {
+			assertEquals(CheapException.ERR_WF_COMPETATION, x.code());
+		}
 	}
 
 	@Test
@@ -285,6 +329,7 @@ public class CheapApiTest {
 					 "sort int default 1,\n" +
 					 "nodeName varchar(20) DEFAULT NULL,\n" +
 					 "nodeCode varchar(20) DEFAULT NULL,\n" +
+					 "isFinish varchar(2),\n" +
 					 "arrivCondit varchar(200) DEFAULT NULL, -- '[TODO] previous node list. If not null, all previous node handlered can reach here . EX: a01 AND (a02 OR a03)',\n" +
 					 "cmdRights varchar(20), -- rights view sql key, see engine-meta.xml/table=rights-ds\n" +
 					 "timeoutRoute varchar(500) NULL, -- 'timeout-node-id:handled-text:(optional)event-handler(implement ICheapEventHandler)',\n" +
@@ -324,8 +369,8 @@ public class CheapApiTest {
 						"	wfId varchar(20),\n" + 
 						"	nodeId varchar(20) NOT NULL,\n" + 
 						"	userId varchar(20) NOT NULL, -- Its more commonly using role id here. Using user id here for simplifying testing.\n" + 
-						"	cmdFilter varchar(20)), -- only used by client for UI\n" +
-						"	roleId varchar(20)");
+						"	cmdFilter varchar(20), -- only used by client for UI\n" +
+						"	roleId varchar(20))");
 
 				sqls.add("CREATE TABLE tasks (\n" +
 					"-- business task\n" +
@@ -354,7 +399,7 @@ public class CheapApiTest {
 					"values ('t01', 'workflow 01', 'task_nodes', 'tasks', 'taskId', 'wfState', 'wfId', 't01.01', 't01.01:startNode,t01.03:requireAllStep', '0')");
 				
 				sqls.add("insert into oz_wfnodes( wfId, nodeId, sort, nodeName, nodeCode,  \n" +
-					"	arrivCondit, cmdRights, timeoutRoute, timeouts, nonEvents )\n" +
+					"	arrivCondit, cmdRights, timeoutRoute, timeouts, onEvents )\n" +
 					"values\n" +
 					"('t01', 't01.01', 10, 'starting', 't01.01',  \n" +
 						"null, 'ds-allcmd', null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
@@ -376,7 +421,7 @@ public class CheapApiTest {
 					"	('t01.02B', 't01.02B.go03', 'a', 'B To 03',       't01.03', 2),\n" +
 					"	('t01.03',  't01.03.go-end','a', '03 Go End',     't01.04', 9)\n");
 
-				sqls.add("insert into task_rights (wfId, nodeId, userId, cmdFilter)\n" +
+				sqls.add("insert into task_rights (wfId, nodeId, userId, cmdFilter, roleId)\n" +
 					"	values\n" +
 					"	('t01', 't01.01', 'CheapApiTest', 'a', 'r01'),\n" +
 					"	('t01', 't01.02A', 'CheapApiTest', 'a', 'r01'),\n" +
@@ -389,6 +434,8 @@ public class CheapApiTest {
 					"('tasks.taskId', 0, 'tasks'),\n" +
 					"('task_details.recId', 128, 'task details')\n");	// 128: for readable difference
 
+				sqls.add("update oz_wfnodes set isFinish = '1' where timeoutRoute is null and nodeId not in "
+						+ "(select distinct nodeId from oz_wfcmds)");
 				Connects.commit(usr, sqls, Connects.flag_nothing);
 			} catch (Exception e) {
 				Utils.warn("Make sure table oz_autoseq already exists, and only for testing aginst a sqlite DB.");

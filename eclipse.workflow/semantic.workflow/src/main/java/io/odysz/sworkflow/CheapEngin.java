@@ -147,8 +147,8 @@ public class CheapEngin {
 				// in case of step, task-id is not created, the ref string is kept untouched
 				// - this shall be improved, implicit semantics is not encouraged.
 
-//				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.fkIns,
-//						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
+				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.fkIns,
+						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
 				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.postFk))
 					CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.postFk,
 						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
@@ -290,7 +290,7 @@ public class CheapEngin {
 		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr);
 		ins1.nv(nodeInst.nodeFk, nextNode.nodeId())
 			.nv(nodeInst.descol, nodeDesc);
-		// String newInstId = basictx.formatResulv(wf.instabl, nodeInst.id);
+
 		Resulving newInstId = new Resulving(wf.instabl, nodeInst.id);
 		if (nodeInst.wfIdFk != null)
 			ins1.nv(nodeInst.wfIdFk, wf.wfId);
@@ -306,12 +306,13 @@ public class CheapEngin {
 						.where("=", nodeInst.id, "'" + currentInstId + "'"));
 		}
 		else
-			// place holder (not null column) for semantics postFk(tasks.wfState - task_nodes.instId) 
+			// 2019.5.26 can not resulved by post-fk here, using Resulving instead. 
+			// see https://odys-z.github.io/notes/semantics/best-practices.html#post-fk
 			// resulved by postFk
 			// ins1.nv(nodeInst.busiFk , "?");
-			
-			// nideInst.busiFk is resulved by postFk
-			;
+			// ins1.nv(nodeInst.busiFk , ShPostFk.Resulving(wf.bTabl, wf.bRecId));
+			if (!LangExt.isblank(busiId))
+				ins1.nv(nodeInst.busiFk, busiId);
 
 		// 2.0. prepare back-ref(nodeId:task.nodeBackRef);
 		// e.g. oz_workflow.bacRefs = 't01.03:requireAllStep', so set tasks.requireAll = new-inst-id if nodeId = 't01.03';<br>
