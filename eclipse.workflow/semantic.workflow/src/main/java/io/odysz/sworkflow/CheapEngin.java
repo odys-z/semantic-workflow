@@ -292,8 +292,8 @@ public class CheapEngin {
 			.nv(nodeInst.descol, nodeDesc);
 
 		Resulving newInstId = new Resulving(wf.instabl, nodeInst.id);
-		if (nodeInst.wfIdFk != null)
-			ins1.nv(nodeInst.wfIdFk, wf.wfId);
+//		if (nodeInst.wfIdFk != null)
+//			ins1.nv(nodeInst.wfIdFk, wf.wfId);
 
 		// with nv: currentInst.nodeState = cmd-name except start<br>
 		// post nv: nextInst.prevNode = current.id except start<br>
@@ -305,7 +305,7 @@ public class CheapEngin {
 						.nv(nodeInst.handleCmd, cmd)
 						.where("=", nodeInst.id, "'" + currentInstId + "'"));
 		}
-		else
+		else {
 			// 2019.5.26 can not resulved by post-fk here, using Resulving instead. 
 			// see https://odys-z.github.io/notes/semantics/best-practices.html#post-fk
 			// resulved by postFk
@@ -313,6 +313,10 @@ public class CheapEngin {
 			// ins1.nv(nodeInst.busiFk , ShPostFk.Resulving(wf.bTabl, wf.bRecId));
 			if (!LangExt.isblank(busiId))
 				ins1.nv(nodeInst.busiFk, busiId);
+			
+			// starting node instance's handling command = start 
+			ins1.nv(nodeInst.handleCmd, Req.start.name());
+		}
 
 		// 2.0. prepare back-ref(nodeId:task.nodeBackRef);
 		// e.g. oz_workflow.bacRefs = 't01.03:requireAllStep', so set tasks.requireAll = new-inst-id if nodeId = 't01.03';<br>

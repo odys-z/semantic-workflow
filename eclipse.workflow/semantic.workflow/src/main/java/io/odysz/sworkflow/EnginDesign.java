@@ -6,7 +6,7 @@ public class EnginDesign {
 		/** load workflow */
 		load("load"),
 		/** load node's commands */
-		nodeCmds("node-cmds"),
+		nodeCmds("nodeCmds"),
 		TgetDef("get-def"), findRoute("findroute"),
 		rights("rights"),
 		/** client use this to ask plausible operation using 't' */
@@ -75,7 +75,7 @@ public class EnginDesign {
 		static final String bNodeInstBackRefs = "backRefs";
 
 		static final String nodeTabl = "oz_wfnodes";
-		static final String nodeWfId = "nodeWfId";
+		static final String nodeWfId = "wfId";
 		static final String nid = "nodeId";
 		static final String ncode = "nodeCode";
 		static final String nname = "nodeName";
@@ -86,6 +86,7 @@ public class EnginDesign {
 		static final String noutTime = "timeouts";
 		/**timeout route (nodeId) */
 		static final String ntimeoutRoute = "timeoutRoute";
+		static final String nsort = "sort";
 		static final String nisFinish = "isFinish";
 		
 		//////// oz_wfcmds
@@ -104,8 +105,8 @@ public class EnginDesign {
 
 			static final String nodeFk = "nodeId";
 
-			/**<b>Optional</b> wf type id FK to Wftabl.recId (nodeWfId) */
-			static final String wfIdFk = null;
+			/**wf type id FK to Wftabl.recId (nodeWfId) */
+			// static final String wfIdFk = "";
 
 			/**TODO modify tables<br>
 			 * task-id fk to tasks */
@@ -120,6 +121,7 @@ public class EnginDesign {
 
 			static final String prevInst = "prevRec";
 		}
+
 		
 	}
 

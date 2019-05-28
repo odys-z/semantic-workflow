@@ -69,34 +69,71 @@ public class CheapApi {
 		return sobj;
 	}
 
-	public static SemanticObject loadFlow(String wftype, String taskid, String usrid)
+	public static SemanticObject loadFlow(String wftype, String taskid, IUser usr)
 			throws TransException, SQLException {
 		SemanticObject sobj = new SemanticObject();
 		
 		CheapWorkflow wf = CheapEngin.wfs.get(wftype);
 
-		// select sort, n.nodeName, i.* from oz_wfnodes n 
+		// select n.sort, n.nodeName, i.* from oz_wfnodes n 
 		// left outer join task_nodes i on i.nodeId = n.nodeId and i.taskId = '000001'
 		// where n.wfId = 't01'
 		// order by n.sort;
 		SemanticObject list = CheapEngin.trcs
 				.select(WfMeta.nodeTabl, "n")
-				.col("n.sort").col("n.nodeName").col("i.*").col("c.txt", "handleTxt")
-				.l(wf.instabl, "i", "i.nodeId = n.nodeId and i.taskId = '" + taskid + "'")
+				.col("n." + WfMeta.nsort).col("n." + WfMeta.nname).col("i.*").col("c." + WfMeta.cmdTxt, "handleTxt")
+				.l(wf.instabl, "i", "i." + WfMeta.nodeInst.nodeFk + " = n." + WfMeta.nid + " and i." + WfMeta.nodeInst.busiFk + " = '" + taskid + "'")
 				.l(WfMeta.cmdTabl, "c", "i.handlingCmd = c.cmd")
-				.where("=", "n.wfId", "'" + wftype + "'")
-				.orderby("n.sort")
-				.rs(CheapEngin.trcs.basictx());
+				.where("=", "n." + WfMeta.nodeWfId, "'" + wftype + "'")
+				.orderby("n." + WfMeta.nsort)
+				.rs(CheapEngin.trcs.instancontxt(usr));
 		SResultset lst = (SResultset) list.rs(0);
 
+		// load current instance
+		// select i.* from task_nodes i
+		// join tasks b on b.wfState = i.instId and b.taskId = '000010' where b.wfId = 't01'
+		list = CheapEngin.trcs
+				.select(wf.instabl, "i")
+				.col("i.*")
+				.j(wf.bTabl, "b", String.format("b.%s = i.%s and b.%s = '%s'",
+						wf.bTaskStateRef, WfMeta.nodeInst.id, wf.bRecId, taskid))
+				.where("=", "b." + wf.bCateCol, "'" + wftype + "'")
+				.rs(CheapEngin.trcs.instancontxt(usr));
+		SResultset ist = (SResultset) list.rs(0);
+
 		sobj.rs(lst, lst.getRowCount());
+		sobj.rs(ist, ist.getRowCount());
+		sobj.put("rs array", String.format("0: nodes and instances of %s, 1: current instance",
+					taskid));
 		return sobj;
 	}
 
-	public static SemanticObject loadCmds(String wftype, String nId, String iId, String uid)
+	/**
+	 * @param wftype
+	 * @param nId
+	 * @param taskid
+	 * @param uid
+	 * @return <pre>
+nodeId |cmd          |rt |
+-------|-------------|---|
+t01.01 |start        |0  |
+t01.01 |t01.01.stepA |0  |
+t01.01 |t01.01.stepB |0  |
+	 * </pre>
+	 * @throws TransException
+	 * @throws SQLException
+	 */
+	public static SemanticObject loadCmds(String wftype, String nId, String taskid, String uid)
 			throws TransException, SQLException {
+		if (LangExt.isblank(wftype) || LangExt.isblank(nId))
+			throw new CheapException("Target wftype or node is null. %s, %s",
+					wftype, nId);
+		
 		CheapTransBuild t = CheapEngin.trcs;
 		CheapNode n = CheapEngin.getWf(wftype).getNode(nId);
+		if (n == null)
+			throw new CheapException(CheapException.ERR_WF, "Can't find node: wfId: %s, node: %s",
+					wftype, nId);
 		// select c.nodeId, c.cmd, _v.cmd from oz_wfnodes n 
 		// join oz_wfcmds c  on n.wfId = 'chg01' and n.nodeId = c.nodeId and n.nodeId = 'chg01.10'
 		// 		left outer join (	
@@ -104,17 +141,20 @@ public class CheapApi {
 		// 			join a_user u on u.userId = 'admin'
 		// 			join oz_wfcmds c on r.cmd = c.cmd and r.roleId = u.roleId and r.wfId = 'chg01' and r.nodeId = 'chg01.10'
 		// 		) _v on c.cmd = _v.cmd
+		
+		String rightSelct = String.format(CheapNode.rightDs(n.rightSk(), t), wftype, n.nodeId(), uid, taskid);
 		SemanticObject list = t.select(WfMeta.nodeTabl, "n")
 				.col("c.nodeId").col("c.cmd")
 				// .col("_v.cmd")
-				.col(Funcall.ifNullElse("_v.cmd", true, false))
+				.col(Funcall.ifNullElse("_v.cmd", true, false), "rt")
 				.j(WfMeta.cmdTabl, "c", Sql.condt(String.format(
 						"n.wfId = '%s' and n.nodeId = c.nodeId and n.nodeId = '%s'",
 						wftype, nId)))
-				.l(t.select(CheapNode.rightDs(n.rightSk(), t), "_v"), "", "c.cmd = _v.cmd")
+				// .l(t.select("(" + CheapNode.rightDs(n.rightSk(), t) + ")", "_v"), "", "c.cmd = _v.cmd")
+				.l(t.select("(" + rightSelct + ")", "_v"), "", "c.cmd = _v.cmd")
 				.rs(CheapEngin.trcs.basictx());
 		SResultset lst = (SResultset) list.rs(0);
-
+		
 		return new SemanticObject().rs(lst, lst.getRowCount());
 	}
 
@@ -220,14 +260,20 @@ public class CheapApi {
 //			}
 //			else 
 				// FIXME This checking is not safe
+			
+			// select count(*) cnt from tasks b 
+			// join task_nodes i on b.taskId = '000002' and b.startNode is not null and b.startNode = i.instId
+			// 		where wfState is not null AND wfState not in 
+			// 		( select nodeId from oz_wfnodes  where isFinish = '1' and wfId = 't01' );
 				q = st.select(wf.bTabl, "b")
 					.col("count(*)", "cnt")
-					.where_("=", wf.bRecId, taskId)
+					.j(wf.instabl, "i", String.format("b.%s = '%s' and b.startNode is not null and b.startNode = i.instId",
+													wf.bRecId, taskId))
 					// .where("=", wf.bTaskStateRef, startCol)
-					.where(new Condit(Logic.op.isNotnull, wf.bTaskStateRef, wf.bTaskStateRef)) 	// alread started
-					.where(new Condit(Logic.op.notin, wf.bTaskStateRef, st.select(wf.bTabl)		// not finish yet
-													.col(WfMeta.nodeInst.id)
-													.j(withTabl, onCondit)
+					// .where(new Condit(Logic.op.isNotnull, wf.bTaskStateRef, wf.bTaskStateRef)) 	// alread started
+					.where(new Condit(Logic.op.notin, "i." + WfMeta.nid, st.select(WfMeta.nodeTabl)		// not finish yet
+													.col(WfMeta.nid)
+													.where_("=", WfMeta.nodeWfId, wftype)
 													.where_("=", WfMeta.nisFinish, "1")))
 					;
 		}

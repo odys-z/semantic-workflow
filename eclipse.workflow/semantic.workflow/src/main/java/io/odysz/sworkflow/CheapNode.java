@@ -232,7 +232,7 @@ public class CheapNode {
 
 	/**Get sql configured in workflow-meta.xml/table="rigth-ds"
 	 * @param dskey
-	 * @param trcs
+	 * @param trcs for getting correct driver type
 	 * @return configured sql template
 	 * @throws SemanticException
 	 * @throws SQLException

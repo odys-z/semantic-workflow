@@ -249,13 +249,46 @@ public class CheapApiTest {
 				.commit(usr);
 			fail("task2 started again");
 		} catch (CheapException x) {
+			Utils.warn("Got expecting mesage: %s", x.getMessage());
 			assertEquals(CheapException.ERR_WF_COMPETATION, x.code());
 		}
+//		fail("Add 'start' to task_nodes.handlingCmd");
 	}
 
 	@Test
-	public void test_2_Next() throws SQLException, TransException {
-		test_1_Start();
+	public void test_2_load() throws SQLException, TransException {
+		if (newTaskId == null)
+			test_1_Start();
+		
+		CheapWorkflow wf = CheapEngin.getWf(wftype);
+
+		SemanticObject res1 = CheapApi.loadFlow(wftype, newTaskId, usr);
+		SResultset nodes = (SResultset) res1.rs(0);
+		int nodestotal = res1.total(0);
+		SResultset insts = (SResultset) res1.rs(1);
+
+		nodes.beforeFirst().next();
+		assertEquals(nodestotal, nodes.getRowCount());
+		assertEquals(newTaskId, nodes.getString(wf.bRecId));
+
+		insts.beforeFirst().next();
+		assertEquals(1, insts.getRowCount());
+		// only true for new started instance
+		assertEquals(nodes.getString(WfMeta.nodeInst.id), insts.getString(WfMeta.nodeInst.id));
+		
+		// test load commands and rights
+		String nid = nodes.getString(WfMeta.nodeInst.nodeFk);
+		res1 = CheapApi.loadCmds(wftype, nid, newTaskId, usr.uid());
+		SResultset rs = (SResultset) res1.rs(0);
+		rs.beforeFirst().next();
+		assertEquals(nid, rs.getString("nodeId"));
+		assertEquals(rs.getRowCount(), res1.total(0));
+	}
+
+	@Test
+	public void test_3_Next() throws SQLException, TransException {
+		if (newTaskId == null)
+			test_1_Start();
 
 		// A post updating mocking the case that only business handlings knows the semantics.
 		Update postups = CheapEngin.trcs.update("task_details")
