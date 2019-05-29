@@ -81,11 +81,21 @@ public class CheapApi {
 		// order by n.sort;
 		SemanticObject list = CheapEngin.trcs
 				.select(WfMeta.nodeTabl, "n")
-				.col("n." + WfMeta.nsort).col("n." + WfMeta.nname).col("i.*").col("c." + WfMeta.cmdTxt, "handleTxt")
+				.col("n." + WfMeta.nsort)
+				.col("n." + WfMeta.nname)
+				.col("c." + WfMeta.cmdTxt, "handleTxt")
+				// case when b.currentNode = i.instId then true else false end isCurrent
+				// .col(String.format("if(b.%s = i.%s, true, false)", wf.bTaskStateRef, WfMeta.nodeInst.id), "isCurrent")
+				.col(Funcall.ifElse(String.format("b.%s = i.%s", wf.bTaskStateRef, WfMeta.nodeInst.id), true, false), "isCurrent")
+				.col("i.*")
 				.l(wf.instabl, "i", "i." + WfMeta.nodeInst.nodeFk + " = n." + WfMeta.nid + " and i." + WfMeta.nodeInst.busiFk + " = '" + taskid + "'")
-				.l(WfMeta.cmdTabl, "c", "i.handlingCmd = c.cmd")
+				// left outer join p_change_application b on i.nodeId = n.nodeId and b.currentNode = i.instId AND i.taskId = '00000I' 
+				.l(wf.bTabl, "b", String.format("i.%s = n.%s and b.%s = i.%s AND i.%s = '%s'",
+							WfMeta.nodeInst.nodeFk, WfMeta.nid, wf.bTaskStateRef, WfMeta.nodeInst.id, WfMeta.nodeInst.busiFk, taskid))
+				.l(WfMeta.cmdTabl, "c", String.format("i.%s = c.%s", WfMeta.nodeInst.handleCmd, WfMeta.cmdCmd))
 				.where("=", "n." + WfMeta.nodeWfId, "'" + wftype + "'")
 				.orderby("n." + WfMeta.nsort)
+				.orderby("i." + WfMeta.nodeInst.prevInst)
 				.rs(CheapEngin.trcs.instancontxt(usr));
 		SResultset lst = (SResultset) list.rs(0);
 
@@ -114,25 +124,25 @@ public class CheapApi {
 	 * @param taskid
 	 * @param uid
 	 * @return <pre>
-nodeId |cmd          |rt |
--------|-------------|---|
-t01.01 |start        |0  |
-t01.01 |t01.01.stepA |0  |
-t01.01 |t01.01.stepB |0  |
-	 * </pre>
+nodeId   |cmd             |txt         |rightFilter |rt |
+---------|----------------|------------|------------|---|
+chg01.01 |chg01.01.submit |zh: submit  |a           |1  |
+chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	 * @throws TransException
 	 * @throws SQLException
 	 */
 	public static SemanticObject loadCmds(String wftype, String nId, String taskid, String uid)
 			throws TransException, SQLException {
 		if (LangExt.isblank(wftype) || LangExt.isblank(nId))
-			throw new CheapException("Target wftype or node is null. %s, %s",
+			throw new CheapException(CheapException.ERR_WF,
+					"Target wftype or node is null. wfid: %s, nodeId: %s",
 					wftype, nId);
 		
 		CheapTransBuild t = CheapEngin.trcs;
 		CheapNode n = CheapEngin.getWf(wftype).getNode(nId);
 		if (n == null)
-			throw new CheapException(CheapException.ERR_WF, "Can't find node: wfId: %s, node: %s",
+			throw new CheapException(CheapException.ERR_WF,
+					"Can't find node: wfId: %s, node: %s",
 					wftype, nId);
 		// select c.nodeId, c.cmd, _v.cmd from oz_wfnodes n 
 		// join oz_wfcmds c  on n.wfId = 'chg01' and n.nodeId = c.nodeId and n.nodeId = 'chg01.10'
@@ -144,9 +154,9 @@ t01.01 |t01.01.stepB |0  |
 		
 		String rightSelct = String.format(CheapNode.rightDs(n.rightSk(), t), wftype, n.nodeId(), uid, taskid);
 		SemanticObject list = t.select(WfMeta.nodeTabl, "n")
-				.col("c.nodeId").col("c.cmd")
+				.col("c.nodeId").col("c.cmd").col("c.txt").col("c.css")
 				// .col("_v.cmd")
-				.col(Funcall.ifNullElse("_v.cmd", true, false), "rt")
+				.col(Funcall.ifNullElse("_v.cmd", false, true), "rt")
 				.j(WfMeta.cmdTabl, "c", Sql.condt(String.format(
 						"n.wfId = '%s' and n.nodeId = c.nodeId and n.nodeId = '%s'",
 						wftype, nId)))
@@ -248,24 +258,12 @@ t01.01 |t01.01.stepB |0  |
 		Query q;
 		if (req == Req.start && !LangExt.isblank(taskId)) {
 			// CheapEngin only support 1 starting node
-//			String startCol = wf.bNodeInstRefs == null ?
-//					null : wf.bNodeInstRefs.get(wf.node1);
-//			if (startCol == null) {
-//				Utils.warn("Can't find starting instance referencing column in business table %s, task %s.\n"
-//						+ "Checking starting competation ignored.\n"
-//						+ "In oz_workflow.node1, define the starting node, e.g. 'n01';\n"
-//						+ "in backRefs define at lest 1 back ref, e.g. 'n01:startNode', where 'startNode' is the task's column name.",
-//						wf.bTabl, taskId);
-//				q = null;
-//			}
-//			else 
-				// FIXME This checking is not safe
 			
 			// select count(*) cnt from tasks b 
 			// join task_nodes i on b.taskId = '000002' and b.startNode is not null and b.startNode = i.instId
 			// 		where wfState is not null AND wfState not in 
 			// 		( select nodeId from oz_wfnodes  where isFinish = '1' and wfId = 't01' );
-				q = st.select(wf.bTabl, "b")
+			q = st.select(wf.bTabl, "b")
 					.col("count(*)", "cnt")
 					.j(wf.instabl, "i", String.format("b.%s = '%s' and b.startNode is not null and b.startNode = i.instId",
 													wf.bRecId, taskId))
@@ -312,6 +310,8 @@ t01.01 |t01.01.stepB |0  |
 		((CheapEvent) jreq.get("evt")).resulve(smtxt);
 
 		jreq.remove("stmt");
+		
+		// FIXME Why events handler not called here?
 		return jreq;
 	}
 	

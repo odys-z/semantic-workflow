@@ -65,6 +65,7 @@ CREATE TABLE oz_wfcmds (
 	txt varchar(50) comment 'readable command text',
 	route varchar(20) comment 'route: next nodeId for cmd' NOT NULL ,
 	sort int default 0,
+	css varchar(200),
 	PRIMARY KEY (cmd) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 comment 'workflow commnads';
@@ -122,14 +123,14 @@ values
 	('t01', 't01.04', 99, 'finished', 't01.04',
 	null, 'ds-allcmd', null, null, 'io.odysz.sworkflow.CheapHandler');
 
-insert into oz_wfcmds (nodeId, cmd, rightFilter, txt, route, sort)
+insert into oz_wfcmds (nodeId, cmd, rightFilter, txt, route, css, sort)
 values
-	('t01.01',  'start',        'a', 'start check',   '', 0),
-	('t01.01',  't01.01.stepA', 'a', 'Go A(t01.02A)', 't01.02A', 1),
-	('t01.01',  't01.01.stepB', 'b', 'Go B(t01.02B)', 't01.02B', 2),
-	('t01.02A', 't01.02.go03',  'a', 'A To 03',       't01.03', 1),
-	('t01.02B', 't01.02B.go03', 'a', 'B To 03',       't01.03', 2),
-	('t01.03',  't01.03.go-end','a', '03 Go End',     't01.04', 9);
+	('t01.01',  'start',        'a', 'start check',   '', 		 'started', 0),
+	('t01.01',  't01.01.stepA', 'a', 'Go A(t01.02A)', 't01.02A', 'pass', 1),
+	('t01.01',  't01.01.stepB', 'b', 'Go B(t01.02B)', 't01.02B', 'pass', 2),
+	('t01.02A', 't01.02.go03',  'a', 'A To 03',       't01.03', 'pass', 1),
+	('t01.02B', 't01.02B.go03', 'a', 'B To 03',       't01.03', 'deny', 2),
+	('t01.03',  't01.03.go-end','a', '03 Go End',     't01.04', null, 9);
 	
 insert into oz_wfrights (wfId, nodeId, roleId, cmdFilter)
 	values
@@ -378,6 +379,7 @@ public class CheapApiTest {
 					 "rightFilter varchar(20), -- flag lick read, update that can be used as command type when filtering rights\n" +
 					 "txt varchar(50), -- readable command text\n" +
 					 "route varchar(20) NOT NULL, -- route: next nodeId for cmd\n" +
+					 "css varchar(200),\n" +
 					 "sort int default 0,\n" +
 					 "PRIMARY KEY (cmd) )"
 					);
@@ -445,14 +447,14 @@ public class CheapApiTest {
 					"('t01', 't01.04', 99, 'finished', 't01.04',\n" +
 						"null, 'ds-allcmd', null, null, 'io.odysz.sworkflow.CheapHandler')\n");
 
-				sqls.add("insert into oz_wfcmds (nodeId, cmd, rightFilter, txt, route, sort)\n" +
+				sqls.add("insert into oz_wfcmds (nodeId, cmd, rightFilter, txt, route, css, sort)\n" +
 					"values\n" +
-					"	('t01.01',  'start',        'a', 'start check',   '', 0),\n" +
-					"	('t01.01',  't01.01.stepA', 'a', 'Go A(t01.02A)', 't01.02A', 1),\n" +
-					"	('t01.01',  't01.01.stepB', 'b', 'Go B(t01.02B)', 't01.02B', 2),\n" +
-					"	('t01.02A', 't01.02.go03',  'a', 'A To 03',       't01.03', 1),\n" +
-					"	('t01.02B', 't01.02B.go03', 'a', 'B To 03',       't01.03', 2),\n" +
-					"	('t01.03',  't01.03.go-end','a', '03 Go End',     't01.04', 9)\n");
+					"	('t01.01',  'start',        'a', 'start check',   '', 		'start', 0),\n" +
+					"	('t01.01',  't01.01.stepA', 'a', 'Go A(t01.02A)', 't01.02A','pass', 1),\n" +
+					"	('t01.01',  't01.01.stepB', 'b', 'Go B(t01.02B)', 't01.02B','deny', 2),\n" +
+					"	('t01.02A', 't01.02.go03',  'a', 'A To 03',       't01.03', 'pass', 1),\n" +
+					"	('t01.02B', 't01.02B.go03', 'a', 'B To 03',       't01.03', 'pass', 2),\n" +
+					"	('t01.03',  't01.03.go-end','a', '03 Go End',     't01.04', null,   9)\n");
 
 				sqls.add("insert into task_rights (wfId, nodeId, userId, cmdFilter, roleId)\n" +
 					"	values\n" +
