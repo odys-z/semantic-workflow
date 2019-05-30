@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 
 import org.junit.Test;
 import org.xml.sax.SAXException;
@@ -22,7 +21,6 @@ import io.odysz.semantic.LoggingUser;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.SemanticObject;
-import io.odysz.semantics.meta.TableMeta;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.sql.Update;
@@ -150,7 +148,7 @@ public class CheapApiTest {
 
 	static LoggingUser usr;
 
-	private static HashMap<String, TableMeta> metas;
+	// private static HashMap<String, TableMeta> metas;
 
 	static {
 		Utils.printCaller(false);
@@ -165,8 +163,8 @@ public class CheapApiTest {
 		try {
 			String conn = "local-sqlite";
 			initSqlite(conn);
-			metas = Connects.loadMeta(conn);
-			CheapEngin.initCheap("src/test/res/workflow-meta.xml", metas, null);
+			// metas = Connects.loadMeta(conn);
+			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
 			usr = new LoggingUser(conn, "src/test/res/semantic-log.xml", "CheapApiTest", jo);
 		} catch (SQLException | TransException | IOException | SAXException e) {
 			e.printStackTrace();
@@ -253,7 +251,6 @@ public class CheapApiTest {
 			Utils.warn("Got expecting mesage: %s", x.getMessage());
 			assertEquals(CheapException.ERR_WF_COMPETATION, x.code());
 		}
-//		fail("Add 'start' to task_nodes.handlingCmd");
 	}
 
 	@Test
