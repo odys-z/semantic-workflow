@@ -84,9 +84,10 @@ public class CheapApi {
 				.col("n." + WfMeta.nsort)
 				.col("n." + WfMeta.nname)
 				.col("c." + WfMeta.cmdTxt, "handleTxt")
-				// case when b.currentNode = i.instId then true else false end isCurrent
-				// .col(String.format("if(b.%s = i.%s, true, false)", wf.bTaskStateRef, WfMeta.nodeInst.id), "isCurrent")
-				.col(Funcall.ifElse(String.format("b.%s = i.%s", wf.bTaskStateRef, WfMeta.nodeInst.id), true, false), "isCurrent")
+				// sqlite: case when b.wfState = i.instId then 9 else case  when c.txt is null then 0 else 1 end end isCurrent
+				// mysql:  if(b.currentNode = i.instId, 9, if(c.txt is null, 0, 1)) isCurrent
+				.col(Funcall.ifElse(String.format("b.%s = i.%s", wf.bTaskStateRef, WfMeta.nodeInst.id), 9, 
+						Funcall.ifNullElse("c." + WfMeta.cmdTxt, 0, 1)), "isCurrent")
 				.col("i.*")
 				.l(wf.instabl, "i", "i." + WfMeta.nodeInst.nodeFk + " = n." + WfMeta.nid + " and i." + WfMeta.nodeInst.busiFk + " = '" + taskid + "'")
 				// left outer join p_change_application b on i.nodeId = n.nodeId and b.currentNode = i.instId AND i.taskId = '00000I' 

@@ -36,6 +36,7 @@ import io.odysz.sworkflow.EnginDesign.WfMeta.nodeInst;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.sql.parts.Resulving;
+import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
 
 /**A simple work flow engine
@@ -79,7 +80,6 @@ public class CheapEngin {
 		scheduler = Executors.newScheduledThreadPool(1);
 		schedualed = scheduler.scheduleAtFixedRate(
 				new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
-
 	}
 
 	/**Init cheap engine configuration, schedule a timeout checker.<br>
@@ -155,9 +155,16 @@ public class CheapEngin {
 
 
 				// 2.3 node instance oper, opertime
-				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.opTime))
-					CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.opTime,
-						new String[] { nodeInst.oper, nodeInst.opertime });
+				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.opTime)) {
+					// e.g. update task_nodes  set handlingCmd='t01.01.stepA', opertime=datetime('now'), oper='CheapApiTest' where instId = '00001Z'
+					// This makes stepping commands will update opertime.
+					// CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.opTime,
+					//	new String[] { nodeInst.oper, nodeInst.opertime });
+				}
+				else {
+					Utils.logi("Found op-time semantics of node instance table %s.\n"
+							+ "The handler and handling time may be updated when the flow stepping to next nodes.", instabl);
+				}
 
 				// 2.4 business task's pk and current state ref, e.g. tasks.wfState -> task_nodes.instId
 				if (!CheapTransBuild.hasSemantics(conn, busitabl, smtype.autoInc))
@@ -287,13 +294,14 @@ public class CheapEngin {
 		// 1. create node instance;<br>
 		// post nv: nextInst.prevNode = current.id except start<br>
 		// post nv: currentNode.nodeState = cmd-name except start<br>
-		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr);
-		ins1.nv(nodeInst.nodeFk, nextNode.nodeId())
-			.nv(nodeInst.descol, nodeDesc);
+		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr)
+			.nv(nodeInst.nodeFk, nextNode.nodeId())
+			.nv(nodeInst.descol, nodeDesc)
+			// op-time semantics is removed to avoid updating when stepping next
+			.nv(nodeInst.opertime, Funcall.now(CheapEngin.trcs.basictx().dbtype()))
+			.nv(nodeInst.oper, usr.uid());
 
 		Resulving newInstId = new Resulving(wf.instabl, nodeInst.id);
-//		if (nodeInst.wfIdFk != null)
-//			ins1.nv(nodeInst.wfIdFk, wf.wfId);
 
 		// with nv: currentInst.nodeState = cmd-name except start<br>
 		// post nv: nextInst.prevNode = current.id except start<br>

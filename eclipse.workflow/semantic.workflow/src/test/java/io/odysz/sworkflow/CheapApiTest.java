@@ -390,7 +390,7 @@ public class CheapApiTest {
 					 "nodeId varchar(20) NOT NULL, -- node FK\n" +
 					 "taskId varchar(20) NOT NULL, -- fk to tasks.taskId\n" +
 					 "oper varchar(20) NOT NULL,\n" +
-					 "opertime DATETIME,\n" +
+					 "opertime DATETIME NOT NULL,\n" + 
 					 "descpt varchar(200),\n" + 
 					 "remarks varchar(2000),\n" +
 					 "handlingCmd varchar(10),\n" +
@@ -427,6 +427,16 @@ public class CheapApiTest {
 					 "remarks varchar(200),\n" +
 					 "PRIMARY KEY (recId) )"
 					);
+				
+				sqls.add("CREATE TABLE a_user (\n" + 
+						"  userId varchar(20) not null,\n" + 
+						"  orgId varchar(20),\n" + 
+						"  roleId varchar(20),\n" + 
+						"  pswd varchar(50) NOT NULL,\n" + 
+						"  encAuxiliary varchar(50),\n" + 
+						"  userName varchar(50),\n" + 
+						"  PRIMARY KEY (userId) )"
+						);
 				Connects.commit(usr, sqls, Connects.flag_nothing);
 				sqls.clear();
 
@@ -471,6 +481,8 @@ public class CheapApiTest {
 
 				sqls.add("update oz_wfnodes set isFinish = '1' where timeoutRoute is null and nodeId not in "
 						+ "(select distinct nodeId from oz_wfcmds)");
+				
+				sqls.add("insert into a_user(userId, userName, roleId, pswd) values ('admin', 'Administrator', 'r01', '123456')");
 				Connects.commit(usr, sqls, Connects.flag_nothing);
 			} catch (Exception e) {
 				Utils.warn("Make sure table oz_autoseq already exists, and only for testing aginst a sqlite DB.");
