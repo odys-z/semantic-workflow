@@ -169,6 +169,10 @@ public class CheapEngin {
 				if (!CheapTransBuild.hasSemantics(conn, busitabl, smtype.fkIns))
 					CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.fkIns,
 						new String[] {busiState, instabl, nodeInst.id});
+				if (!CheapTransBuild.hasSemantics(conn, busitabl, smtype.opTime))
+					Utils.warn("WARN -- CheapEngin --\nCheapEngin didn't find oper-time semanticcs for business table %s.\n" +
+								"CheapEngin doesn't require this semantics, and it can be configured in it's own semantic.xml.",
+								busitabl);
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -257,14 +261,16 @@ public class CheapEngin {
 		else {
 			// 0.2 step, find the task and the current state node
 			if (busiId == null)
-				throw new CheapException("Command %s.%s need to find task/business record first. but busi-id is null",
+				throw new CheapException(CheapException.ERR_WF,
+						"Command %s.%s need to find task/business record first. but busi-id is null",
 						req.name(), cmd);
 			String[] tskInf = wf.getInstByTask(trcs, busiId);
 			if (tskInf == null || tskInf.length == 0) {
 				// may be a server error
 				Utils.warn("Can't find task's information. taskId = %s, wfId = %s", busiId, wf.wfId);
 				// may be a client error
-				throw new CheapException("Can't find task's information. taskId = %s, wfId = %s",
+				throw new CheapException(CheapException.ERR_WF,
+						"Can't find task's information. taskId = %s, wfId = %s",
 						busiId, wf.wfId);
 			}
 			currentInstId = tskInf[1];

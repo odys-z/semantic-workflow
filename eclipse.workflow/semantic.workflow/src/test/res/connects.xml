@@ -15,6 +15,7 @@
   		<pswd>test</pswd>
   		<!-- enable sql printing -->
   		<dbg>true</dbg>
+  		<smtcs>src/test/res/semantic-log.xml</smtcs>
   	</c>
   </t>
 

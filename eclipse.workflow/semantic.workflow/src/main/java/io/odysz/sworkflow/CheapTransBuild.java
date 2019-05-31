@@ -51,8 +51,11 @@ public class CheapTransBuild extends DATranscxt {
 	 * @param xtabl
 	 * @throws SQLException 
 	 * @throws SemanticException 
+	 * @throws IOException 
+	 * @throws SAXException 
 	 */
-	public CheapTransBuild(String connId, XMLTable xtabl) throws SemanticException, SQLException {
+	public CheapTransBuild(String connId, XMLTable xtabl)
+			throws SemanticException, SQLException, SAXException, IOException {
 		// super(connId, Connects.loadMeta(connId));
 		super(connId); // metas must already loaded
 		try {

@@ -74,6 +74,8 @@ public class CheapApi {
 		SemanticObject sobj = new SemanticObject();
 		
 		CheapWorkflow wf = CheapEngin.wfs.get(wftype);
+		if (wf == null) 
+			throw new SemanticException("Can not find workflow with id: %s", wftype);
 
 		// select n.sort, n.nodeName, i.* from oz_wfnodes n 
 		// left outer join task_nodes i on i.nodeId = n.nodeId and i.taskId = '000001'
@@ -114,7 +116,7 @@ public class CheapApi {
 
 		sobj.rs(lst, lst.getRowCount());
 		sobj.rs(ist, ist.getRowCount());
-		sobj.put("rs array", String.format("0: nodes and instances of %s, 1: current instance",
+		sobj.put("rs structure", String.format("0: nodes joining instances of %s, 1: current instance",
 					taskid));
 		return sobj;
 	}
