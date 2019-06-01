@@ -32,6 +32,7 @@ import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.sworkflow.EnginDesign.WfMeta.nodeInst;
 import io.odysz.transact.sql.Insert;
+import io.odysz.transact.sql.Statement;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.sql.parts.condition.Funcall;
@@ -237,10 +238,14 @@ public class CheapEngin {
 	 */
 	public static SemanticObject onReqCmd(IUser usr, String wftype, Req req, String cmd,
 			String busiId, String nodeDesc, ArrayList<Object[]> busiPack,
-			SemanticObject multireq, Update postreq)
+			SemanticObject multireq2, ArrayList<Statement<?>> postups)
 					throws SQLException, TransException {
 		String currentInstId = null;
-		CheapNode currentNode; 
+		
+		// Design Notes:
+		// We are not only step from current state, we also step from the out-going node asked by cmd.
+		// The client needing change some how to adapt to the new style - multip node's can submit simultaneously.
+		CheapNode fromNode; 
 
 		if (wfs == null)
 			throw new SemanticException("Cheap engine must been initialized.");
@@ -249,7 +254,7 @@ public class CheapEngin {
 		CheapWorkflow wf = wfs.get(wftype);
 		if (req == Req.start) {
 			// 0.1 start
-			currentNode = wf.start(); // a virtual node
+			fromNode = wf.start(); // a virtual node
 			cmd = Req.start.name();
 			// sometimes a task alread exists
 			if (!LangExt.isblank(busiId, "\\s*null\\s*")) {
@@ -274,25 +279,28 @@ public class CheapEngin {
 						busiId, wf.wfId);
 			}
 			currentInstId = tskInf[1];
-			currentNode = wf.getNode(tskInf[2]); // FIXME can be simplified
+			
+			// 2019.5.31 current node should be exactly the FROM node
+			// currentNode = wf.getNode(tskInf[2]);
+			fromNode = wf.getNode(findFrom(cmd));
 		}
 
 		// 0.3 prepare next node
-		if (currentNode == null) throw new SQLException(
+		if (fromNode == null) throw new SQLException(
 				String.format(Configs.getCfg("cheap-workflow", "t-no-node"),
 				wftype, currentInstId, req));
-		CheapNode nextNode = currentNode.findRoute(cmd);
+		CheapNode nextNode = fromNode.findRoute(cmd);
 		
 		if (nextNode == null)
 			// a configuration problem?
 			throw new CheapException(CheapException.ERR_WF,
-					"Node not found: wfId %s, instId %s, req %s", 
-				wftype, currentInstId, req);
+					"Route resolving failed, next node not found: wfId %s, taskId %s, req %s, cmd %s", 
+				wftype, busiId, req, cmd);
 
 		if (req == Req.start)
 			nextNode.checkRights(trcs, usr, req, cmd, busiId);
 		else
-			currentNode.checkRights(trcs, usr, req, cmd, busiId);
+			fromNode.checkRights(trcs, usr, req, cmd, busiId);
 
 		// 1. create node instance;<br>
 		// post nv: nextInst.prevNode = current.id except start<br>
@@ -373,13 +381,14 @@ public class CheapEngin {
 		}
 
 		//3. handle multi-operation request, e.g. multireq &amp; postreq<br>
-		ins1.postChildren(multireq, trcs);
+		// ins1.postChildren(multireq, trcs);
+		ins1.post(postups);
 		
 		CheapEvent evt = null;
 		if (Req.start == req)
 			// start: create task
-			evt = new CheapEvent(currentNode.wfId(), Evtype.start,
-						currentNode, nextNode,
+			evt = new CheapEvent(fromNode.wfId(), Evtype.start,
+						fromNode, nextNode,
 						// busiId is null for new task, resolved later
 						// basictx.formatResulv(wf.bTabl, wf.bRecId),
 						new Resulving(wf.bTabl, wf.bRecId),
@@ -387,14 +396,29 @@ public class CheapEngin {
 						Req.start, Req.start.name());
 		else
 			// step: insert node instance, update task as post updating.
-			evt = new CheapEvent(currentNode.wfId(), Evtype.step,
-						currentNode, nextNode,
+			evt = new CheapEvent(fromNode.wfId(), Evtype.step,
+						fromNode, nextNode,
 						busiId, newInstId, req, cmd);
 
 		return new SemanticObject()
 				.put("stmt", ins1)
 				.put("evt", evt)
-				.put("stepHandler", currentNode.onEventHandler())
-				.put("arriHandler", nextNode.isArrived(currentNode) ? nextNode.onEventHandler() : null);
+				.put("stepHandler", fromNode.onEventHandler())
+				.put("arriHandler", nextNode.isArrived(fromNode) ? nextNode.onEventHandler() : null);
+	}
+
+	/**<p>Find <i>from</i> node, the out going node, according to cmd request.</p> 
+	 * @param cmd
+	 * @return the out going node (null if failed)
+	 * @throws SQLException 
+	 * @throws TransException 
+	 */
+	private static String findFrom(String cmd) throws TransException, SQLException {
+		SemanticObject res = trcs.select(WfMeta.cmdTabl)
+				.col(WfMeta.cmdNodeFk)
+				.where_("=", WfMeta.cmdCmd, cmd)
+				.rs(trcs.basictx()); // shouldn't using context?
+		SResultset rs = (SResultset) res.rs(0);
+		return rs.next() ? rs.getString(WfMeta.cmdNodeFk) : null;
 	}
 }

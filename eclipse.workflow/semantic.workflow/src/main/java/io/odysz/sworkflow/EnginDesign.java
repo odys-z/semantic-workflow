@@ -92,6 +92,7 @@ public class EnginDesign {
 		//////// oz_wfcmds
 		static final String cmdTabl = "oz_wfcmds";
 		static final String cmdCmd = "cmd";
+		static final String cmdNodeFk = "nodeId";
 		static final String cmdRoute = "route";
 		static final String cmdTxt = "txt";
 		static final String cmdSort = "sort";

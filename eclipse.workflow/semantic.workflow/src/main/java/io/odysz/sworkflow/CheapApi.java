@@ -17,7 +17,7 @@ import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.transact.sql.Delete;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
-import io.odysz.transact.sql.Update;
+import io.odysz.transact.sql.Statement;
 import io.odysz.transact.sql.parts.Logic;
 import io.odysz.transact.sql.parts.Sql;
 import io.odysz.transact.sql.parts.condition.Condit;
@@ -195,7 +195,7 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	private ArrayList<String[]> multiDels;
 	/** 3d array ArrayList<ArrayList<String[]>>*/
 	private ArrayList<ArrayList<?>> multiInserts;
-	private Update postups;
+	private ArrayList<Statement<?>> postups;
 	private String cmd;
 
 	protected CheapApi(String wftype, Req req, String cmd) {
@@ -231,7 +231,7 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 		return this;
 	}
 	
-	public CheapApi postupdates(Update postups) {
+	public CheapApi postupdates(ArrayList<Statement<?>> postups) {
 		this.postups = postups;
 		return this;
 	}
