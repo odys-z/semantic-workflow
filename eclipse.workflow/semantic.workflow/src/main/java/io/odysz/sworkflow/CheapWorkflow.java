@@ -107,7 +107,14 @@ public class CheapWorkflow {
 		return nodes == null ? null : nodes.get(nodeId);
 	}
 
-	/**
+	/**Get the last instance (bTable.wfState) id:<br>
+	 * select i.instId instId, b.taskId busiId, i.nodeId nodeId
+	 * from tasks b join task_nodes i
+	 * on i.taskId = b.taskId AND i.taskId = '000019' AND b.wfState = i.instId<br>
+	 * <b>Note</b><br>
+	 * Should this been deprecated because current state is not will a step beginning
+	 * if multiple outgoing branches are supported.?
+	 * <p><b>deprecated</b></p>
 	 * @param trcs
 	 * @param busiId
 	 * @return 0: busiId(taskId), 1: instance-id (instabl.intId), 2: nodeId

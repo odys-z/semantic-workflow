@@ -14,7 +14,6 @@ import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapNode.VirtualNode;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
-import io.odysz.transact.sql.Delete;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Statement;
@@ -191,10 +190,10 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	/** task table n-vs */
 	private ArrayList<Object[]> nvs;
 
-	private String multiChildTabl;
-	private ArrayList<String[]> multiDels;
+	// private String multiChildTabl;
+	// private ArrayList<String[]> multiDels;
 	/** 3d array ArrayList<ArrayList<String[]>>*/
-	private ArrayList<ArrayList<?>> multiInserts;
+	// private ArrayList<ArrayList<?>> multiInserts;
 	private ArrayList<Statement<?>> postups;
 	private String cmd;
 
@@ -223,13 +222,13 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 		return this;
 	}
 	
-	public CheapApi taskChildMulti(String tabl,
-			ArrayList<String[]> delConds, ArrayList<ArrayList<?>> inserts) {
-		multiChildTabl = tabl;
-		multiDels = delConds;
-		multiInserts = inserts;
-		return this;
-	}
+//	public CheapApi taskChildMulti(String tabl,
+//			ArrayList<String[]> delConds, ArrayList<ArrayList<?>> inserts) {
+//		multiChildTabl = tabl;
+//		multiDels = delConds;
+//		multiInserts = inserts;
+//		return this;
+//	}
 	
 	public CheapApi postupdates(ArrayList<Statement<?>> postups) {
 		this.postups = postups;
@@ -247,9 +246,12 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	 */
 	public SemanticObject commit(IUser usr) throws SQLException, TransException {
 		CheapTransBuild st = CheapEngin.trcs;
-		SemanticObject multireq = formatMulti(st, usr, multiChildTabl, multiDels, multiInserts);
+//		SemanticObject multireq = formatMulti(st, usr, multiChildTabl, multiDels, multiInserts);
+//		SemanticObject jreq = CheapEngin.onReqCmd(usr, wftype, req, cmd,
+//					taskId, nodeDesc, nvs, multireq, postups);
+
 		SemanticObject jreq = CheapEngin.onReqCmd(usr, wftype, req, cmd,
-					taskId, nodeDesc, nvs, multireq, postups);
+					taskId, nodeDesc, nvs, postups);
 
 		Insert ins = (Insert) jreq.get("stmt");
 		ISemantext smtxt = st.instancontxt(usr);
@@ -326,7 +328,6 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	 * @param multiInserts
 	 * @return formated SemanticObject
 	 * @throws TransException
-	 */
 	@SuppressWarnings("unchecked")
 	private static SemanticObject formatMulti(CheapTransBuild st, IUser usr, String tabl,
 			ArrayList<String[]> delConds, ArrayList<ArrayList<?>> multiInserts) throws TransException {
@@ -351,4 +352,5 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 		}
 		return jmultis;
 	}
+	 */
 }

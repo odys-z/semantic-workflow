@@ -23,7 +23,7 @@ import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
-import io.odysz.transact.sql.Update;
+import io.odysz.transact.sql.Statement;
 import io.odysz.transact.x.TransException;
 
 /**This class use sqlite for test.
@@ -192,11 +192,11 @@ public class CheapApiTest {
 		row.add(new String[] {"remarks", "detail-3"});
 		inserts.add(row);
 		
-		Update postups = null;
+		ArrayList<Statement<?>> postups = null;
 		SemanticObject res1 = CheapApi.start(wftype)
 				.nodeDesc("desc: starting " + DateFormat.formatime(new Date()))
 				.taskNv("remarks", "testing")
-				.taskChildMulti("task_details", null, inserts)
+				// .taskChildMulti("task_details", null, inserts)
 				.postupdates(postups)
 				.commit(usr);
 
@@ -289,9 +289,11 @@ public class CheapApiTest {
 			test_1_Start();
 
 		// A post updating mocking the case that only business handlings knows the semantics.
-		Update postups = CheapEngin.trcs.update("task_details")
-				.nv("remakrs", newInstId) // new node instance auto created in test-start.
-				.where("=", "taskId", newTaskId);
+		ArrayList<Statement<?>> postups = new ArrayList<Statement<?>>();
+		postups.add(CheapEngin.trcs
+					.update("task_details")
+					.nv("remarks", newInstId) // new node instance auto created in test-start.
+					.where_("=", "taskId", newTaskId));
 
 		SemanticObject res = CheapApi.next(wftype, newTaskId, "t01.01.stepA")
 				.nodeDesc("desc: next " + DateFormat.formatime(new Date()))
@@ -459,7 +461,7 @@ public class CheapApiTest {
 					"	('t01.01',  'start',        'a', 'start check',   '', 		'start', 0),\n" +
 					"	('t01.01',  't01.01.stepA', 'a', 'Go A(t01.02A)', 't01.02A','pass', 1),\n" +
 					"	('t01.01',  't01.01.stepB', 'b', 'Go B(t01.02B)', 't01.02B','deny', 2),\n" +
-					"	('t01.02A', 't01.02.go03',  'a', 'A To 03',       't01.03', 'pass', 1),\n" +
+					"	('t01.02A', 't01.02A.go03',  'a', 'A To 03',       't01.03', 'pass', 1),\n" +
 					"	('t01.02B', 't01.02B.go03', 'a', 'B To 03',       't01.03', 'pass', 2),\n" +
 					"	('t01.03',  't01.03.go-end','a', '03 Go End',     't01.04', null,   9)\n");
 
