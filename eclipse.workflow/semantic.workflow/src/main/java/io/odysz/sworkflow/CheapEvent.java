@@ -10,7 +10,7 @@ import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.x.TransException;
 
 public class CheapEvent extends SemanticObject {
-	public enum Evtype { arrive, start, step, close }
+	public enum Evtype { arrive, start, step, close, timeout }
 
 	@Override
 	public String toString() {

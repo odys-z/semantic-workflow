@@ -5,6 +5,11 @@ package io.odysz.sworkflow;
  */
 public interface ICheapChecker {
 
-	void check();
+	void check(String conn);
+
+	/**The milliseconds interval for checking. CheapEngin use this to schedule the task.
+	 * @return milliseconds interval
+	 */
+	long ms();
 
 }

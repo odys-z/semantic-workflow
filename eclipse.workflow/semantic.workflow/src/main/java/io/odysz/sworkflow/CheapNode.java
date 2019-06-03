@@ -16,8 +16,11 @@ import io.odysz.transact.x.TransException;
 
 public class CheapNode {
 	public static class CheapRoute {
+		/**From node Id required by the command */
 		String from;
+		/**Target node Id stepped by the command */
 		String to;
+		/**Command route's text */
 		String txt;
 		/** -1 for not a timeout route */
 		int timeoutsnd = -1;
@@ -285,5 +288,10 @@ public class CheapNode {
 		nid = ss[2];
 		ncode = ss[3];
 		nname = ss[4];
+	}
+
+	public String timeoutTxt() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

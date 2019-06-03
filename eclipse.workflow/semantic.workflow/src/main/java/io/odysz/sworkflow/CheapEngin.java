@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -51,7 +52,7 @@ public class CheapEngin {
 	static HashMap<String, CheapWorkflow> wfs;
 	public static HashMap<String, CheapWorkflow> wfs() { return wfs; }
 
-	private static ScheduledFuture<?> schedualed;
+	private static ArrayList<ScheduledFuture<?>> schedualeds;
 	private static ScheduledExecutorService scheduler;
 
 	static HashMap<String, Dataset> ritConfigs;
@@ -69,22 +70,25 @@ public class CheapEngin {
 	 * @throws TransException 
 	 */
 	public static void initCheap(String configPath,
-			ICheapChecker customChecker) throws TransException, IOException, SAXException {
+			HashMap<String, ICheapChecker> customCheckers) throws TransException, IOException, SAXException {
 		// worker thread 
 		stopCheap();
 		
-		reloadCheap(configPath);
+		reloadCheap(configPath, customCheckers);
 		confpath = configPath;
 
-		scheduler = Executors.newScheduledThreadPool(1);
-		schedualed = scheduler.scheduleAtFixedRate(
-				new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
+		// scheduler = Executors.newScheduledThreadPool(1);
+
+		// schedualed = scheduler.scheduleAtFixedRate(
+		// 		new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
+		
 	}
 
 	/**Init cheap engine configuration, schedule a timeout checker.<br>
 	 * <b>Note:</b> Calling this only after DAStranscxt initialized with metas.
+	 * @param customCheckers 
 	 * @param configPath 
-	 * @param customChecker 
+	 * @param customCheckers 
 	 * @throws TransException 
 	 * @throws IOException 
 	 * @throws SAXException
@@ -94,7 +98,7 @@ public class CheapEngin {
 	}
 	 * */
 
-	private static void reloadCheap(String filepath)
+	private static void reloadCheap(String filepath, HashMap<String, ICheapChecker> customCheckers)
 			throws TransException, IOException, SAXException {
 		try {
 			LinkedHashMap<String, XMLTable> xtabs = loadXmeta(filepath);
@@ -176,9 +180,56 @@ public class CheapEngin {
 								"CheapEngin doesn't require this semantics, and it can be configured in it's own semantic.xml.",
 								busitabl);
 			}
+
+			schedualeds = loadCheckers(conn, wfs, xtabs.get("cheap-checker"), customCheckers);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private static ArrayList<ScheduledFuture<?>> loadCheckers(String conn, HashMap<String, CheapWorkflow> wfs,
+			XMLTable xconfgs, HashMap<String, ICheapChecker> customChks) throws SAXException {
+		ArrayList<ScheduledFuture<?>> scheduals =
+				new ArrayList<ScheduledFuture<?>>(xconfgs == null ? 0 : xconfgs.getRowCount());
+		
+		if (xconfgs != null) {
+			if (scheduler == null)
+				scheduler = Executors.newScheduledThreadPool(1);
+
+			// added customer checker's name, later will add all user provided checkers if not overriding xconfig.
+			HashSet<String> addedCustoms = new HashSet<String>(customChks == null ? 0 : customChks.size());
+
+			xconfgs.beforeFirst();
+			while (xconfgs.next()) {
+				// <t id="cheap-checker" pk="wfid" columns="wfid,ms,mysql,orcl,ms2k,sqlit">
+				int ms = xconfgs.getInt("ms");
+				String wfid = xconfgs.getString("wfid").trim();
+				ScheduledFuture<?> schedualed;
+				
+				// if user provided checker for the wfid, override it
+				if (customChks != null && customChks.containsKey(wfid)) {
+					ICheapChecker chk = customChks.get(wfid);
+					schedualed = scheduler.scheduleAtFixedRate
+						(new CheapChecker(conn, chk), 0, chk.ms(), TimeUnit.MICROSECONDS);
+					addedCustoms.add(wfid);
+				}
+				// otherwise create a default checker for the wfid,
+				else {
+					String[] sqls = new String[4];
+					sqls[DatasetCfg.ixMysql] = xconfgs.getString("mysql");
+					sqls[DatasetCfg.ixOrcl] = xconfgs.getString("orcl");
+					sqls[DatasetCfg.ixSqlit] = xconfgs.getString("sqlit");
+					sqls[DatasetCfg.ixMs2k] = xconfgs.getString("ms2k");
+	
+					Dataset ds = new Dataset(wfid, null, sqls, null);
+					schedualed = scheduler.scheduleAtFixedRate
+							(new CheapChecker(conn, wfid, ms, ds), 0, ms, TimeUnit.MICROSECONDS);
+				}
+				scheduals.add(schedualed);
+			}
+		}
+
+		return scheduals;
 	}
 
 	private static LinkedHashMap<String,XMLTable> loadXmeta(String filepath) throws SAXException, IOException {
@@ -192,17 +243,20 @@ public class CheapEngin {
 	}
 
 	public static void stopCheap() {
-		if (schedualed == null && scheduler == null) return;
-		// stop worker
-		Utils.logi("cancling WF-Checker ... ");
-		schedualed.cancel(true);
-		try {
-		    if (!scheduler.awaitTermination(200, TimeUnit.MILLISECONDS)) {
-		        scheduler.shutdownNow();
-		    } 
-		} catch (InterruptedException e) {
-		    scheduler.shutdownNow();
-		}
+		if (schedualeds != null)
+			for (ScheduledFuture<?> schedualed : schedualeds) {
+				if (schedualed == null && scheduler == null) continue;
+				// stop worker
+				Utils.logi("cancling WF-Checker ... ");
+				schedualed.cancel(true);
+				try {
+		    		if (!scheduler.awaitTermination(200, TimeUnit.MILLISECONDS)) {
+		        		scheduler.shutdownNow();
+		    		} 
+				} catch (InterruptedException e) {
+		    		scheduler.shutdownNow();
+				}
+			}
 	}
 
 	public static CheapWorkflow getWf(String type) {

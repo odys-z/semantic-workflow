@@ -3,78 +3,90 @@ package io.odysz.sworkflow;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 
+import io.odysz.common.Utils;
+import io.odysz.module.rs.SResultset;
+import io.odysz.semantic.DA.Connects;
+import io.odysz.semantic.DA.DatasetCfg.Dataset;
+import io.odysz.semantics.x.SemanticException;
+import io.odysz.sworkflow.CheapEvent.Evtype;
 import io.odysz.transact.sql.Update;
 import io.odysz.transact.x.TransException;
 
 public class CheapChecker implements Runnable {
-	@SuppressWarnings("unused")
-	private final HashMap<String, CheapWorkflow> wfs;
+	// private final HashMap<String, CheapWorkflow> wfs;
 
 	private ICheapChecker customChker;
+	private String conn;
+	private Dataset ds;
+	private String wfid;
+	@SuppressWarnings("unused")
+	private int ms;
 
-	public CheapChecker(HashMap<String,CheapWorkflow> wfs, ICheapChecker usrChker) {
-		this.wfs = wfs;
+	// public CheapChecker(HashMap<String,CheapWorkflow> wfs, ICheapChecker usrChker) {
+	public CheapChecker(String conn, ICheapChecker usrChker) {
+		// this.wfs = wfs;
+		this.conn = conn;
 		this.customChker = usrChker;
+	}
+
+	public CheapChecker(String conn, String wfid, int ms, Dataset ds) {
+		// TODO Auto-generated constructor stub
+		this.ds = ds;
+		this.wfid = wfid;
+		this.conn = conn;
+		this.ms = ms;
 	}
 
 	@Override
 	public void run() {
 		try {
 			if (customChker != null)
-				customChker.check();
+				customChker.check(conn);
+			else checkTimeout();
 		}
-		catch (Exception ex) { ex.printStackTrace(); }
-
-		try { checkTimeout(); }
 		catch (Exception ex) { ex.printStackTrace(); }
 	}
 	
-	private void checkTimeout() throws SQLException {
-		@SuppressWarnings("unused")
+	private void checkTimeout() throws SQLException, SemanticException {
+		if (CheapEngin.debug)
+			Utils.logi("CheapChecker - checking timeout ...");
 		ArrayList<CheapEvent> evts = new ArrayList<CheapEvent>();
-		/* let's rock
-			// select TIMESTAMPDIFF(minute, disposalTime, now()) idled, n.timeoutmm, n.timeoutRoute,
-			// i.processTypeId nodeWfId, i.processNodeId nodeId, i.baseProcessDataId taskId 
-			// from c_process_processing i join ir_wfdef n on i.processNodeId = n.nodeId and n.timeoutmm > 0
-			// where TIMESTAMPDIFF(minute, disposalTime, now()) > n.timeoutmm;
-			String sql = String.format(
-					"select TIMESTAMPDIFF(minute, %s, now()) idled, i.%s wfid, i.%s nodeid, i.%s taskId, i.%s instId " + 
-					"from %s i join %s n on i.%s = n.%s and n.%s > 0 " + 
-					// IMPORTANT "i.nodeStatus is null" means not handled. Also check where it updated
-					"where i.nodeStatus is null and TIMESTAMPDIFF(SECOND, %s, now()) > n.%s;",
-					EnginDesign.Instabl.operTime(), EnginDesign.Instabl.wfIdFk(), EnginDesign.Instabl.nodeFk(), EnginDesign.Instabl.busiFK(), EnginDesign.Instabl.instId(),
-					EnginDesign.Instabl.tabl(), EnginDesign.WfDeftabl.tabl(), EnginDesign.Instabl.nodeFk(), EnginDesign.WfDeftabl.nid(), EnginDesign.WfDeftabl.outTime(),
-					EnginDesign.Instabl.operTime(), EnginDesign.WfDeftabl.outTime());
-			ICResultset rs = DA.select(sql);
-			rs.beforeFirst();
-			while (rs.next()) {
-				CheapNode n = wfs.get(rs.getString("wfid")).nodes.get(rs.getString("nodeid"));
-				// CheapEvent(nodeWfId,  currentNode,  nextNode,  instid,  taskId,  cmd)
-				evts.add(new CheapEvent(n.wfId(), n.nodeId(),
-						n.timeoutRoute(), rs.getString("instId"),
-						rs.getString("taskId"), n.timeoutTxt()));
-			}
-			rs.close();
-			 
-			for (CheapEvent evt : evts) {
-				try {
-					// timeout stepping 
-					timeout(evt);
+		
+		// select TIMESTAMPDIFF(minute, opertime, now()) expMin, i.opertime, n.timeouts, n.timeoutRoute,
+		// n.wfId, i.nodeId nodeId, i.taskId taskId 
+		// from ir_prjnodes i join oz_wfnodes n on i.nodeId = n.nodeId and n.timeouts > 0
+		// where TIMESTAMPDIFF(second, opertime, now()) > n.timeouts;
+		String sql = ds.getSql(Connects.driverType(conn));
+		SResultset rs = Connects.select(sql);
+		rs.beforeFirst();
+		while (rs.next()) {
+			String nid = rs.getString("nodeId");
+			CheapNode n = CheapEngin.getWf(wfid).getNode(nid);
+			CheapNode go = CheapEngin.getWf(wfid).getNode(n.timeoutRoute().to);
+
+			evts.add(new CheapEvent(n.wfId(), Evtype.timeout, n, go,
+					rs.getString("taskId"), rs.getString("instId"),
+					null, n.timeoutTxt()));
+		}
+		rs.close();
+
+		for (CheapEvent evt : evts) {
+			try {
+				// timeout stepping 
+				timeout(evt);
 	 
-					// call user handler
-					// wfs.get(evt.wfId()).getNode(evt.currentNodeId()).timeoutHandler().onTimeout(evt);
-					ICheapEventHandler handler = wfs.get(evt.wfId()).getNode(evt.currentNodeId()).timeoutHandler();
-					if (handler != null)
-						handler.onTimeout(evt);
-				} catch (Exception ex) {
-					System.err.println("Timeout event ignored: ");
-					System.err.println(evt.toString());
-					System.err.println(ex.getMessage());
-				}
+				// call user handler
+				// wfs.get(evt.wfId()).getNode(evt.currentNodeId()).timeoutHandler().onTimeout(evt);
+				ICheapEventHandler handler = CheapEngin.getWf(wfid).getNode(evt.currentNodeId()).timeoutHandler();
+				if (handler != null)
+					handler.onTimeout(evt);
+			} catch (Exception ex) {
+				System.err.println("Timeout event ignored: ");
+				System.err.println(evt.toString());
+				System.err.println(ex.getMessage());
 			}
-		*/
+		}
 	}
 
 	/**Handle timeout event: step event's current node to timeout node - timeout event not fired here.
