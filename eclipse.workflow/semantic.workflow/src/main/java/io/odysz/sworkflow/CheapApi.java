@@ -2,11 +2,15 @@ package io.odysz.sworkflow;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
+import io.odysz.common.AESHelper;
 import io.odysz.common.LangExt;
+import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
+import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
@@ -29,6 +33,25 @@ import io.odysz.transact.x.TransException;
  */
 public class CheapApi {
 	static ReentrantLock lock = new ReentrantLock();
+
+	/** Finger print used for checking timeout checker's competition.
+	 * When initializing, will update a random value to db, when checking, query it and compare with this version.
+	 */
+	static String cheaprint;
+
+	public static void initFingerPrint(IUser checkUsr, HashSet<String> wfids)
+			throws SQLException, TransException {
+		cheaprint = AESHelper.encode64(AESHelper.getRandom());
+		ArrayList<String> sqls = new ArrayList<String>(wfids.size());
+		for (String wfid : wfids) {
+				CheapEngin.trcs.update(WfMeta.wftabl)
+					.nv(WfMeta.wfChecker, cheaprint)
+					.whereEq(WfMeta.wfWfid, wfid)
+					.commit(sqls);	
+		}
+		Connects.commit(checkUsr, sqls);
+	}
+
 	/**Get an API instance to start a new workflow of type wftype.
 	 * @param wftype
 	 * @param existask optional, if not exists, cheap engine will create a task record. 
@@ -175,12 +198,17 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	 * @param wftype
 	 * @param currentNode
 	 * @param taskId
-	 * @return
+	 * @param instId 
+	 * @return the update statement for committing
+	 * @throws TransException 
+	 * @throws SQLException 
 	 */
-	static CheapApi stepTimeout(String wftype, String taskId) {
-		CheapApi api = new CheapApi(wftype, Req.timeout, null);
+	static SemanticObject stepTimeout(String wftype, String nodeId, String taskId, String instId) throws SQLException, TransException {
+		CheapApi api = new CheapApi(wftype, Req.timeout, Req.timeout.name());
 		api.taskId = taskId;
-		return api;
+		SemanticObject jreq = (SemanticObject) api
+				.commitimeout(CheapEngin.checkUser, wftype, nodeId, taskId, instId).get("res");
+		return jreq;
 	}
 
 	private String wftype;
@@ -190,12 +218,11 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	/** task table n-vs */
 	private ArrayList<Object[]> nvs;
 
-	// private String multiChildTabl;
 	// private ArrayList<String[]> multiDels;
-	/** 3d array ArrayList<ArrayList<String[]>>*/
 	// private ArrayList<ArrayList<?>> multiInserts;
 	private ArrayList<Statement<?>> postups;
 	private String cmd;
+
 
 	protected CheapApi(String wftype, Req req, String cmd) {
 		this.wftype = wftype;
@@ -244,20 +271,18 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	 * @throws SQLException
 	 * @throws TransException 
 	 */
-	public SemanticObject commit(IUser usr) throws SQLException, TransException {
+	public SemanticObject commitReq(IUser usr) throws SQLException, TransException {
 		CheapTransBuild st = CheapEngin.trcs;
 //		SemanticObject multireq = formatMulti(st, usr, multiChildTabl, multiDels, multiInserts);
-//		SemanticObject jreq = CheapEngin.onReqCmd(usr, wftype, req, cmd,
-//					taskId, nodeDesc, nvs, multireq, postups);
 
-		SemanticObject jreq = CheapEngin.onReqCmd(usr, wftype, req, cmd,
+		SemanticObject logic = CheapEngin.onReqCmd(usr, wftype, req, cmd,
 					taskId, nodeDesc, nvs, postups);
 
-		Insert ins = (Insert) jreq.get("stmt");
+		Insert ins = (Insert) logic.get("stmt");
 		ISemantext smtxt = st.instancontxt(usr);
 
 		// prepare competition checking
-		CheapEvent evt = (CheapEvent) jreq.get("evt");
+		CheapEvent evt = (CheapEvent) logic.get("evt");
 		CheapWorkflow wf = CheapEngin.getWf(evt.wfId());
 
 		Query q;
@@ -300,6 +325,7 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 		lock.lock();
 		try {
 			if (q != null) {
+				// check competation
 				SemanticObject s = q.rs(smtxt);
 				SResultset rs = (SResultset) s.rs(0);
 				if (rs.beforeFirst().next()) {
@@ -309,16 +335,51 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 							wf.wfId, evt.currentNodeId(), evt.cmd(), taskId);
 				}
 			}
+			// step
 			ins.ins(smtxt);
 		} finally { lock.unlock(); }
 
-		((CheapEvent) jreq.get("evt")).resulve(smtxt);
+		((CheapEvent) logic.get("evt")).resulve(smtxt);
 
-		jreq.remove("stmt");
+		logic.remove("stmt");
 		
 		// FIXME Why events handler not called here?
-		return jreq;
+		return logic;
 	}
+	
+	public SemanticObject commitimeout(IUser usr, String wfid, String nodeId, String busiId, String instId)
+			throws SQLException, TransException {
+		SemanticObject logic = CheapEngin.onTimeout(usr, wfid, nodeId, busiId, instId);
+
+		// check competition
+		checkerCompetition(wfid);
+		
+		Insert ins = (Insert) logic.get("stmt");
+		ISemantext smtx = CheapEngin.trcs.instancontxt(usr);
+		ins.ins(smtx);
+		((CheapEvent) logic.get("evt")).resulve(smtx);
+		logic.remove("stmt");
+		return logic;
+	}
+
+	private void checkerCompetition(String wfid) throws TransException, SQLException {
+		SemanticObject res = CheapEngin.trcs.select(WfMeta.wftabl, "wf")
+			.col(WfMeta.wfChecker, "chkr")
+			.where_("=", WfMeta.wfWfid, wfid)
+			.rs(CheapEngin.trcs.basictx());
+		SResultset rs = (SResultset) res.rs(0);
+		if (rs.beforeFirst().next()) {
+			if (CheapEngin.cheaprint == null)
+				Utils.warn("CheapAip is checking competations but it's finger print is null, this should only hanppened when testing");
+			else if (CheapEngin.cheaprint.equals(rs.getString("chkr")))
+				throw new CheapException(CheapException.ERR_WF_COMPETATION,
+						"Another timeout checker is running - the value of %s.%s is different than my finger print: %s.\n" +
+						"To disable background checker, set workflow-meta.xml/t=cfg/k=enable-checker/v: false.",
+						WfMeta.wftabl, WfMeta.wfChecker, CheapEngin.cheaprint);
+		}
+		else Utils.warn("CheapApi#checkerCompetition(): Checking timeout commitment competition fialed. wfid: %s", wfid);
+	}
+
 	
 	/**Format multi-details request into SemanticObject.
 	 * @param st

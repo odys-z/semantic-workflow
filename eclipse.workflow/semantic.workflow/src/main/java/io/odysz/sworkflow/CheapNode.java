@@ -27,10 +27,10 @@ public class CheapNode {
 		String cmd; 
 		int sort;
 
-		public CheapRoute(int timeout, String timeoutRoute) throws SemanticException {
-			if (timeout <= 0)
-				throw new SemanticException("Timeout Route consturctor can't been called if timeout is not defined");
-		}
+//		public CheapRoute(int timeout, String timeoutRoute) throws SemanticException {
+//			if (timeout <= 0 || LangExt.isblank(timeoutRoute))
+//				throw new SemanticException("Timeout Route consturctor can't been called if timeout is not defined");
+//		}
 
 		public CheapRoute(String from, String cmd, String to, String text, int sort) {
 			this.from = from;
@@ -47,15 +47,15 @@ public class CheapNode {
 			return LangExt.toString(new String[] {from, to, txt, cmd, String.valueOf(timeoutsnd), String.valueOf(sort)});
 		}
 		
-		public CheapRoute(String js) {
-			String[] jss = LangExt.toArray(js);
-			this.from = jss[0];
-			this.to= jss[1];
-			this.txt = jss[2];
-			this.cmd = jss[3];
-			this.timeoutsnd = Integer.valueOf(jss[4]);
-			this.sort = Integer.valueOf(jss[5]);
-		}
+//		public CheapRoute(String js) {
+//			String[] jss = LangExt.toArray(js);
+//			this.from = jss[0];
+//			this.to= jss[1];
+//			this.txt = jss[2];
+//			this.cmd = jss[3];
+//			this.timeoutsnd = Integer.valueOf(jss[4]);
+//			this.sort = Integer.valueOf(jss[5]);
+//		}
 	}
 
 	public static class VirtualNode extends CheapNode {
@@ -124,11 +124,11 @@ public class CheapNode {
 		this.arriveCondt = new CheapLogic(prevNodes);
 		this.eventHandler = createHandler(onEvents);
 
-		if (timeout > 0)
-			this.timeoutRoute = new CheapRoute(timeout, timeoutRoute);
 		if (timeout > 0) {
 			// String[] timeoutRt = new String[2];
-			this.timeoutHandler = parseTimeoutRoute(timeoutRoute);
+			Object[] rh = parseTimeoutRoute(nid, timeoutRoute);
+			this.timeoutRoute = (CheapRoute) rh[0];
+			this.timeoutHandler = (ICheapEventHandler) rh[1];
 		}
 		
 		this.rights = rightsView;
@@ -155,10 +155,10 @@ public class CheapNode {
 		return routs;
 	}
 
-	private ICheapEventHandler createHandler(String onEvent) {
-		if(onEvent != null) {
+	private ICheapEventHandler createHandler(String cls) {
+		if(cls != null) {
 			try {
-				ICheapEventHandler handler = (ICheapEventHandler) Class.forName(onEvent.trim()).newInstance();
+				ICheapEventHandler handler = (ICheapEventHandler) Class.forName(cls.trim()).newInstance();
 				return handler;
 			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
 				e.printStackTrace();
@@ -168,15 +168,24 @@ public class CheapNode {
 		return new CheapHandler();
 	}
 
-	private ICheapEventHandler parseTimeoutRoute(String timeoutRoute) {
+	/**Parse tiemoutRoute string, in format of [target node]:[text]:[handler],
+	 * e.g. t01.01:time out:io.oz.sample.handler
+	 * @param timeoutRoute
+	 * @return 0: CheapRoute; 1: ICheapEventHandler
+	 */
+	private Object[] parseTimeoutRoute(String from, String timeoutRoute) {
 		if (timeoutRoute == null)
 			return null;
 		String[] timess = timeoutRoute.split(":");
 		if (timess == null || timess.length < 2)
 			return null;
 		if (timess.length == 2)
-			return new CheapHandler();
-		return createHandler(timess[2]);
+			return new Object[] {
+				new CheapRoute(from, Req.timeout.name(), timess[0], timess[1], 9999),
+				new CheapHandler()};
+		return new Object[] {
+				new CheapRoute(from, Req.timeout.name(), timess[0], timess[1], 9999),
+				createHandler(timess[2])};
 	}
 
 	public String nodeId() { return nid; }

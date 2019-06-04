@@ -40,27 +40,33 @@ public class CheapEvent extends SemanticObject {
 	 * @param current
 	 * @param next
 	 * @param taskId a {@link Resulving} value to be resulved or a known task id value
-	 * @param newInstId a {@link Resulving} value to be resulved or a known instance id value
+	 * @param instId a {@link Resulving} value to be resulved or a known instance id value
 	 * @param rq
 	 * @param cmd
 	 */
 	public CheapEvent(String wfId, Evtype evtype, CheapNode current,
-			CheapNode next, Object taskId, Object newInstId, Req rq, String cmd) {
+			CheapNode next, Object taskId, Object instId, Req rq, String cmd) {
 		put("__wfId", wfId);
 		put("__etype", evtype);
 		put("__currentNode", current);
 		put("__nextNode", next);
 		put("__taskId", taskId);
-		put("__instId", newInstId);
+		put("__instId", instId);
 		put("__req", rq);
 		put("__cmd", cmd);
 	}
 
 	public String wfId() { return (String) get("__wfId"); }
 
-	public String currentNodeId() { return ((CheapNode)get("__currentNode")).nodeId(); }
+	public String currentNodeId() {
+		return has("__currentNode") ?
+				((CheapNode)get("__currentNode")).nodeId() : null;
+	}
 
-	public String nextNodeId() { return ((CheapNode)get("__nextNode")).nodeId(); }
+	public String nextNodeId() { 
+		return has("__nextNode") ?
+				((CheapNode)get("__nextNode")).nodeId() : null;
+	}
 
 	public String instId() { 
 		Object v = get("__instId");
@@ -80,13 +86,18 @@ public class CheapEvent extends SemanticObject {
 		else return (String)v;
 	}
 
-	public String arriveCondt() { return ((CheapNode)get("__nextNode")).arrivCondt(); }
+	public String arriveCondt() {
+		return has("__nextNode") ? ((CheapNode)get("__nextNode")).arrivCondt() : null;
+	}
 
 	public Req req() { return (Req) get("__req"); }
 
 	public String cmd() { return (String) get("__cmd"); }
 
-	public String evtype() { return ((Evtype)get("__etype")).name(); }
+	public String evtype() {
+		return has("__etype") ? ((Evtype)get("__etype")).name()
+				: null;
+	}
 
 	/**Resulve taskId, instance Id, etc.
 	 * @param smtxt

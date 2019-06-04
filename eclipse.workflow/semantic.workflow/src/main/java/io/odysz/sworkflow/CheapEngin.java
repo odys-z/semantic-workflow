@@ -29,6 +29,7 @@ import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapEvent.Evtype;
+import io.odysz.sworkflow.CheapNode.CheapRoute;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
 import io.odysz.sworkflow.EnginDesign.WfMeta.nodeInst;
@@ -49,6 +50,11 @@ public class CheapEngin {
 	static CheapTransBuild trcs;
 	static IUser checkUser;
 	
+	/** Finger print used for checking timeout checker's competition.
+	 * When initializing, will update a random value to db, when checking, query it and compare with this version.
+	 */
+	static String cheaprint;
+
 	static HashMap<String, CheapWorkflow> wfs;
 	public static HashMap<String, CheapWorkflow> wfs() { return wfs; }
 
@@ -62,6 +68,9 @@ public class CheapEngin {
 
 	public static String confpath;
 
+	/**Checked times - not very accurate as competition exists */
+	static int checked = 0;
+
 	/**Init cheap engine configuration, schedule a timeout checker.<br>
 	 * @param string
 	 * @param object
@@ -71,41 +80,32 @@ public class CheapEngin {
 	 */
 	public static void initCheap(String configPath,
 			HashMap<String, ICheapChecker> customCheckers) throws TransException, IOException, SAXException {
+		
+		checkUser = new CheapRobot(); 
+
 		// worker thread 
 		stopCheap();
 		
 		reloadCheap(configPath, customCheckers);
 		confpath = configPath;
-
-		// scheduler = Executors.newScheduledThreadPool(1);
-
-		// schedualed = scheduler.scheduleAtFixedRate(
-		// 		new CheapChecker(wfs, customChecker), 0, 1, TimeUnit.MINUTES);
-		
 	}
-
-	/**Init cheap engine configuration, schedule a timeout checker.<br>
-	 * <b>Note:</b> Calling this only after DAStranscxt initialized with metas.
-	 * @param customCheckers 
-	 * @param configPath 
-	 * @param customCheckers 
-	 * @throws TransException 
-	 * @throws IOException 
-	 * @throws SAXException
-	public static void initCheap(String configPath, ICheapChecker customChecker)
-			throws TransException, IOException, SAXException {
-		initCheap(configPath, null, customChecker);
-	}
-	 * */
 
 	private static void reloadCheap(String filepath, HashMap<String, ICheapChecker> customCheckers)
 			throws TransException, IOException, SAXException {
 		try {
 			LinkedHashMap<String, XMLTable> xtabs = loadXmeta(filepath);
 			// table = conn
-			XMLTable tb = xtabs.get("conn");
-			tb.beforeFirst().next();
-			String conn = tb.getString("conn");
+			XMLTable cfg = xtabs.get("cfg");
+			String conn = null;
+			boolean enableChkr = false;
+			cfg.beforeFirst();
+			while (cfg.next()) {
+				String k = cfg.getString("k");
+				if ("conn".equals(k))
+					conn = cfg.getString("v");
+				else if ("enable-checker".equals(k))
+					enableChkr = cfg.getBool("v", false);
+			}
 			
 			// table = rigth-ds 
 			ritConfigs = new HashMap<String, Dataset>();
@@ -130,7 +130,7 @@ public class CheapEngin {
 				String bRecId = rs.getString(WfMeta.bRecId);
 				String instabl = rs.getString(WfMeta.instabl);
 				CheapWorkflow wf = new CheapWorkflow(
-						rs.getString(WfMeta.recId),
+						rs.getString(WfMeta.wfWfid),
 						rs.getString(WfMeta.wfName),
 						instabl,
 						busitabl, // tasks
@@ -139,7 +139,7 @@ public class CheapEngin {
 						rs.getString(WfMeta.bussCateCol),
 						rs.getString(WfMeta.node1),
 						rs.getString(WfMeta.bNodeInstBackRefs));
-				wfs.put(rs.getString(WfMeta.recId), wf);
+				wfs.put(rs.getString(WfMeta.wfWfid), wf);
 
 				// 2. append semantics for handling routes, etc.
 
@@ -181,23 +181,24 @@ public class CheapEngin {
 								busitabl);
 			}
 
-			schedualeds = loadCheckers(conn, wfs, xtabs.get("cheap-checker"), customCheckers);
+			if (enableChkr) {
+				schedualeds = loadCheckers(conn, wfs, xtabs.get("cheap-checker"), customCheckers);
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
 
 	private static ArrayList<ScheduledFuture<?>> loadCheckers(String conn, HashMap<String, CheapWorkflow> wfs,
-			XMLTable xconfgs, HashMap<String, ICheapChecker> customChks) throws SAXException {
+			XMLTable xconfgs, HashMap<String, ICheapChecker> customChks) throws SAXException, TransException, SQLException {
 		ArrayList<ScheduledFuture<?>> scheduals =
 				new ArrayList<ScheduledFuture<?>>(xconfgs == null ? 0 : xconfgs.getRowCount());
 		
+		// added customer checker's name, later will add all user provided checkers if not overriding xconfig.
+		HashSet<String> addedCostums = new HashSet<String>(customChks == null ? 0 : customChks.size());
 		if (xconfgs != null) {
 			if (scheduler == null)
 				scheduler = Executors.newScheduledThreadPool(1);
-
-			// added customer checker's name, later will add all user provided checkers if not overriding xconfig.
-			HashSet<String> addedCustoms = new HashSet<String>(customChks == null ? 0 : customChks.size());
 
 			xconfgs.beforeFirst();
 			while (xconfgs.next()) {
@@ -211,7 +212,7 @@ public class CheapEngin {
 					ICheapChecker chk = customChks.get(wfid);
 					schedualed = scheduler.scheduleAtFixedRate
 						(new CheapChecker(conn, chk), 0, chk.ms(), TimeUnit.MICROSECONDS);
-					addedCustoms.add(wfid);
+					addedCostums.add(wfid);
 				}
 				// otherwise create a default checker for the wfid,
 				else {
@@ -224,10 +225,26 @@ public class CheapEngin {
 					Dataset ds = new Dataset(wfid, null, sqls, null);
 					schedualed = scheduler.scheduleAtFixedRate
 							(new CheapChecker(conn, wfid, ms, ds), 0, ms, TimeUnit.MICROSECONDS);
+					
+					addedCostums.add(wfid);
 				}
 				scheduals.add(schedualed);
 			}
 		}
+		
+		if (customChks != null)
+			for (ICheapChecker ckr : customChks.values()) {
+				if (addedCostums.contains(ckr.wfId()))
+					continue;
+				else {
+					ICheapChecker chk = customChks.get(ckr.wfId());
+					scheduler.scheduleAtFixedRate
+						(new CheapChecker(conn, chk), 0, chk.ms(), TimeUnit.MICROSECONDS);
+					addedCostums.add(ckr.wfId());
+				}
+			}
+
+		CheapApi.initFingerPrint(checkUser, addedCostums);
 
 		return scheduals;
 	}
@@ -258,11 +275,93 @@ public class CheapEngin {
 				}
 			}
 	}
+	
+	public static int checked() { return checked ; }
 
 	public static CheapWorkflow getWf(String type) {
 		return wfs == null ? null : wfs.get(type);
 	}
 
+	/**Create statements that can be committed to step the timeout routes,
+	 * return an event object with target instance can be resulved if committing the statements.
+	 * @param usr
+	 * @param wftype
+	 * @param nodeId
+	 * @param busiId
+	 * @param instId
+	 * @return {stmt: {@link Insert}/{@link Update} (for committing), <br>
+	 * 	evt: start/step event (new task ID ({@link Resulving} to be resolved), <br>
+	 *	stepHandler: {@link ICheapEventHandler} for req (step/deny/next) if there is one configured]<br>
+	 *	arriHandler: {@link ICheapEventHandler} for arriving event if there is one configured<br>
+	 * }
+	 * @throws SQLException
+	 * @throws TransException
+	 */
+	public static SemanticObject onTimeout(IUser usr, String wftype, String nodeId,
+			String busiId, String instId) throws SQLException, TransException {
+		if (wfs == null)
+			throw new SemanticException("Before step timeout, cheap engine must been initialized.");
+		if (LangExt.isblank(busiId) ||
+				LangExt.isblank(nodeId) ||
+				LangExt.isblank(instId)) {
+			Utils.warn("On inconsistant timeout satuation. nodeId %s, busiId %s, instId %s",
+					nodeId, busiId, instId);
+			return null;
+		}
+		CheapWorkflow wf = wfs.get(wftype);
+		CheapNode timeoutNode = wf.getNode(nodeId);
+		CheapRoute toRoute = timeoutNode.timeoutRoute();
+		CheapNode nextNode = wf.getNode(toRoute.to);
+
+		// 1. insert a target instance stepped to it via timeout
+		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr)
+				.nv(nodeInst.nodeFk, nodeId)
+				.nv(nodeInst.busiFk, busiId)
+				.nv(nodeInst.descol, "from " + instId + " timeout")
+				// update the current (timeout) node as the prvNode
+				.nv(nodeInst.prevInst, instId) // can't be null - no null node can timeout
+				// op-time semantics is removed to avoid updating when stepping next
+				.nv(nodeInst.opertime, Funcall.now(CheapEngin.trcs.basictx().dbtype()))
+				.nv(nodeInst.oper, usr.uid());
+
+		Resulving newInstId = new Resulving(wf.instabl, nodeInst.id);
+
+		// 2. update the task's current state
+		Update upd2 = trcs.update(wf.bTabl, usr)
+				.nv(wf.bTaskStateRef, newInstId)
+				.whereEq(wf.bRecId, busiId);
+
+		// 2.0. prepare back-ref(nodeId:task.nodeBackRef);
+		// e.g. oz_workflow.bacRefs = 't01.03:requireAllStep',
+		// so set tasks.requireAll = new-inst-id if nodeId = 't01.03';
+		if (wf.bNodeInstRefs != null && wf.bNodeInstRefs.containsKey(nextNode.nodeId())) {
+			// requireAllStep = 't01.03'
+			String colname = wf.bNodeInstRefs.get(timeoutNode.nodeId());
+			if (!LangExt.isblank(colname))
+				upd2.nv(colname, newInstId);
+		}
+
+		ins1.post(upd2)
+
+		// 3. update the current (timeout) node handling-cmd with new instance Id.
+			.post(trcs.update(wf.instabl, usr)
+				.nv(nodeInst.handleCmd, nextNode.nodeId())
+				.nv(nodeInst.descol, newInstId)
+				.whereEq(nodeInst.id, instId))
+			;
+
+		// timeout event
+		CheapEvent evt = new CheapEvent(timeoutNode.wfId(), Evtype.timeout,
+					timeoutNode, nextNode,
+					busiId, newInstId, Req.timeout, Req.timeout.name());
+
+		return new SemanticObject()
+			.put("stmt", ins1)
+			.put("evt", evt)
+			.put("stepHandler", timeoutNode.onEventHandler())
+			.put("arriHandler", nextNode.isArrived(timeoutNode) ? nextNode.onEventHandler() : null);
+	}
+	
 	/**step to next node according to current node and request.<br>
 	 * 1. create node instance;<br>
 	 * nv: currentNode.nodeState = cmd-name except start<br>
@@ -294,8 +393,7 @@ public class CheapEngin {
 	 */
 	public static SemanticObject onReqCmd(IUser usr, String wftype, Req req, String cmd,
 			String busiId, String nodeDesc, ArrayList<Object[]> busiPack,
-			ArrayList<Statement<?>> postups)
-					throws SQLException, TransException {
+			ArrayList<Statement<?>> postups) throws SQLException, TransException {
 		// Design Notes:
 		// We are not only step from current state, we also step from the out-going node asked by cmd.
 		// The client needing change some how to adapt to the new style - multip node's can submit simultaneously.
@@ -315,12 +413,6 @@ public class CheapEngin {
 			// sometimes a task alread exists
 			// but the instance shouldn't exist. Yet competation is not checked here
 			fromInstId = null;
-
-//			if (!LangExt.isblank(busiId, "\\s*null\\s*")) {
-//				String[] tskInf = wf.getInstByTask(trcs, busiId);
-//				if (tskInf != null && tskInf.length > 0)
-//					currentInstId = tskInf[1];
-//			}
 		}
 		else {
 			// 0.2 step, find the task and the current state node
@@ -328,7 +420,6 @@ public class CheapEngin {
 				throw new CheapException(CheapException.ERR_WF,
 						"Command %s.%s need to find task/business record first. but busi-id is null",
 						req.name(), cmd);
-			// String[] tskInf = wf.getInstByTask(trcs, busiId);
 
 			String[] tskInf = findFrom(busiId, cmd, wf);
 			fromNode = wf.getNode(tskInf[0]);
@@ -423,7 +514,7 @@ public class CheapEngin {
 			
 			ins1.post(ins2);
 		}
-		//  2.2. or task exists, update task,<br>
+		//  2.2. or if the task exists, update task,<br>
 		//  semantics: fk(tasks.wfState - task_nodes.instId)<br>
 		//  add back-ref(nodeId:task.nodeBackRef),
 		else if (Req.cmd == req || Req.start == req) {
@@ -662,11 +753,11 @@ public class CheapEngin {
 		SResultset rs = (SResultset) res.rs(0);
 		
 		if (rs == null || rs.getRowCount() != 1) {
-			Utils.warn("found multiple instance for the cmd %s, task: %s",
+			Utils.warn("CheapEngin#findFrom(): Found multiple instance for the cmd %s, task: %s",
 					cmd, busiId);
 			if (debug)
 				throw new CheapException(CheapException.ERR_WF_INTERNAL,
-						"found multiple instance for the cmd %s, task: %s",
+						"CheapEngin#findFrom(): Found multiple instance for the cmd %s, task: %s",
 						cmd, busiId);
 		}
 

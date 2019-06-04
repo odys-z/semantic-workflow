@@ -146,6 +146,7 @@ insert into oz_autoseqs (sid, seq, remarks) values
 public class CheapApiTest {
 	static final String wftype = "t01";
 
+	static String conn = "local-sqlite";
 	static LoggingUser usr;
 
 	// private static HashMap<String, TableMeta> metas;
@@ -161,11 +162,10 @@ public class CheapApiTest {
 		jo.put("usrAct", usrAct);
 
 		try {
-			String conn = "local-sqlite";
 			initSqlite(conn);
-			// metas = Connects.loadMeta(conn);
 			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
-			usr = new LoggingUser(conn, "src/test/res/semantic-log.xml", "CheapApiTest", jo);
+			usr = new LoggingUser(conn,
+					"src/test/res/semantic-log.xml", "CheapApiTest", jo);
 		} catch (SQLException | TransException | IOException | SAXException e) {
 			e.printStackTrace();
 		}
@@ -174,7 +174,6 @@ public class CheapApiTest {
 	private String newInstId;
 	private String newTaskId;
 
-	@Test
 	public void test_1_Start() throws SQLException, TransException {
 		// case 1 start new task, without task record exists
 		// add some business details (not logic of workflow, but needing committed in same transaction)
@@ -198,7 +197,7 @@ public class CheapApiTest {
 				.taskNv("remarks", "testing")
 				// .taskChildMulti("task_details", null, inserts)
 				.postupdates(postups)
-				.commit(usr);
+				.commitReq(usr);
 
 		// simulating business layer handling events
 		ICheapEventHandler eh = (ICheapEventHandler) res1.get("stepHandler");
@@ -229,7 +228,7 @@ public class CheapApiTest {
 		res2 = CheapApi.start(wftype, task2)
 				.nodeDesc("desc: starting " + task2)
 				.taskNv("remarks", "testing case 2")
-				.commit(usr);
+				.commitReq(usr);
 		
 		res2 = CheapEngin.trcs.select(wf.instabl)
 				.col(WfMeta.nodeInst.nodeFk, "nid")
@@ -245,7 +244,7 @@ public class CheapApiTest {
 			res2 = CheapApi.start(wftype, task2)
 				.nodeDesc("desc: starting " + task2)
 				.taskNv("remarks", "testing case 2")
-				.commit(usr);
+				.commitReq(usr);
 			fail("task2 started again");
 		} catch (CheapException x) {
 			Utils.warn("Got expecting mesage: %s", x.getMessage());
@@ -298,7 +297,7 @@ public class CheapApiTest {
 		SemanticObject res = CheapApi.next(wftype, newTaskId, "t01.01.stepA")
 				.nodeDesc("desc: next " + DateFormat.formatime(new Date()))
 				.postupdates(postups)
-				.commit(usr);
+				.commitReq(usr);
 
 		// simulating business layer handling events
 		ICheapEventHandler eh = (ICheapEventHandler) res.get("stepHandler");
@@ -312,7 +311,29 @@ public class CheapApiTest {
 		else Utils.logi("No arriving event handler");
 	}
 
-	private static void initSqlite(String conn) throws SQLException, SemanticException {
+//	@Test
+//	public void testCheckTimeout() throws SQLException, SAXException, TransException {
+//		if (newTaskId == null)
+//			test_3_Next();
+//		// initSqlite(conn);
+//
+//		Dataset ds;
+//		{
+//			String[] sqls = new String[4];
+//			sqls[DatasetCfg.ixSqlit] = "select (CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) )/60 expMin, \n" + 
+//					"		i.opertime, n.timeouts, n.timeoutRoute, n.wfId, i.nodeId nodeId, i.taskId taskId, i.instId\n" + 
+//					"		from task_nodes i join oz_wfnodes n on i.nodeId = n.nodeId and n.timeouts > 0 and i.handlingCmd is null\n" + 
+//					"		where CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) > n.timeouts";
+//
+//			ds = new Dataset("t01", null, sqls, null);
+//		}
+//
+//		CheapChecker chkr = new CheapChecker(conn, "t01", 2000, ds);
+//		int c = chkr.checkTimeout();
+//		Utils.logi(String.valueOf(c));
+//	}
+
+	static void initSqlite(String conn) throws SQLException, SemanticException {
 		File file = new File("src/test/res");
 		String path = file.getAbsolutePath();
 		Connects.init(path);
@@ -352,6 +373,7 @@ public class CheapApiTest {
 					 "bussCateCol varchar(20) DEFAULT NULL , -- cate id in business table, e.g. task.tasktype.  The value is one of ir_workflow.wfId.,\n" +
 					 "node1 varchar(50) NOT NULL , -- start node id in ir_wfdef,\n" +
 					 "backRefs varchar(200) DEFAULT NULL , -- node instance back reference to business task record pk, format [node-id]:[business-col],\n" +
+					 "checker varchar(50), -- background checker's finger print, used for competition check \n" +
 					 "sort int(11) DEFAULT NULL,\n" +
 					 "PRIMARY KEY (wfId) )"
 					);
@@ -448,9 +470,9 @@ public class CheapApiTest {
 					"('t01', 't01.01', 10, 'starting', 't01.01',  \n" +
 						"null, 'ds-allcmd', null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.02A', 20, 'plan A', 't01.02A',\n" +
-						"null, 'ds-allcmd', 't03:Time Out:', 15, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"null, 'ds-allcmd', 't01.03:Time Out:', 15, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.02B', 30, 'plan B', 't01.02B',\n" +
-						"null, 'ds-allcmd', 't03:Time Out:', 25, 'io.odysz.sworkflow.CheapHandler'),\n" +
+						"null, 'ds-allcmd', 't01.03:Time Out:', 25, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.03', 90, 'abort', 't01.03',\n" +
 						"'t01.02 AND t01.02B', 'ds-v1', null, null, 'io.odysz.sworkflow.CheapHandler'),\n" +
 					"('t01', 't01.04', 99, 'finished', 't01.04',\n" +
@@ -487,6 +509,6 @@ public class CheapApiTest {
 				Utils.warn("Make sure table oz_autoseq already exists, and only for testing aginst a sqlite DB.");
 			}
 		}
-
 	}
+	
 }

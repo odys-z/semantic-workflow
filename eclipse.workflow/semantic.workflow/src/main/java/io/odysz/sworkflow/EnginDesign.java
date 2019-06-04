@@ -57,9 +57,11 @@ public class EnginDesign {
 		/** virtual node code hard coded */
 		static final String wftabl = "oz_workflow";
 		static final String wfName = "wfName";
+		/** Checker print to prevent timeout checking competition */
+		static final String wfChecker = "checker";
 
 		static final String virtualNCode = "virt";
-		static final String recId = "wfId";
+		static final String wfWfid = "wfId";
 
 		/**Column of node-instance-table-name<br>
 		 * This table name is configurable in oz_workflow.instabl,

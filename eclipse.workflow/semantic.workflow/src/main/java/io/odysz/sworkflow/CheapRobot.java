@@ -9,9 +9,7 @@ import io.odysz.transact.x.TransException;
 
 public class CheapRobot implements IUser {
 
-	@Override public ArrayList<String> dbLog(ArrayList<String> sqls) {
-		return sqls;
-	}
+	@Override public ArrayList<String> dbLog(ArrayList<String> sqls) { return null; }
 
 	@Override public boolean login(Object req) throws TransException { return false; }
 	@Override public String sessionId() { return null; }
