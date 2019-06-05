@@ -27,11 +27,6 @@ public class CheapNode {
 		String cmd; 
 		int sort;
 
-//		public CheapRoute(int timeout, String timeoutRoute) throws SemanticException {
-//			if (timeout <= 0 || LangExt.isblank(timeoutRoute))
-//				throw new SemanticException("Timeout Route consturctor can't been called if timeout is not defined");
-//		}
-
 		public CheapRoute(String from, String cmd, String to, String text, int sort) {
 			this.from = from;
 			this.to= to;
@@ -41,23 +36,18 @@ public class CheapNode {
 			this.sort = sort;
 		}
 		
-		/////// JSON Helpers /////////////////////////////////////////////////////////////
+		/**Convert to json like string
+		 * @see java.lang.Object#toString()
+		 */
 		@Override
 		public String toString() {
 			return LangExt.toString(new String[] {from, to, txt, cmd, String.valueOf(timeoutsnd), String.valueOf(sort)});
 		}
-		
-//		public CheapRoute(String js) {
-//			String[] jss = LangExt.toArray(js);
-//			this.from = jss[0];
-//			this.to= jss[1];
-//			this.txt = jss[2];
-//			this.cmd = jss[3];
-//			this.timeoutsnd = Integer.valueOf(jss[4]);
-//			this.sort = Integer.valueOf(jss[5]);
-//		}
 	}
 
+	/**A virtual node used before a stepping to a starting node.
+	 * @author odys-z@github.com
+	 */
 	public static class VirtualNode extends CheapNode {
 		public static final String prefix = "virt-";
 		public static final String virtualName = "invisible";
@@ -124,7 +114,7 @@ public class CheapNode {
 		this.arriveCondt = new CheapLogic(prevNodes);
 		this.eventHandler = createHandler(onEvents);
 
-		if (timeout > 0) {
+		if (timeout > 0 && !LangExt.isblank(timeoutRoute)) {
 			// String[] timeoutRt = new String[2];
 			Object[] rh = parseTimeoutRoute(nid, timeoutRoute);
 			this.timeoutRoute = (CheapRoute) rh[0];
@@ -155,7 +145,7 @@ public class CheapNode {
 		return routs;
 	}
 
-	private ICheapEventHandler createHandler(String cls) {
+	private static ICheapEventHandler createHandler(String cls) {
 		if(cls != null) {
 			try {
 				ICheapEventHandler handler = (ICheapEventHandler) Class.forName(cls.trim()).newInstance();
@@ -169,11 +159,16 @@ public class CheapNode {
 	}
 
 	/**Parse tiemoutRoute string, in format of [target node]:[text]:[handler],
-	 * e.g. t01.01:time out:io.oz.sample.handler
-	 * @param timeoutRoute
-	 * @return 0: CheapRoute; 1: ICheapEventHandler
+	 * <br>e.g. "t01.01:time out:io.oz.sample.handler",<br>
+	 * where <i>handler</i> is an implementation of {@link ICheapEventHandler} which can be ignored
+	 * - timeout routing is already handled, nothing can do if there is no special business handling.<br>
+	 * See <a href='https://odys-z.github.io/notes/cheapengin/about.html#cheap-config-oz_wfnodes-timeoutroute'>
+	 * How to configure tiemout route</a>
+	 * @param from from node id - the node will timeout
+	 * @param timeoutRoute e.g. "t01.01:time out:io.oz.sample.handler"
+	 * @return 0: {@link CheapRoute} object; 1: {@link ICheapEventHandler} if configured
 	 */
-	private Object[] parseTimeoutRoute(String from, String timeoutRoute) {
+	public static Object[] parseTimeoutRoute(String from, String timeoutRoute) {
 		if (timeoutRoute == null)
 			return null;
 		String[] timess = timeoutRoute.split(":");

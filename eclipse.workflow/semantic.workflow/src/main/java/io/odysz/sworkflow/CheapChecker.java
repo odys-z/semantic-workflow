@@ -67,7 +67,6 @@ public class CheapChecker implements Runnable, ICheapChecker {
 			return checked;
 		}
 
-		// sql = String.format(sql, wfid);
 		SResultset rs = Connects.select(sql);
 		rs.beforeFirst();
 		while (rs.next()) {
@@ -92,8 +91,13 @@ public class CheapChecker implements Runnable, ICheapChecker {
 				// call user handler
 				ICheapEventHandler handler = CheapEngin.getWf(wfid).getNode(evt.currentNodeId()).timeoutHandler();
 				if (handler != null)
-					// TODO in another thread
-					handler.onTimeout(evt);
+					new Thread(() -> {
+						try {handler.onTimeout(evt);}
+						catch (Throwable t) { 
+							Utils.warn("Handler failed for event on-timeout. taskId: %s, instId: %s\ndetais:\n%s",
+									evt.taskId(), evt.instId(), t.getMessage());
+						}
+					}).start();
 			} catch (Exception ex) {
 				Utils.warn("Timeout event ignored.\nEvent:\n%s\nException:\n%s",
 						evt.toString(), ex.getMessage());
