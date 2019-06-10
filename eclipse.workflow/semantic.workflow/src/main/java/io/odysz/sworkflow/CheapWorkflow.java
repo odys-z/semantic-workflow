@@ -68,9 +68,10 @@ public class CheapWorkflow {
 		this.node1 = node1;
 		this.bNodeInstRefs = LangExt.parseMap(bNodeInstRefs);
 
-		// load configs
+		// load configs - load all my nodes
 		SemanticObject s = CheapEngin.trcs
 				.select(WfMeta.nodeTabl)
+				.whereEq(WfMeta.wfWfid, wfId)
 				.rs(CheapEngin.basictx);
 		
 		SResultset rs = (SResultset) s.rs(0);
