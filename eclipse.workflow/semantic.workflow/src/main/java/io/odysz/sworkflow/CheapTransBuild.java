@@ -15,6 +15,7 @@ import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Update;
+import io.odysz.transact.x.TransException;
 
 public class CheapTransBuild extends DATranscxt {
 	@Override
@@ -55,7 +56,7 @@ public class CheapTransBuild extends DATranscxt {
 	 * @throws SAXException 
 	 */
 	public CheapTransBuild(String connId, XMLTable xtabl)
-			throws SemanticException, SQLException, SAXException, IOException {
+			throws TransException, SQLException, SAXException, IOException {
 		// super(connId, Connects.loadMeta(connId));
 		super(connId); // metas must already loaded
 		try {

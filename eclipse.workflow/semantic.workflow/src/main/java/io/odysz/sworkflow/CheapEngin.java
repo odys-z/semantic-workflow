@@ -459,6 +459,7 @@ public class CheapEngin {
 		// post nv: nextInst.prevNode = current.id except start<br>
 		// post nv: currentNode.nodeState = cmd-name except start<br>
 		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr)
+			.nv(nodeInst.busiFk, "Resulving...")
 			.nv(nodeInst.nodeFk, nextNode.nodeId())
 			.nv(nodeInst.descol, nodeDesc)
 			// op-time semantics is removed to avoid updating when stepping next
@@ -492,10 +493,10 @@ public class CheapEngin {
 
 		// 2.0. prepare back-ref(nodeId:task.nodeBackRef);
 		// e.g. oz_workflow.bacRefs = 't01.03:requireAllStep', so set tasks.requireAll = new-inst-id if nodeId = 't01.03';<br>
-		String colname = null; 
+		String colnameBackRef = null; 
 		if (wf.bNodeInstRefs != null && wf.bNodeInstRefs.containsKey(nextNode.nodeId())) {
 			// requireAllStep = 't01.03'
-			colname = wf.bNodeInstRefs.get(nextNode.nodeId());
+			colnameBackRef = wf.bNodeInstRefs.get(nextNode.nodeId());
 		}
 
 		//  2.1. create task, with busiPack as task nvs.<br>
@@ -504,13 +505,14 @@ public class CheapEngin {
 		if (Req.start == req && LangExt.isblank(busiId)) {
 			Insert ins2 = trcs
 					.insert(wf.bTabl, usr)
-					.nv(wf.bCateCol, wf.wfId);
+					.nv(wf.bCateCol, wf.wfId)
+					.nv(wf.bTaskStateRef, "Resulving...");
 			if (busiPack != null)
 				for (Object[] nv : busiPack)
 					ins2.nv((String)nv[0], nv[1]);
 			
-			if (colname != null)
-				ins2.nv(colname, newInstId);
+			if (colnameBackRef != null)
+				ins2.nv(colnameBackRef, newInstId);
 			
 			ins1.post(ins2);
 		}
@@ -527,8 +529,8 @@ public class CheapEngin {
 				for (Object[] nv : busiPack)
 					upd2.nv((String)nv[0], nv[1]);
 
-			if (colname != null)
-				upd2.nv(colname, newInstId);
+			if (colnameBackRef != null)
+				upd2.nv(colnameBackRef, newInstId);
 
 			ins1.post(upd2);
 		}

@@ -220,7 +220,7 @@ public class CheapApiTest {
 		SemanticObject res2 = (SemanticObject) CheapEngin.trcs
 				.insert(wf.bTabl, usr)
 				.nv("remarks", "testing case 2")
-				.nv(wf.bTaskStateRef, null)
+				.nv(wf.bTaskStateRef, "null stub")
 				.nv("wfId", wftype)
 				.ins(tr2);
 		String task2 = (String) tr2.resulvedVal(wf.bTabl, wf.bRecId);
