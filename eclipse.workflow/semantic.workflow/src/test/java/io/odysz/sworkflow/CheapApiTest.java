@@ -1,6 +1,7 @@
 package io.odysz.sworkflow;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -191,7 +192,11 @@ public class CheapApiTest {
 		row.add(new String[] {"remarks", "detail-3"});
 		inserts.add(row);
 		
-		ArrayList<Statement<?>> postups = null;
+		ArrayList<Statement<?>> postups = new ArrayList<Statement<?>>();
+		postups.add(CheapEngin.trcs
+					.insert("task_details")		// new node instance can not auto created in test-start.
+					.nv("remarks", newInstId));	// semantics will handle recId (auto-key)
+
 		SemanticObject res1 = CheapApi.start(wftype)
 				.nodeDesc("desc: starting " + DateFormat.formatime(new Date()))
 				.taskNv("remarks", "testing")
@@ -290,9 +295,10 @@ public class CheapApiTest {
 		// A post updating mocking the case that only business handlings knows the semantics.
 		ArrayList<Statement<?>> postups = new ArrayList<Statement<?>>();
 		postups.add(CheapEngin.trcs
-					.update("task_details")
-					.nv("remarks", newInstId) // new node instance auto created in test-start.
-					.where_("=", "taskId", newTaskId));
+					.update("task_details")		 // new node instance can not auto created in test-start.
+					.nv("remarks", newInstId)
+					.where_("=", "taskId", newTaskId)
+					);
 
 		SemanticObject res = CheapApi.next(wftype, newTaskId, "t01.01.stepA")
 				.nodeDesc("desc: next " + DateFormat.formatime(new Date()))
@@ -305,10 +311,79 @@ public class CheapApiTest {
 			eh.onCmd(((CheapEvent) res.get("evt")));
 		else Utils.logi("No stepping event");
 
+		// verify results of post update
+		res = CheapEngin.trcs.select("task_details")
+			.col("remarks")
+			.where_("=", "taskId", newTaskId)
+			.rs(CheapEngin.trcs.instancontxt(usr));
+		SResultset rs = (SResultset) res.rs(0);
+		rs.beforeFirst().next();
+		assertEquals(newInstId, rs.getString("remarks"));
+
+		// now step branch
+		res = CheapApi.next(wftype, newTaskId, "t01.01.stepB")
+			.commitReq(usr);
+		assertWf(wftype, newTaskId, "t01.02B");
+
+		// back
+		res = CheapApi.next(wftype, newTaskId, "t01.02B.go01")
+			.commitReq(usr);
+		assertWf(wftype, newTaskId, "t01.01");
+
+		// and loop
+		res = CheapApi.next(wftype, newTaskId, "t01.01.stepB")
+			.commitReq(usr);
+		assertWf(wftype, newTaskId, "t01.02B");
+
+		// arriving 
+		res = CheapApi.next(wftype, newTaskId, "t01.02A.go03")
+			.commitReq(usr);
+		assertWf(wftype, newTaskId, "t01.03");
+
+		// arrived 
+		res = CheapApi.next(wftype, newTaskId, "t01.02B.go03")
+			.commitReq(usr);
+		assertWf(wftype, newTaskId, "t01.03");
+
+		// logic working?
 		eh = (ICheapEventHandler) res.get("arriHandler");
 		if (eh != null)
 			eh.onArrive(((CheapEvent) res.get("evt")));
-		else Utils.logi("No arriving event handler");
+		else Utils.warn("No arriving event handler");
+	}
+
+	/**Verify task's current state is the currentNode.
+	 * @param wftype
+	 * @param taskId
+	 * @param crntNid current node id
+	 * @throws SQLException 
+	 * @throws TransException 
+	 */
+	public static void assertWf(String wftype, String taskId, String crntNid) throws SQLException, TransException {
+		assertFalse(LangExt.isblank(crntNid));
+
+		SemanticObject res1 = CheapApi.loadFlow(wftype, taskId, usr);
+		SResultset nodes = (SResultset) res1.rs(0);
+		SResultset insts = (SResultset) res1.rs(1);
+		
+		nodes.beforeFirst();
+		boolean ok = false;
+		while (nodes.next()) {
+			String nid = nodes.getString("nodeId");
+			if (nid == null)
+				break;
+			else if (crntNid.equals(nid)) {
+				ok = true;
+				break;
+			}
+		}
+		if (!ok)
+			fail("Node Id is not the current state's node.");
+
+		assertEquals(1, insts.getRowCount());
+		insts.beforeFirst().next();
+		assertEquals(taskId, insts.getString(WfMeta.nodeInst.busiFk));
+		assertEquals(crntNid, insts.getString(WfMeta.nodeInst.nodeFk));
 	}
 
 //	@Test
@@ -437,7 +512,7 @@ public class CheapApiTest {
 					 "opertime DATETIME,\n" +
 					 "remarks varchar(2000),\n" +
 					 "startNode varchar(10),\n" +
-					 "rquireAllStep varchar(20),\n" +
+					 "requireAllStep varchar(20),\n" +
 					 "PRIMARY KEY (taskId) )"
 					);
 
@@ -483,8 +558,9 @@ public class CheapApiTest {
 					"	('t01.01',  'start',        'a', 'start check',   '', 		'start', 0),\n" +
 					"	('t01.01',  't01.01.stepA', 'a', 'Go A(t01.02A)', 't01.02A','pass', 1),\n" +
 					"	('t01.01',  't01.01.stepB', 'b', 'Go B(t01.02B)', 't01.02B','deny', 2),\n" +
-					"	('t01.02A', 't01.02A.go03',  'a', 'A To 03',       't01.03', 'pass', 1),\n" +
+					"	('t01.02A', 't01.02A.go03', 'a', 'A To 03',       't01.03', 'pass', 1),\n" +
 					"	('t01.02B', 't01.02B.go03', 'a', 'B To 03',       't01.03', 'pass', 2),\n" +
+					"	('t01.02B', 't01.02B.go01', 'a', 'B To 01',       't01.01', 'deny', 0),\n" +
 					"	('t01.03',  't01.03.go-end','a', '03 Go End',     't01.04', null,   9)\n");
 
 				sqls.add("insert into task_rights (wfId, nodeId, userId, cmdFilter, roleId)\n" +

@@ -91,6 +91,41 @@ public class CheapApi {
 		return sobj;
 	}
 
+	/**Load a task's workflow instances.<br>
+	 * rs[0] - nodes outer join instances:
+	 * <pre>
+select n.sort, n.nodeName, c.txt handleTxt,
+case when b.wfState = i.instId then 9 else case when c.txt is null then 0 else 1 end end isCurrent,
+i.*
+from oz_wfnodes n
+left outer join task_nodes i on i.nodeId = n.nodeId AND i.taskId = '000005'
+left outer join tasks b on i.nodeId = n.nodeId AND b.wfState = i.instId AND i.taskId = '000005'
+left outer join oz_wfcmds c on i.handlingCmd = c.cmd
+where n.wfId = 't01' order by n.sort asc, i.prevRec asc
+
+sort |nodeName |handleTxt   |isCurrent |instId |nodeId |taskId |oper         |opertime            |descpt                             |remarks |handlingCmd |prevRec |
+-----|---------|------------|----------|-------|-------|-------|-------------|--------------------|-----------------------------------|--------|------------|--------|
+10   |starting |start check |9         |000016 |t01.01 |000005 |CheapApiTest |2019-06-13 03:42:31 |desc: starting 2019-06-13 11:42:30 |        |start       |        |
+20   |plan A   |            |0         |       |       |       |             |                    |                                   |        |            |        |
+30   |plan B   |            |0         |       |       |       |             |                    |                                   |        |            |        |
+90   |abort    |            |0         |       |       |       |             |                    |                                   |        |            |        |
+99   |finished |            |0         |       |       |       |             |                    |                                   |        |            |        |</pre>
+	 *
+	 * rs[1] - the current instance:<br>
+<pre>select i.* from task_nodes i
+join tasks b on b.wfState = i.instId AND b.taskId = '000005'
+where b.wfId = 't01'
+
+instId |nodeId |taskId |oper         |opertime            |descpt                             |remarks |handlingCmd |prevRec |
+-------|-------|-------|-------------|--------------------|-----------------------------------|--------|------------|--------|
+000016 |t01.01 |000005 |CheapApiTest |2019-06-13 03:42:31 |desc: starting 2019-06-13 11:42:30 |        |start       |        |</pre>
+	 * @param wftype
+	 * @param taskid
+	 * @param usr
+	 * @return
+	 * @throws TransException
+	 * @throws SQLException
+	 */
 	public static SemanticObject loadFlow(String wftype, String taskid, IUser usr)
 			throws TransException, SQLException {
 		SemanticObject sobj = new SemanticObject();
@@ -249,16 +284,14 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 		return this;
 	}
 	
-//	public CheapApi taskChildMulti(String tabl,
-//			ArrayList<String[]> delConds, ArrayList<ArrayList<?>> inserts) {
-//		multiChildTabl = tabl;
-//		multiDels = delConds;
-//		multiInserts = inserts;
-//		return this;
-//	}
-	
 	public CheapApi postupdates(ArrayList<Statement<?>> postups) {
 		this.postups = postups;
+		if (CheapEngin.debug && postups != null && req != Req.start)
+			for (Statement<?> post : postups)
+				if (post instanceof Insert)
+					Utils.warn("[CheapEngin.debug] CheapApi#postupdates(): Inserting new records to %s in a %s request?\n" +
+							"You can add this post insertion but the task's auto pk won't resulved.",
+							post.mainTabl(), req.name());;
 		return this;
 	}
 

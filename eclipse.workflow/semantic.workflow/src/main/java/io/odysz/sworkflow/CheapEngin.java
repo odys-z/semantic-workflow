@@ -456,13 +456,18 @@ public class CheapEngin {
 			fromNode.checkRights(trcs, usr, req, cmd, busiId);
 
 		// 1. create node instance;<br>
+		// FIXME - not always an inserting, e.g. the arriving at a node via merging routes.
+		// FIXME - not always an inserting, e.g. the arriving at a node via merging routes.
+		// FIXME - not always an inserting, e.g. the arriving at a node via merging routes.
+		// FIXME - not always an inserting, e.g. the arriving at a node via merging routes.
+
 		// post nv: nextInst.prevNode = current.id except start<br>
 		// post nv: currentNode.nodeState = cmd-name except start<br>
 		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr)
 			.nv(nodeInst.busiFk, "Resulving...")
 			.nv(nodeInst.nodeFk, nextNode.nodeId())
 			.nv(nodeInst.descol, nodeDesc)
-			// op-time semantics is removed to avoid updating when stepping next
+			// op-time semantics is removed to avoid updating when stepping next and updating 'preNode'
 			.nv(nodeInst.opertime, Funcall.now(CheapEngin.trcs.basictx().dbtype()))
 			.nv(nodeInst.oper, usr.uid());
 
@@ -506,7 +511,8 @@ public class CheapEngin {
 			Insert ins2 = trcs
 					.insert(wf.bTabl, usr)
 					.nv(wf.bCateCol, wf.wfId)
-					.nv(wf.bTaskStateRef, "Resulving...");
+					// .nv(wf.bTaskStateRef, "Resulving...")
+					;
 			if (busiPack != null)
 				for (Object[] nv : busiPack)
 					ins2.nv((String)nv[0], nv[1]);
@@ -561,177 +567,6 @@ public class CheapEngin {
 				.put("stepHandler", fromNode.onEventHandler())
 				.put("arriHandler", nextNode.isArrived(fromNode) ? nextNode.onEventHandler() : null);
 	}
-//	public static SemanticObject onReqCmd(IUser usr, String wftype, Req req, String cmd,
-//			String busiId, String nodeDesc, ArrayList<Object[]> busiPack,
-//			SemanticObject multireq2, ArrayList<Statement<?>> postups)
-//					throws SQLException, TransException {
-//		// from-node's instance id
-//		String currentInstId = null;
-//		
-//		// Design Notes:
-//		// We are not only step from current state, we also step from the out-going node asked by cmd.
-//		// The client needing change some how to adapt to the new style - multip node's can submit simultaneously.
-//		CheapNode fromNode; 
-//
-//		if (wfs == null)
-//			throw new SemanticException("Cheap engine must been initialized.");
-//
-//		// 0 prepare current node
-//		CheapWorkflow wf = wfs.get(wftype);
-//		if (req == Req.start) {
-//			// 0.1 start
-//			fromNode = wf.start(); // a virtual node
-//			cmd = Req.start.name();
-//			// sometimes a task alread exists
-//			if (!LangExt.isblank(busiId, "\\s*null\\s*")) {
-//				String[] tskInf = wf.getInstByTask(trcs, busiId);
-//				if (tskInf != null && tskInf.length > 0)
-//					currentInstId = tskInf[1];
-//			}
-//		}
-//		else {
-//			// 0.2 step, find the task and the current state node
-//			if (busiId == null)
-//				throw new CheapException(CheapException.ERR_WF,
-//						"Command %s.%s need to find task/business record first. but busi-id is null",
-//						req.name(), cmd);
-//			String[] tskInf = wf.getInstByTask(trcs, busiId);
-//			if (tskInf == null || tskInf.length == 0) {
-//				// may be a server error
-//				Utils.warn("Can't find task's information. taskId = %s, wfId = %s", busiId, wf.wfId);
-//				// may be a client error
-//				throw new CheapException(CheapException.ERR_WF,
-//						"Can't find task's information. taskId = %s, wfId = %s",
-//						busiId, wf.wfId);
-//			}
-//			currentInstId = tskInf[1];
-//			
-//			// 2019.5.31 current node should be exactly the FROM node
-//			// currentNode = wf.getNode(tskInf[2]);
-//			fromNode = wf.getNode(findFrom(cmd));
-//		}
-//
-//		// 0.3 prepare next node
-//		if (fromNode == null) throw new SQLException(
-//				String.format(Configs.getCfg("cheap-workflow", "t-no-node"),
-//				wftype, currentInstId, req));
-//		CheapNode nextNode = fromNode.findRoute(cmd);
-//		
-//		if (nextNode == null)
-//			// a configuration problem?
-//			throw new CheapException(CheapException.ERR_WF,
-//					"Route resolving failed, next node not found: wfId %s, taskId %s, req %s, cmd %s", 
-//				wftype, busiId, req, cmd);
-//
-//		if (req == Req.start)
-//			nextNode.checkRights(trcs, usr, req, cmd, busiId);
-//		else
-//			fromNode.checkRights(trcs, usr, req, cmd, busiId);
-//
-//		// 1. create node instance;<br>
-//		// post nv: nextInst.prevNode = current.id except start<br>
-//		// post nv: currentNode.nodeState = cmd-name except start<br>
-//		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr)
-//			.nv(nodeInst.nodeFk, nextNode.nodeId())
-//			.nv(nodeInst.descol, nodeDesc)
-//			// op-time semantics is removed to avoid updating when stepping next
-//			.nv(nodeInst.opertime, Funcall.now(CheapEngin.trcs.basictx().dbtype()))
-//			.nv(nodeInst.oper, usr.uid());
-//
-//		Resulving newInstId = new Resulving(wf.instabl, nodeInst.id);
-//
-//		// with nv: currentInst.nodeState = cmd-name except start<br>
-//		// post nv: nextInst.prevNode = current.id except start<br>
-//		if (Req.start != req) {
-//			ins1.nv(nodeInst.prevInst, currentInstId)
-//				.nv(nodeInst.busiFk, busiId); // busiId shouldn't resulved with fk-ins
-//
-//			ins1.post(trcs.update(wf.instabl)
-//						.nv(nodeInst.handleCmd, cmd)
-//						.where("=", nodeInst.id, "'" + currentInstId + "'"));
-//		}
-//		else {
-//			// 2019.5.26 can not resulved by post-fk here, using Resulving instead. 
-//			// see https://odys-z.github.io/notes/semantics/best-practices.html#post-fk
-//			// resulved by postFk
-//			// ins1.nv(nodeInst.busiFk , "?");
-//			// ins1.nv(nodeInst.busiFk , ShPostFk.Resulving(wf.bTabl, wf.bRecId));
-//			if (!LangExt.isblank(busiId))
-//				ins1.nv(nodeInst.busiFk, busiId);
-//			
-//			// starting node instance's handling command = start 
-//			ins1.nv(nodeInst.handleCmd, Req.start.name());
-//		}
-//
-//		// 2.0. prepare back-ref(nodeId:task.nodeBackRef);
-//		// e.g. oz_workflow.bacRefs = 't01.03:requireAllStep', so set tasks.requireAll = new-inst-id if nodeId = 't01.03';<br>
-//		String colname = null; 
-//		if (wf.bNodeInstRefs != null && wf.bNodeInstRefs.containsKey(nextNode.nodeId())) {
-//			// requireAllStep = 't01.03'
-//			colname = wf.bNodeInstRefs.get(nextNode.nodeId());
-//		}
-//
-//		//  2.1. create task, with busiPack as task nvs.<br>
-//		//  semantics: autopk(tasks.taskId), fk(tasks.wfState - task_nodes.instId);<br>
-//		//  add back-ref(nodeId:task.nodeBackRef),
-//		if (Req.start == req && LangExt.isblank(busiId)) {
-//			Insert ins2 = trcs
-//					.insert(wf.bTabl, usr)
-//					.nv(wf.bCateCol, wf.wfId);
-//			if (busiPack != null)
-//				for (Object[] nv : busiPack)
-//					ins2.nv((String)nv[0], nv[1]);
-//			
-//			if (colname != null)
-//				ins2.nv(colname, newInstId);
-//			
-//			ins1.post(ins2);
-//		}
-//		//  2.2. or task exists, update task,<br>
-//		//  semantics: fk(tasks.wfState - task_nodes.instId)<br>
-//		//  add back-ref(nodeId:task.nodeBackRef),
-//		else if (Req.cmd == req || Req.start == req) {
-//			Update upd2 = trcs.update(wf.bTabl, usr)
-//					.nv(wf.bTaskStateRef,
-//							// trcs.basictx().formatResulv(wf.instabl, wf.bRecId));
-//							newInstId)
-//					.where("=", wf.bRecId, "'" + busiId + "'");
-//			if (busiPack != null)
-//				for (Object[] nv : busiPack)
-//					upd2.nv((String)nv[0], nv[1]);
-//
-//			if (colname != null)
-//				upd2.nv(colname, newInstId);
-//
-//			ins1.post(upd2);
-//		}
-//
-//		//3. handle multi-operation request, e.g. multireq &amp; postreq<br>
-//		// ins1.postChildren(multireq, trcs);
-//		ins1.post(postups);
-//		
-//		CheapEvent evt = null;
-//		if (Req.start == req)
-//			// start: create task
-//			evt = new CheapEvent(fromNode.wfId(), Evtype.start,
-//						fromNode, nextNode,
-//						// busiId is null for new task, resolved later
-//						// basictx.formatResulv(wf.bTabl, wf.bRecId),
-//						new Resulving(wf.bTabl, wf.bRecId),
-//						newInstId,
-//						Req.start, Req.start.name());
-//		else
-//			// step: insert node instance, update task as post updating.
-//			evt = new CheapEvent(fromNode.wfId(), Evtype.step,
-//						fromNode, nextNode,
-//						busiId, newInstId, req, cmd);
-//
-//		return new SemanticObject()
-//				.put("stmt", ins1)
-//				.put("evt", evt)
-//				.put("stepHandler", fromNode.onEventHandler())
-//				.put("arriHandler", nextNode.isArrived(fromNode) ? nextNode.onEventHandler() : null);
-//	}
 
 	/**<p>Find <i>from</i> node, the out going node, according to cmd request.</p> 
 	 * <p>This method doesn't require a instId, instance id.
@@ -745,22 +580,28 @@ public class CheapEngin {
 	 * @throws TransException 
 	 */
 	private static String[] findFrom(String busiId, String cmd, CheapWorkflow wf) throws TransException, SQLException {
+		// select c.nodeId, instId 
+		// from oz_wfcmds c 
+		// left outer join task_nodes i on c.nodeId = i.nodeId AND i.taskId = '00000L' And i.handlingCmd is null 
+		// where cmd = 't01.01.stepB'
 		Query q = trcs.select(WfMeta.cmdTabl, "c")
 				.col("c." + WfMeta.cmdNodeFk).col(WfMeta.nodeInst.id)
-				.l(wf.instabl, "i", String.format("c.%s = i.%s and i.%s = '%s'",
-									WfMeta.cmdNodeFk, WfMeta.nodeInst.nodeFk, WfMeta.nodeInst.busiFk, busiId))
+				.l(wf.instabl, "i", String.format("c.%s = i.%s and i.%s = '%s' and i.%s is null",
+									WfMeta.cmdNodeFk, WfMeta.nodeInst.nodeFk,
+									WfMeta.nodeInst.busiFk, busiId,
+									WfMeta.nodeInst.handleCmd))
 				.where_("=", WfMeta.cmdCmd, cmd);
 
 		SemanticObject res = q.rs(trcs.basictx()); // shouldn't using context?
 		SResultset rs = (SResultset) res.rs(0);
 		
 		if (rs == null || rs.getRowCount() != 1) {
-			Utils.warn("CheapEngin#findFrom(): Found multiple instance for the cmd %s, task: %s",
-					cmd, busiId);
+			Utils.warn("CheapEngin#findFrom(): Found %s starting instance for the cmd %s, task: %s",
+					rs.getRowCount(), cmd, busiId);
 			if (debug)
 				throw new CheapException(CheapException.ERR_WF_INTERNAL,
-						"CheapEngin#findFrom(): Found multiple instance for the cmd %s, task: %s",
-						cmd, busiId);
+						"CheapEngin#findFrom(): Found %s starting instance for the cmd %s, task: %s",
+						rs.getRowCount(), cmd, busiId);
 		}
 
 		return rs.beforeFirst().next() ?

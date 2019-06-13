@@ -1,42 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <workflow>
   <t id="cfg" pk="k" columns="k,v">
-  	<s> <k>conn</k>
-  		<v>local-sqlite</v>
-  	</s>
-  	<s> <k>enable-checker</k>
-  		<!-- CheapApiTest won't work if true -->
-  		<v>false</v>
-  	</s>
+	<s> <k>conn</k>
+		<v>local-sqlite</v>
+	</s>
+	<s> <k>enable-checker</k>
+		<!-- CheapApiTest won't work if true -->
+		<v>false</v>
+	</s>
   </t>
 
   <t id="semantics" pk="id" columns="id,smtc,tabl,pk,args">
   <!--	All business semantics must committed in JDBC transact but outside CheapEngin's handling must configured here.
-		For smtc type, see io.odysz.semantic.DASemantic.smtype.
-  -->
-  	<!-- task table's oper/opertime -->
-  	<s> <id>01</id>
-  		<smtc>o-t</smtc>
-  		<tabl>tasks</tabl>
-  		<pk>taskId</pk>
-  		<args>oper,opertime</args>
-  	</s>
+  		smtc: semantics type, e.g. auto: auto increase key.
+			see javadoc: https://odys-z.github.io/javadoc/semantic.DA/io/odysz/semantic/DASemantics.smtype.html 
+		tabl: database table name
+		pk:
+		args: arguments for sementics handlers. For args for different handlers, see above javadoc link.
+   -->
+ 	<!-- task table's oper/opertime -->
+	<s> <id>01</id>
+		<smtc>o-t</smtc>
+		<tabl>tasks</tabl>
+		<pk>taskId</pk>
+		<args>oper,opertime</args>
+	</s>
 
-  	<!-- task details table's auto pk -->
-  	<s> <id>02</id>
-  		<smtc>pk</smtc>
-  		<tabl>task_details</tabl>
-  		<pk>recId</pk>
-  		<args>recId</args>
-  	</s>
+	<!-- task details table's auto pk -->
+	<s> <id>02</id>
+		<smtc>pk</smtc>
+		<tabl>task_details</tabl>
+		<pk>recId</pk>
+		<args>recId</args>
+	</s>
 
-  	<!-- task details table's fk to tasks.taskId (in business semantics, task details is a children of tasks) -->
-  	<s> <id>03</id>
-  		<smtc>fk-ins</smtc>
-  		<tabl>task_details</tabl>
-  		<pk>recId</pk>
-  		<args>taskId,tasks,taskId</args>
-  	</s>
+	<!-- task details table's fk to tasks.taskId.
+		As tasks.taskId is an auto pk added by CheapEngin, this FK can be resulved.
+		In business semantics, task details is a children of tasks.
+		CheapEngin can not handle all business details, it doesn't care about workflow form's children. -->
+	<s> <id>03</id>
+		<smtc>fk-ins</smtc>
+		<tabl>task_details</tabl>
+		<pk>recId</pk>
+		<args>taskId,tasks,taskId</args>
+	</s>
   </t>
 
   <t id="right-ds" pk="sk" columns="sk,cols,mysql,orcl,ms2k,sqlit,s-tree">
@@ -55,40 +62,40 @@
 			Tip: to make CheapEngin working more stable, keep at leas one rights configure rule, with sk = ds-allcmd.
 			CheapEngin will use this as default if the workflow configured nothing for a node rights.
 		-->
-  		<sk>ds-allcmd</sk>
-  		<mysql>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
-  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'</mysql>
-  		<sqlit>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
-  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'</sqlit>
+		<sk>ds-allcmd</sk>
+		<mysql>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'</mysql>
+		<sqlit>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'</sqlit>
 	</s>
 
 	<s>
 		<!-- ds-v1 is configured in oz_wfnodes.cmdRights -->
-  		<sk>ds-v1</sk>
-  		<mysql>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
-  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</mysql>
-  		<sqlit>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
-  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</sqlit>
+		<sk>ds-v1</sk>
+		<mysql>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</mysql>
+		<sqlit>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</sqlit>
 	</s>
   </t>
   
   <t id="cheap-checker" pk="wfid" columns="wfid,ms,mysql,orcl,ms2k,sqlit">
-  	<!--CheapChecker using this configure for checking timeout events.
-  		Each record will create a thread.
-  		ms: checker's polling time, milliseconds -->
-  	<s>
-  		<wfid>chg01</wfid>
-  		<ms>20000</ms>
-  		<mysql>select TIMESTAMPDIFF(minute, opertime, now()) expMin, i.opertime, n.timeouts, n.timeoutRoute, n.wfId, i.nodeId nodeId, i.taskId taskId, i.instId
+	<!--CheapChecker using this configure for checking timeout events.
+		Each record will create a thread.
+		ms: checker's polling time, milliseconds -->
+	<s>
+		<wfid>chg01</wfid>
+		<ms>20000</ms>
+		<mysql>select TIMESTAMPDIFF(minute, opertime, now()) expMin, i.opertime, n.timeouts, n.timeoutRoute, n.wfId, i.nodeId nodeId, i.taskId taskId, i.instId
 		from ir_prjnodes i join oz_wfnodes n on i.nodeId = n.nodeId and n.timeouts > 0 and (n.timeouts > 0 and  or i.handlingCmd = 'start')
 		where TIMESTAMPDIFF(second, opertime, now()) > n.timeouts;</mysql>
-  		<sqlit></sqlit>
+		<sqlit></sqlit>
 	</s>
-  	<s>
-  		<wfid>t01</wfid>
-  		<ms>20000</ms>
-  		<mysql></mysql>
-  		<sqlit>select (CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) )/60 expMin, 
+	<s>
+		<wfid>t01</wfid>
+		<ms>20000</ms>
+		<mysql></mysql>
+		<sqlit>select (CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) )/60 expMin, 
 		i.opertime, n.timeouts, n.timeoutRoute, n.wfId, i.nodeId nodeId, i.taskId taskId, i.instId
 		from task_nodes i join oz_wfnodes n on i.nodeId = n.nodeId and (n.timeouts > 0 and  or i.handlingCmd = 'start')
 		where CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) > n.timeouts</sqlit>
