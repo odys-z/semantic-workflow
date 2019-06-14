@@ -37,6 +37,7 @@ import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Statement;
 import io.odysz.transact.sql.Update;
+import io.odysz.transact.sql.parts.AbsPart;
 import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
@@ -515,7 +516,10 @@ public class CheapEngin {
 					;
 			if (busiPack != null)
 				for (Object[] nv : busiPack)
-					ins2.nv((String)nv[0], nv[1]);
+					if (nv[1] instanceof AbsPart)
+						ins2.nv((String)nv[0], (AbsPart)nv[1]);
+					else 
+						ins2.nv((String)nv[0], (String)nv[1]);
 			
 			if (colnameBackRef != null)
 				ins2.nv(colnameBackRef, newInstId);
@@ -527,13 +531,15 @@ public class CheapEngin {
 		//  add back-ref(nodeId:task.nodeBackRef),
 		else if (Req.cmd == req || Req.start == req) {
 			Update upd2 = trcs.update(wf.bTabl, usr)
-					.nv(wf.bTaskStateRef,
-							// trcs.basictx().formatResulv(wf.instabl, wf.bRecId));
-							newInstId)
+					.nv(wf.bTaskStateRef, newInstId)
 					.where("=", wf.bRecId, "'" + busiId + "'");
 			if (busiPack != null)
-				for (Object[] nv : busiPack)
-					upd2.nv((String)nv[0], nv[1]);
+				for (Object[] nv : busiPack) {
+					if (nv[1] instanceof AbsPart)
+						upd2.nv((String)nv[0], (AbsPart)nv[1]);
+					else
+						upd2.nv((String)nv[0], (String)nv[1]);
+				}
 
 			if (colnameBackRef != null)
 				upd2.nv(colnameBackRef, newInstId);
