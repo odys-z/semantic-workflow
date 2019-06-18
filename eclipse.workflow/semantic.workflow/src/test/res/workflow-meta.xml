@@ -71,12 +71,16 @@
 
 	<s>
 		<!-- ds-v1 is configured in oz_wfnodes.cmdRights -->
-		<sk>ds-v1</sk>
-		<mysql>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
-		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</mysql>
-		<sqlit>SELECT cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
-		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s' and rightFilter = 'a'</sqlit>
-	</s>
+		<sk>ds-allcmd</sk>
+  		<mysql>SELECT c.cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'
+  		join a_user u on u.userId = '%3$s'
+  		join oz_wfrights r on n.nodeId = r.nodeId and r.roleId = u.roleId</mysql>
+  		<sqlit>SELECT c.cmd, rightFilter from oz_wfcmds c join oz_wfnodes n
+  		on c.nodeId = n.nodeId and n.wfId = '%1$s' and n.nodeId = '%2$s'
+  		join a_user u on u.userId = '%3$s'
+  		join task_rights r on n.nodeId = r.nodeId and r.roleId = u.roleId</sqlit>
+  	</s>
   </t>
   
   <t id="cheap-checker" pk="wfid" columns="wfid,ms,mysql,orcl,ms2k,sqlit">
