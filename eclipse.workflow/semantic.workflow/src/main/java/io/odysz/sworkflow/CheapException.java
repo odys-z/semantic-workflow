@@ -22,7 +22,7 @@ public class CheapException extends SemanticException {
 	private String code;
 
 	public CheapException(String code, String tmpl, Object... args) {
-		super(tmpl, args);
+		super("[" + code + "] " + tmpl, args);
 		this.code = code;
 	}
 
