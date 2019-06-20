@@ -125,6 +125,11 @@ public class EnginDesign {
 			static final String prevInst = "prevRec";
 		}
 
+		public static class user {
+			static String tbl;
+			static String id;
+			static String name;
+		};
 		
 	}
 

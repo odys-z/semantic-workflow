@@ -579,7 +579,9 @@ public class CheapApiTest {
 				sqls.add("update oz_wfnodes set isFinish = '1' where timeoutRoute is null and nodeId not in "
 						+ "(select distinct nodeId from oz_wfcmds)");
 				
-				sqls.add("insert into a_user(userId, userName, roleId, pswd) values ('admin', 'Administrator', 'r01', '123456')");
+				sqls.add("insert into a_user(userId, userName, roleId, pswd) values "
+						+ "('admin', 'Administrator', 'r01', '123456'),\n"
+						+ "('CheapApiTest', 'Cheap Tester', 'r01', '123456')");
 				Connects.commit(usr, sqls, Connects.flag_nothing);
 			} catch (Exception e) {
 				Utils.warn("Make sure table oz_autoseq already exists, and only for testing aginst a sqlite DB.");

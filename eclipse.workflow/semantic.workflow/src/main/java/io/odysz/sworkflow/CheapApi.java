@@ -138,7 +138,7 @@ instId |nodeId |taskId |oper         |opertime            |descpt               
 		// left outer join task_nodes i on i.nodeId = n.nodeId and i.taskId = '000001'
 		// where n.wfId = 't01'
 		// order by n.sort;
-		SemanticObject list = CheapEngin.trcs
+		Query q = CheapEngin.trcs
 				.select(WfMeta.nodeTabl, "n")
 				.col("n." + WfMeta.nsort)
 				.col("n." + WfMeta.nname)
@@ -155,8 +155,14 @@ instId |nodeId |taskId |oper         |opertime            |descpt               
 				.l(WfMeta.cmdTabl, "c", String.format("i.%s = c.%s", WfMeta.nodeInst.handleCmd, WfMeta.cmdCmd))
 				.where("=", "n." + WfMeta.nodeWfId, "'" + wftype + "'")
 				.orderby("n." + WfMeta.nsort)
-				.orderby("i." + WfMeta.nodeInst.prevInst)
-				.rs(CheapEngin.trcs.instancontxt(usr));
+				.orderby("i." + WfMeta.nodeInst.prevInst);
+		
+		if (WfMeta.user.tbl != null) {
+			q.l(WfMeta.user.tbl, "u", String.format("u.%s = i.%s", WfMeta.user.id, WfMeta.nodeInst.oper))
+				.col("u." + WfMeta.user.name);
+		}
+		
+		SemanticObject list = q.rs(CheapEngin.trcs.instancontxt(usr));
 		SResultset lst = (SResultset) list.rs(0);
 
 		// load current instance

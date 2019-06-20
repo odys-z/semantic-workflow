@@ -106,6 +106,12 @@ public class CheapEngin {
 					conn = cfg.getString("v");
 				else if ("enable-checker".equals(k))
 					enableChkr = cfg.getBool("v", false);
+				else if ("user-meta".equals(k)) {
+					String[] vss = LangExt.split(cfg.getString("v"), ",");
+					WfMeta.user.tbl = vss[0];
+					WfMeta.user.id = vss[1];
+					WfMeta.user.name = vss[2];
+				}
 			}
 			
 			// table = rigth-ds 

@@ -269,7 +269,8 @@ public class CheapNode {
 			HashMap<String, String> rts = rights(trcs, usr.uid(), taskId);
 			if (req == Req.start && rts.size() == 0
 				|| req != Req.start && !rts.keySet().contains(cmd))
-				throw new CheapException(CheapException.ERR_WF_Rights, "wf %s, user %s, node %s, task: %s",
+				throw new CheapException(CheapException.ERR_WF_Rights,
+						"No rights for the requst.\nwf: %s, user: %s, node: %s, task: %s",
 						wf.wfId, usr.uid(), nid, taskId);
 		} catch (SQLException e) {
 			e.printStackTrace();

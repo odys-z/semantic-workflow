@@ -8,6 +8,9 @@
 		<!-- CheapApiTest won't work if true -->
 		<v>false</v>
 	</s>
+	<s> <k>user-meta</k>
+		<v>a_user,userId,userName</v>
+	</s>
   </t>
 
   <t id="semantics" pk="id" columns="id,smtc,tabl,pk,args">
