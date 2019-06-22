@@ -385,7 +385,7 @@ public class CheapEngin {
 	 * @param req
 	 * @param cmd commands in the same as that configured in oz_wfcmds.cmd
 	 * @param busiId business record ID if exists, or null to create (providing piggyback)
-	 * @param nodeDesc workflow instance node description
+	 * @param prevInstDsc current node instance description - the handling description
 	 * @param busiPack nvs for task records
 	 * @param multireq  {tabl: tablename, del: dels, insert: eaches};
 	 * @param postreq
@@ -399,7 +399,7 @@ public class CheapEngin {
 	 * Modified 2019.6.2, supporting multiple outgoing branches.
 	 */
 	public static SemanticObject onReqCmd(IUser usr, String wftype, Req req, String cmd,
-			String busiId, String nodeDesc, ArrayList<Object[]> busiPack,
+			String busiId, String prevInstDsc, ArrayList<Object[]> busiPack,
 			ArrayList<Statement<?>> postups) throws SQLException, TransException {
 		// Design Notes:
 		// We are not only step from current state, we also step from the out-going node asked by cmd.
@@ -428,10 +428,10 @@ public class CheapEngin {
 						"Command %s.%s need to find task/business record first. but busi-id is null",
 						req.name(), cmd);
 
-			String[] tskInf = findFrom(busiId, cmd, wf);
-			fromNode = wf.getNode(tskInf[0]);
+			String[] prevInf = findFrom(busiId, cmd, wf);
+			fromNode = wf.getNode(prevInf[0]);
 
-			if (tskInf == null || fromNode == null) {
+			if (prevInf == null || fromNode == null) {
 				// may be a server error
 				Utils.warn("Can't find task's current node. taskId = %s, wfId = %s", busiId, wf.wfId);
 				// may be a client error
@@ -439,7 +439,7 @@ public class CheapEngin {
 						"Can't find task's current node. taskId = %s, wfId = %s",
 						busiId, wf.wfId);
 			}
-			fromInstId = LangExt.isblank(tskInf[1]) ? null : tskInf[1];
+			fromInstId = LangExt.isblank(prevInf[1]) ? null : prevInf[1];
 			
 			// 2019.5.31 current node should be exactly the FROM node
 			// currentNode = wf.getNode(tskInf[2]);
@@ -472,8 +472,7 @@ public class CheapEngin {
 		// post nv: currentNode.nodeState = cmd-name except start<br>
 		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr)
 			// .nv(nodeInst.busiFk, "Resulving...")
-			.nv(nodeInst.nodeFk, nextNode.nodeId())
-			.nv(nodeInst.descol, nodeDesc)
+			.nv(nodeInst.nodeFk, nextNode.nodeId()) // .nv(nodeInst.descol, nodeDesc)
 			// op-time semantics is removed to avoid updating when stepping next and updating 'preNode'
 			.nv(nodeInst.opertime, Funcall.now(CheapEngin.trcs.basictx().dbtype()))
 			.nv(nodeInst.oper, usr.uid());
@@ -489,6 +488,7 @@ public class CheapEngin {
 
 			ins1.post(trcs.update(wf.instabl)
 						.nv(nodeInst.handleCmd, cmd)
+						.nv(nodeInst.descol, prevInstDsc)
 						.whereEq(nodeInst.id, fromInstId));
 		}
 		else {

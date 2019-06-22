@@ -322,27 +322,89 @@ public class CheapApiTest {
 
 		// now step branch
 		res = CheapApi.next(wftype, newTaskId, "t01.01.stepB")
-			.commitReq(usr);
+				.nodeDesc("cmd: stepB, current: t01.01")
+				.commitReq(usr);
+		/*
+instId |nodeId  |taskId |oper         |opertime            |descpt                              |remarks |handlingCmd  |prevRec |
+-------|--------|-------|-------------|--------------------|------------------------------------|--------|-------------|--------|
+000015 |t01.01  |000003 |CheapApiTest |2019-06-22 13:45:45 |desc: starting 2019-06-22 21:45:44  |        |t01.01.stepA |        |
+000016 |t01.01  |000004 |CheapApiTest |2019-06-22 13:45:48 |node instance desc: starting 000004 |        |             |        |
+000017 |t01.02A |000003 |CheapApiTest |2019-06-22 13:51:11 |desc: next 2019-06-22 21:51:08      |        |             |000015  |
+000018 |t01.02B |000003 |CheapApiTest |2019-06-22 13:54:03 |                                    |        |             |        |
+		 */
 		assertWf(wftype, newTaskId, "t01.02B");
 
 		// back
 		res = CheapApi.next(wftype, newTaskId, "t01.02B.go01")
+			.nodeDesc("cmd: go01, current: t01.02B")
 			.commitReq(usr);
+		/* FIXME There is no direct logics can be applied to loopable, branchable workflow starting nodes.
+		 * Don't know how to handle find the from-node-instance here.
+		 * 
+		 * Problem: can't find from-instance (handling command is not null and looping nodes has the last on as null)
+select c.nodeId, instId from oz_wfcmds c left outer join task_nodes i on c.nodeId = i.nodeId AND i.taskId = '000003' AND i.handlingCmd is null where cmd = 't01.01.stepB'
+		 * 
+insert into task_nodes  (nodeId, descpt, opertime, oper, prevRec, taskId, instId) values ('t01.02B', null, datetime('now'), 'CheapApiTest', null, '000003', '000018')
+update task_nodes  set handlingCmd='t01.01.stepB' where instId = 'null'
+update tasks  set wfState='000018', opertime=datetime('now'), oper='CheapApiTest' where taskId = '000003'
+		 * 
+		 * May be the client providing the from instance node can solve this problem?
+instId |nodeId  |taskId |oper         |opertime            |descpt                              |remarks |handlingCmd  |prevRec |
+-------|--------|-------|-------------|--------------------|------------------------------------|--------|-------------|--------|
+000015 |t01.01  |000003 |CheapApiTest |2019-06-22 13:45:45 |desc: starting 2019-06-22 21:45:44  |        |t01.01.stepA |        |
+000016 |t01.01  |000004 |CheapApiTest |2019-06-22 13:45:48 |node instance desc: starting 000004 |        |             |        |
+000017 |t01.02A |000003 |CheapApiTest |2019-06-22 13:51:11 |desc: next 2019-06-22 21:51:08      |        |             |000015  |
+000018 |t01.02B |000003 |CheapApiTest |2019-06-22 13:54:03 |                                    |        |             |        |
+		 */
 		assertWf(wftype, newTaskId, "t01.01");
 
 		// and loop
 		res = CheapApi.next(wftype, newTaskId, "t01.01.stepB")
+			.nodeDesc("cmd: stepB, current: t01.01")
 			.commitReq(usr);
+		/*
+instId |nodeId  |taskId |oper         |opertime            |descpt                              |remarks |handlingCmd  |prevRec |
+-------|--------|-------|-------------|--------------------|------------------------------------|--------|-------------|--------|
+000015 |t01.01  |000003 |CheapApiTest |2019-06-22 13:45:45 |desc: starting 2019-06-22 21:45:44  |        |t01.01.stepA |        |
+000016 |t01.01  |000004 |CheapApiTest |2019-06-22 13:45:48 |node instance desc: starting 000004 |        |             |        |
+000017 |t01.02A |000003 |CheapApiTest |2019-06-22 13:51:11 |desc: next 2019-06-22 21:51:08      |        |             |000015  |
+000018 |t01.02B |000003 |CheapApiTest |2019-06-22 13:54:03 |                                    |        |t01.02B.go01 |        |
+000019 |t01.01  |000003 |CheapApiTest |2019-06-22 16:13:48 |                                    |        |t01.01.stepB |000018  |
+00001A |t01.02B |000003 |CheapApiTest |2019-06-22 16:16:37 |                                    |        |             |000019  |
+		 */
 		assertWf(wftype, newTaskId, "t01.02B");
 
 		// arriving 
 		res = CheapApi.next(wftype, newTaskId, "t01.02A.go03")
+			.nodeDesc("cmd: go03, current: t01.02A")
 			.commitReq(usr);
+		/*
+instId |nodeId  |taskId |oper         |opertime            |descpt                              |remarks |handlingCmd  |prevRec |
+-------|--------|-------|-------------|--------------------|------------------------------------|--------|-------------|--------|
+000015 |t01.01  |000003 |CheapApiTest |2019-06-22 13:45:45 |desc: starting 2019-06-22 21:45:44  |        |t01.01.stepA |        |
+000016 |t01.01  |000004 |CheapApiTest |2019-06-22 13:45:48 |node instance desc: starting 000004 |        |             |        |
+000017 |t01.02A |000003 |CheapApiTest |2019-06-22 13:51:11 |desc: next 2019-06-22 21:51:08      |        |t01.02A.go03 |000015  |
+000018 |t01.02B |000003 |CheapApiTest |2019-06-22 13:54:03 |                                    |        |t01.02B.go01 |        |
+000019 |t01.01  |000003 |CheapApiTest |2019-06-22 16:13:48 |                                    |        |t01.01.stepB |000018  |
+00001A |t01.02B |000003 |CheapApiTest |2019-06-22 16:16:37 |                                    |        |             |000019  |
+00001B |t01.03  |000003 |CheapApiTest |2019-06-22 16:18:32 |                                    |        |             |000017  |
+		 */
 		assertWf(wftype, newTaskId, "t01.03");
 
 		// arrived 
 		res = CheapApi.next(wftype, newTaskId, "t01.02B.go03")
 			.commitReq(usr);
+		/*
+instId |nodeId  |taskId |oper         |opertime            |descpt                              |remarks |handlingCmd  |prevRec |
+-------|--------|-------|-------------|--------------------|------------------------------------|--------|-------------|--------|
+000015 |t01.01  |000003 |CheapApiTest |2019-06-22 13:45:45 |desc: starting 2019-06-22 21:45:44  |        |t01.01.stepA |        |
+000016 |t01.01  |000004 |CheapApiTest |2019-06-22 13:45:48 |node instance desc: starting 000004 |        |             |        |
+000017 |t01.02A |000003 |CheapApiTest |2019-06-22 13:51:11 |desc: next 2019-06-22 21:51:08      |        |t01.02A.go03 |000015  |
+000018 |t01.02B |000003 |CheapApiTest |2019-06-22 13:54:03 |                                    |        |t01.02B.go01 |        |
+000019 |t01.01  |000003 |CheapApiTest |2019-06-22 16:13:48 |                                    |        |t01.01.stepB |000018  |
+00001A |t01.02B |000003 |CheapApiTest |2019-06-22 16:16:37 |                                    |        |             |000019  |
+00001B |t01.03  |000003 |CheapApiTest |2019-06-22 16:18:32 |                                    |        |             |000017  |
+		 */
 		assertWf(wftype, newTaskId, "t01.03");
 
 		// logic working?
@@ -385,28 +447,6 @@ public class CheapApiTest {
 		assertEquals(taskId, insts.getString(WfMeta.nodeInst.busiFk));
 		assertEquals(crntNid, insts.getString(WfMeta.nodeInst.nodeFk));
 	}
-
-//	@Test
-//	public void testCheckTimeout() throws SQLException, SAXException, TransException {
-//		if (newTaskId == null)
-//			test_3_Next();
-//		// initSqlite(conn);
-//
-//		Dataset ds;
-//		{
-//			String[] sqls = new String[4];
-//			sqls[DatasetCfg.ixSqlit] = "select (CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) )/60 expMin, \n" + 
-//					"		i.opertime, n.timeouts, n.timeoutRoute, n.wfId, i.nodeId nodeId, i.taskId taskId, i.instId\n" + 
-//					"		from task_nodes i join oz_wfnodes n on i.nodeId = n.nodeId and n.timeouts > 0 and i.handlingCmd is null\n" + 
-//					"		where CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) > n.timeouts";
-//
-//			ds = new Dataset("t01", null, sqls, null);
-//		}
-//
-//		CheapChecker chkr = new CheapChecker(conn, "t01", 2000, ds);
-//		int c = chkr.checkTimeout();
-//		Utils.logi(String.valueOf(c));
-//	}
 
 	static void initSqlite(String conn) throws SQLException, SemanticException {
 		File file = new File("src/test/res");

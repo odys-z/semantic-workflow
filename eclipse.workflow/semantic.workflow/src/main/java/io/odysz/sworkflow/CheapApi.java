@@ -18,6 +18,7 @@ import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapNode.VirtualNode;
 import io.odysz.sworkflow.EnginDesign.Req;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
+import io.odysz.sworkflow.EnginDesign.WfMeta.nodeInst;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Statement;
@@ -93,32 +94,32 @@ public class CheapApi {
 
 	/**Load a task's workflow instances.<br>
 	 * rs[0] - nodes outer join instances:
-	 * <pre>
-select n.sort, n.nodeName, c.txt handleTxt,
+	 * <pre>select n.sort, n.nodeName, c.txt handleTxt,
 case when b.wfState = i.instId then 9 else case when c.txt is null then 0 else 1 end end isCurrent,
-i.*
-from oz_wfnodes n
-left outer join task_nodes i on i.nodeId = n.nodeId AND i.taskId = '000005'
-left outer join tasks b on i.nodeId = n.nodeId AND b.wfState = i.instId AND i.taskId = '000005'
-left outer join oz_wfcmds c on i.handlingCmd = c.cmd
+i.*, n.isFinish, u.userName
+from oz_wfnodes n left outer join task_nodes i on i.nodeId = n.nodeId AND i.taskId = '00000Z'
+left outer join tasks b on i.nodeId = n.nodeId AND b.wfState = i.instId AND i.taskId = '00000Z'
+left outer join oz_wfcmds c on i.handlingCmd = c.cmd left outer join a_user u on u.userId = i.oper
 where n.wfId = 't01' order by n.sort asc, i.prevRec asc
 
-sort |nodeName |handleTxt   |isCurrent |instId |nodeId |taskId |oper         |opertime            |descpt                             |remarks |handlingCmd |prevRec |
------|---------|------------|----------|-------|-------|-------|-------------|--------------------|-----------------------------------|--------|------------|--------|
-10   |starting |start check |9         |000016 |t01.01 |000005 |CheapApiTest |2019-06-13 03:42:31 |desc: starting 2019-06-13 11:42:30 |        |start       |        |
-20   |plan A   |            |0         |       |       |       |             |                    |                                   |        |            |        |
-30   |plan B   |            |0         |       |       |       |             |                    |                                   |        |            |        |
-90   |abort    |            |0         |       |       |       |             |                    |                                   |        |            |        |
-99   |finished |            |0         |       |       |       |             |                    |                                   |        |            |        |</pre>
+sort |nodeName |handleTxt |isCurrent |instId |nodeId |taskId |oper         |opertime            |descpt |remarks |handlingCmd |prevRec |isFinish |userName     |
+-----|---------|----------|----------|-------|-------|-------|-------------|--------------------|-------|--------|------------|--------|---------|-------------|
+10   |starting |          |9         |00002L |t01.01 |00000X |CheapApiTest |2019-06-22 17:29:27 |       |        |            |        |         |Cheap Tester |
+20   |plan A   |          |0         |       |       |       |             |                    |       |        |            |        |         |             |
+30   |plan B   |          |0         |       |       |       |             |                    |       |        |            |        |         |             |
+90   |abort    |          |0         |       |       |       |             |                    |       |        |            |        |1        |             |
+99   |finished |          |0         |       |       |       |             |                    |       |        |            |        |1        |             |</pre>
+
 	 *
 	 * rs[1] - the current instance:<br>
-<pre>select i.* from task_nodes i
-join tasks b on b.wfState = i.instId AND b.taskId = '000005'
-where b.wfId = 't01'
+<pre>select i.*, n.isFinish
+from task_nodes i
+join tasks b on b.wfState = i.instId AND b.taskId = '00000X' AND b.wfId = 't01'
+join oz_wfnodes n on n.nodeId = i.nodeId;
 
-instId |nodeId |taskId |oper         |opertime            |descpt                             |remarks |handlingCmd |prevRec |
--------|-------|-------|-------------|--------------------|-----------------------------------|--------|------------|--------|
-000016 |t01.01 |000005 |CheapApiTest |2019-06-13 03:42:31 |desc: starting 2019-06-13 11:42:30 |        |start       |        |</pre>
+instId |nodeId |taskId |oper         |opertime            |descpt |remarks |handlingCmd |prevRec |isFinish |
+-------|-------|-------|-------------|--------------------|-------|--------|------------|--------|---------|
+00001K |t01.03 |000005 |CheapApiTest |2019-06-22 16:38:00 |       |        |            |00001I  |1        |</pre>
 	 * @param wftype
 	 * @param taskid
 	 * @param usr
@@ -148,6 +149,7 @@ instId |nodeId |taskId |oper         |opertime            |descpt               
 				.col(Funcall.ifElse(String.format("b.%s = i.%s", wf.bTaskStateRef, WfMeta.nodeInst.id), 9, 
 						Funcall.ifNullElse("c." + WfMeta.cmdTxt, 0, 1)), "isCurrent")
 				.col("i.*")
+				.col("n." + WfMeta.nisFinish)
 				.l(wf.instabl, "i", "i." + WfMeta.nodeInst.nodeFk + " = n." + WfMeta.nid + " and i." + WfMeta.nodeInst.busiFk + " = '" + taskid + "'")
 				// left outer join p_change_application b on i.nodeId = n.nodeId and b.currentNode = i.instId AND i.taskId = '00000I' 
 				.l(wf.bTabl, "b", String.format("i.%s = n.%s and b.%s = i.%s AND i.%s = '%s'",
@@ -171,9 +173,11 @@ instId |nodeId |taskId |oper         |opertime            |descpt               
 		list = CheapEngin.trcs
 				.select(wf.instabl, "i")
 				.col("i.*")
-				.j(wf.bTabl, "b", String.format("b.%s = i.%s and b.%s = '%s'",
-						wf.bTaskStateRef, WfMeta.nodeInst.id, wf.bRecId, taskid))
-				.where("=", "b." + wf.bCateCol, "'" + wftype + "'")
+				.col("n." + WfMeta.nisFinish)
+				.j(wf.bTabl, "b", String.format("b.%s = i.%s and b.%s = '%s' and b.%s = '%s'",
+						wf.bTaskStateRef, WfMeta.nodeInst.id, wf.bRecId, taskid, wf.bCateCol, wftype))
+				// .where("=", "b." + wf.bCateCol, "'" + wftype + "'")
+				.j(WfMeta.nodeTabl, "n", String.format("n.%s = i.%s", WfMeta.nid, nodeInst.nodeFk))
 				.rs(CheapEngin.trcs.instancontxt(usr));
 		SResultset ist = (SResultset) list.rs(0);
 
