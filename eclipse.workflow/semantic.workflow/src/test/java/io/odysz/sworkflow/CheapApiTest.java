@@ -231,7 +231,7 @@ public class CheapApiTest {
 		String task2 = (String) tr2.resulvedVal(wf.bTabl, wf.bRecId);
 
 		res2 = CheapApi.start(wftype, task2)
-				.nodeDesc("desc: starting " + task2)
+				.nodeDesc("node instance desc: starting " + task2)
 				.taskNv("remarks", "testing case 2")
 				.commitReq(usr);
 		

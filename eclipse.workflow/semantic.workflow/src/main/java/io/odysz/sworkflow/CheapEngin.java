@@ -471,7 +471,7 @@ public class CheapEngin {
 		// post nv: nextInst.prevNode = current.id except start<br>
 		// post nv: currentNode.nodeState = cmd-name except start<br>
 		Insert ins1 = CheapEngin.trcs.insert(wf.instabl(), usr)
-			.nv(nodeInst.busiFk, "Resulving...")
+			// .nv(nodeInst.busiFk, "Resulving...")
 			.nv(nodeInst.nodeFk, nextNode.nodeId())
 			.nv(nodeInst.descol, nodeDesc)
 			// op-time semantics is removed to avoid updating when stepping next and updating 'preNode'
@@ -484,23 +484,23 @@ public class CheapEngin {
 		// post nv: nextInst.prevNode = current.id except start<br>
 		if (Req.start != req) {
 			ins1.nv(nodeInst.prevInst, fromInstId)
-				.nv(nodeInst.busiFk, busiId); // busiId shouldn't resulved with fk-ins
+				// busiId shouldn't resulved with fk-ins, must alread exists
+				.nv(nodeInst.busiFk, busiId);
 
 			ins1.post(trcs.update(wf.instabl)
 						.nv(nodeInst.handleCmd, cmd)
-						.where_("=", nodeInst.id, fromInstId));
+						.whereEq(nodeInst.id, fromInstId));
 		}
 		else {
 			// 2019.5.26 can not resulved by post-fk here, using Resulving instead. 
 			// see https://odys-z.github.io/notes/semantics/best-practices.html#post-fk
 			// resulved by postFk
-			// ins1.nv(nodeInst.busiFk , "?");
-			// ins1.nv(nodeInst.busiFk , ShPostFk.Resulving(wf.bTabl, wf.bRecId));
-			if (!LangExt.isblank(busiId))
-				ins1.nv(nodeInst.busiFk, busiId);
+
+			// if (!LangExt.isblank(busiId))
+				ins1.nv(nodeInst.busiFk, LangExt.isblank(busiId, "null") ? "Resulving..." : busiId);
 			
 			// starting node instance's handling command = start 
-			ins1.nv(nodeInst.handleCmd, Req.start.name());
+//			ins1.nv(nodeInst.handleCmd, Req.start.name());
 		}
 
 		// 2.0. prepare back-ref(nodeId:task.nodeBackRef);
