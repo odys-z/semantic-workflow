@@ -91,6 +91,36 @@ public class CheapApi {
 		sobj.put("rights", n.rights(CheapEngin.trcs, usrId, taskId));
 		return sobj;
 	}
+	
+	public static SemanticObject myTasks(IUser usr) throws TransException, SQLException {
+		if (CheapEngin.wfs != null) {
+			SemanticObject tasks = new SemanticObject();
+			for (CheapWorkflow wf : CheapEngin.wfs.values()) {
+				// select b.changeContent, i.* from ir_prjnodes i
+				// join oz_wfnodes n on i.nodeId = n.nodeId and i.handlingCmd is null and n.isFinish <> '1'
+				// join a_user u on u.userId = 'admin'
+				// join oz_wfrights r on r.nodeId = n.nodeId and r.roleId = u.roleId
+				// join p_change_application b on b.currentNode = i.instId;
+				SResultset task = (SResultset) CheapEngin.trcs
+						.select(wf.instabl, "i")
+						.col("b.*").col("n." + WfMeta.nname)
+						.j(WfMeta.nodeTabl, "n", 
+								"i.%s = n.%s and i.%s IS null and n.%s = false",
+								nodeInst.nodeFk, WfMeta.nid, nodeInst.handleCmd, WfMeta.nisFinish)
+						.j(WfMeta.user.tbl, "u", String.format(
+								"u.%s = '%s'",
+								WfMeta.user.id, usr.uid()))
+						.j(WfMeta.rights.tbl, "r", "r.%s = n.%s and r.%s = u.%s",
+											WfMeta.rights.nodeFk, WfMeta.nid, WfMeta.rights.roleFk, WfMeta.user.roleFk)
+						.j(wf.bTabl, "b", "b.%s = i.%s",
+									 wf.bTaskStateRef, nodeInst.id)
+						.rs(CheapEngin.trcs.instancontxt(usr)).rs(0);
+				tasks.put(wf.wfId, task);
+			}
+			return tasks;
+		}
+		return null;
+	}
 
 	/**Load a task's workflow instances.<br>
 	 * rs[0] - nodes outer join instances:

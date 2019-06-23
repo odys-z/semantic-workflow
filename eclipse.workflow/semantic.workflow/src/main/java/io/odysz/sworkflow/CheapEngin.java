@@ -111,6 +111,14 @@ public class CheapEngin {
 					WfMeta.user.tbl = vss[0];
 					WfMeta.user.id = vss[1];
 					WfMeta.user.name = vss[2];
+					if (vss.length > 3)
+					WfMeta.user.roleFk = vss[3];
+				}
+				else if ("wfrights-meta".equals(k)) {
+					String[] vss = LangExt.split(cfg.getString("v"), ",");
+					WfMeta.rights.tbl = vss[0];
+					WfMeta.rights.nodeFk = vss[1];
+					WfMeta.rights.roleFk = vss[2];
 				}
 			}
 			

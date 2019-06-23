@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 import org.junit.Test;
 import org.xml.sax.SAXException;
@@ -285,6 +286,13 @@ public class CheapApiTest {
 		rs.beforeFirst().next();
 		assertEquals(nid, rs.getString("nodeId"));
 		assertEquals(rs.getRowCount(), res1.total(0));
+	}
+
+	@Test
+	public void test_4_myTasks() throws SQLException, TransException {
+		HashMap<String,Object> my = CheapApi.myTasks(usr).props();
+		if (my == null)
+			fail("No tasks?");
 	}
 
 	@Test

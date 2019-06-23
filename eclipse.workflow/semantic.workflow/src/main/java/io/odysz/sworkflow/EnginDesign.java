@@ -126,10 +126,17 @@ public class EnginDesign {
 		}
 
 		public static class user {
-			static String tbl;
-			static String id;
-			static String name;
-		};
+			static String tbl = "a_user";
+			static String id = "userId";
+			static String name = "userName";
+			static String roleFk = "roleId";
+		}
+
+		public static class rights {
+			static String tbl = "task_rights";
+			static String nodeFk = "nodeId";
+			static String roleFk = "";
+		}
 		
 	}
 
