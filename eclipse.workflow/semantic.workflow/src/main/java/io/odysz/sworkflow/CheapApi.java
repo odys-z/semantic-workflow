@@ -107,13 +107,12 @@ public class CheapApi {
 						.j(WfMeta.nodeTabl, "n", 
 								"i.%s = n.%s and i.%s IS null and n.%s = false",
 								nodeInst.nodeFk, WfMeta.nid, nodeInst.handleCmd, WfMeta.nisFinish)
-						.j(WfMeta.user.tbl, "u", String.format(
-								"u.%s = '%s'",
-								WfMeta.user.id, usr.uid()))
+						.j(WfMeta.user.tbl, "u", "u.%s = '%s'",
+								WfMeta.user.id, usr.uid())
 						.j(WfMeta.rights.tbl, "r", "r.%s = n.%s and r.%s = u.%s",
-											WfMeta.rights.nodeFk, WfMeta.nid, WfMeta.rights.roleFk, WfMeta.user.roleFk)
+								WfMeta.rights.nodeFk, WfMeta.nid, WfMeta.rights.roleFk, WfMeta.user.roleFk)
 						.j(wf.bTabl, "b", "b.%s = i.%s",
-									 wf.bTaskStateRef, nodeInst.id)
+								wf.bTaskStateRef, nodeInst.id)
 						.rs(CheapEngin.trcs.instancontxt(usr)).rs(0);
 				tasks.put(wf.wfId, task);
 			}

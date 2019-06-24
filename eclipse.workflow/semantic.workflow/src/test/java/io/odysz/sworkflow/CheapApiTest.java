@@ -293,6 +293,8 @@ public class CheapApiTest {
 		HashMap<String,Object> my = CheapApi.myTasks(usr).props();
 		if (my == null)
 			fail("No tasks?");
+		else for (String wfid : my.keySet())
+			assertTrue(my.get(wfid) instanceof SResultset);
 	}
 
 	@Test
