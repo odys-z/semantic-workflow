@@ -391,6 +391,43 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 		else {
 			q = null;
 		}
+		// FIXME
+		// FIXME
+		// FIXME
+		// FIXME
+		// FIXME
+		// FIXME
+		// bug: competation not checked:
+		/*insert into ir_prjnodes  (nodeId, opertime, oper, prevRec, taskId, instId) 
+values ('pcac-manager', now(), 'admin', null, '00000l', '00005N')
+
+insert into ir_prjnodes  (nodeId, opertime, oper, prevRec, taskId, instId) 
+values ('pcac-manager', now(), 'admin', '00005L', '00000l', '00005M')
+
+SELECT count( n.nodeId ) cnt FROM oz_wfnodes n
+JOIN ir_prjnodes prv ON n.nodeId = prv.nodeId AND prv.taskId = '00000l'
+JOIN ir_prjnodes nxt ON n.nodeId = nxt.nodeId AND nxt.prevRec = prv.instId 
+WHERE arrivCondit IS null
+
+select * from ir_prjnodes where taskId = '00000l';
+
+select * from p_change_application where changeId = '00000l';
+
+instId |nodeId       |taskId |oper  |opertime            |descpt         |remarks |handlingCmd       |prevRec |
+-------|-------------|-------|------|--------------------|---------------|--------|------------------|--------|
+00003B |mpac-start   |00000l |admin |2019-06-18 13:48:15 |               |        |start             |        |
+00003C |mpac-ac      |00000l |admin |2019-06-18 13:48:21 |               |        |mpac-ac.next      |        |
+00003D |mpac-gm      |00000l |admin |2019-06-18 14:06:23 |               |        |mpac-gm.deny      |00003C  |
+00003E |mpac-start   |00000l |admin |2019-06-18 14:07:47 |               |        |mpac-start.submit |00003D  |
+00003F |mpac-ac      |00000l |admin |2019-06-18 14:08:03 |               |        |mpac-ac.next      |00003E  |
+00003G |mpac-gm      |00000l |admin |2019-06-18 14:31:08 |11111111111111 |        |mpac-gm.pass      |00003F  |
+00004J |mpac-finish  |00000l |admin |2019-06-20 12:55:25 |               |        |                  |00003G  |
+00005J |pcac-start   |00000l |admin |2019-06-25 16:04:55 |rrrrr          |        |pcac-start.submit |        |
+00005K |pcac-pm      |00000l |admin |2019-06-25 16:05:05 |               |        |pcac-pm.upload    |00005J  |
+00005L |pcac-ac      |00000l |admin |2019-06-25 16:05:13 |qqq            |        |pcac-ac.next      |00005K  |
+00005M |pcac-manager |00000l |admin |2019-06-25 16:05:26 |               |        |                  |00005L  |
+00005N |pcac-manager |00000l |admin |2019-06-25 16:05:29 |               |        |                  |        |
+		 */
 
 		// check competition, commit.
 		// FIXME Is this a performance problem? But only supported with RDBMS that have stored processes?
