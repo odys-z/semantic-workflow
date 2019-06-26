@@ -585,6 +585,8 @@ public class CheapEnginv1 {
 						fromNode, nextNode, busiId,
 						fromInstId, newInstId, req, cmd);
 
+		evt.qryCompetition(qryCompetition(req, wf, busiId, nextNode.nodeId(), fromInstId));
+
 		return new SemanticObject()
 				.put("stmt", ins1)
 				.put("evt", evt)
@@ -610,16 +612,20 @@ public class CheapEnginv1 {
 		// where cmd = 't01.01.stepB'
 		Query q = trcs.select(WfMeta.cmdTabl, "c")
 				.col("c." + WfMeta.cmdNodeFk).col(WfMeta.nodeInst.id)
-				.l(wf.instabl, "i", String.format("c.%s = i.%s and i.%s = '%s' and i.%s is null",
+				// FIXME assuming last node is loop and waiting nodes is a logical defect.
+				// .l(wf.instabl, "i", String.format("c.%s = i.%s and i.%s = '%s' and i.%s is null",
+				.l(wf.instabl, "i", String.format("c.%s = i.%s and i.%s = '%s'",
 									WfMeta.cmdNodeFk, WfMeta.nodeInst.nodeFk,
 									WfMeta.nodeInst.busiFk, busiId,
 									WfMeta.nodeInst.handleCmd))
-				.where_("=", WfMeta.cmdCmd, cmd);
+				.whereEq(WfMeta.cmdCmd, cmd)
+				// FIXME assuming last node is loop and waiting nodes is a logical defect.
+				.orderby("i." + nodeInst.opertime, "desc");
 
 		SemanticObject res = q.rs(trcs.basictx()); // shouldn't using context?
 		SResultset rs = (SResultset) res.rs(0);
 		
-		if (rs == null || rs.getRowCount() != 1) {
+		if (rs == null || rs.getRowCount() < 1) {
 			Utils.warn("CheapEngin#findFrom(): Found %s starting instance for the cmd %s, task: %s",
 					rs.getRowCount(), cmd, busiId);
 			if (debug)
@@ -729,20 +735,20 @@ select * from ir_prjnodes where taskId = '00000l';
 
 select * from p_change_application where changeId = '00000l';
 
-instId |nodeId       |taskId |oper  |opertime            |descpt         |remarks |handlingCmd       |prevRec |
--------|-------------|-------|------|--------------------|---------------|--------|------------------|--------|
-00003B |mpac-start   |00000l |admin |2019-06-18 13:48:15 |               |        |start             |        |
-00003C |mpac-ac      |00000l |admin |2019-06-18 13:48:21 |               |        |mpac-ac.next      |<null : competition>
-00003D |mpac-gm      |00000l |admin |2019-06-18 14:06:23 |               |        |mpac-gm.deny      |00003C  |
-00003E |mpac-start   |00000l |admin |2019-06-18 14:07:47 |               |        |mpac-start.submit |00003D  |
-00003F |mpac-ac      |00000l |admin |2019-06-18 14:08:03 |               |        |mpac-ac.next      |00003E  |
-00003G |mpac-gm      |00000l |admin |2019-06-18 14:31:08 |11111111111111 |        |mpac-gm.pass      |00003F  |
-00004J |mpac-finish  |00000l |admin |2019-06-20 12:55:25 |               |        |                  |00003G  |
-00005J |pcac-start   |00000l |admin |2019-06-25 16:04:55 |rrrrr          |        |pcac-start.submit |        |
-00005K |pcac-pm      |00000l |admin |2019-06-25 16:05:05 |               |        |pcac-pm.upload    |00005J  |
-00005L |pcac-ac      |00000l |admin |2019-06-25 16:05:13 |qqq            |        |pcac-ac.next      |00005K  |
-00005M |pcac-manager |00000l |admin |2019-06-25 16:05:26 |               |        |                  |00005L  |
-00005N |pcac-manager |00000l |admin |2019-06-25 16:05:29 |               |        |                  |<null : competition>
+instId |nodeId       |taskId |oper  |opertime            |handlingCmd       |prevRec |
+-------|-------------|-------|------|--------------------|------------------|--------|
+00003B |mpac-start   |00000l |admin |2019-06-18 13:48:15 |start             |        |
+00003C |mpac-ac      |00000l |admin |2019-06-18 13:48:21 |mpac-ac.next      |[null : competition]
+00003D |mpac-gm      |00000l |admin |2019-06-18 14:06:23 |mpac-gm.deny      |00003C  |
+00003E |mpac-start   |00000l |admin |2019-06-18 14:07:47 |mpac-start.submit |00003D  |
+00003F |mpac-ac      |00000l |admin |2019-06-18 14:08:03 |mpac-ac.next      |00003E  |
+00003G |mpac-gm      |00000l |admin |2019-06-18 14:31:08 |mpac-gm.pass      |00003F  |
+00004J |mpac-finish  |00000l |admin |2019-06-20 12:55:25 |                  |00003G  |
+00005J |pcac-start   |00000l |admin |2019-06-25 16:04:55 |pcac-start.submit |        |
+00005K |pcac-pm      |00000l |admin |2019-06-25 16:05:05 |pcac-pm.upload    |00005J  |
+00005L |pcac-ac      |00000l |admin |2019-06-25 16:05:13 |pcac-ac.next      |00005K  |
+00005M |pcac-manager |00000l |admin |2019-06-25 16:05:26 |                  |00005L  |
+00005N |pcac-manager |00000l |admin |2019-06-25 16:05:29 |                  |[null : competition]
 </pre>
 	 * @param req
 	 * @param wf
@@ -776,10 +782,10 @@ instId |nodeId       |taskId |oper  |opertime            |descpt         |remark
 					.select(wf.bTabl, "b")
 					.col("count(*)", "cnt")
 					.whereEq(wf.bRecId, taskId)
-					.where(new Condit(Logic.op.isnull, wf.bTaskStateRef, ""));
+					.where(new Condit(Logic.op.isNotnull, wf.bTaskStateRef, ""));
 					;
 				if (wf.bNodeInstRefs != null && wf.bNodeInstRefs.containsKey(wf.node1))
-					q.where(new Condit(Logic.op.isnull, wf.bNodeInstRefs.get(wf.node1), ""));
+					q.where(new Condit(Logic.op.isNotnull, wf.bNodeInstRefs.get(wf.node1), ""));
 			}
 		}
 		// 3 Check: If not starting and prevCmd is null,
@@ -788,14 +794,14 @@ instId |nodeId       |taskId |oper  |opertime            |descpt         |remark
 		//   - old looping instance is not the same (logic by #findFrom(): handleCmd is null);
 		//   - branching from the out going instance doesn't have a same route;
 		else if (req != Req.start) {
-			// select count(*) from ir_prjnodes i join oz_wfnodes nxNod
-			//        on nxNod.nodeId = 'pcac-manager' and taskId = '00000l' and prevRec = '00005L';
+			// select count(i.nodeId) cnt from task_nodes i 
+			// join oz_wfnodes nxNod on nxNod.nodeId = 't01.02B' AND i.nodeId = nxNod.nodeId AND taskId = '00001D' AND prevRec = '00003d';
 			q = CheapEnginv1.trcs
 				.select(wf.instabl, "i")
 				.col("count(i.nodeId)", "cnt")
-				.j(WfMeta.nodeTabl, "nxtNod",
-						"nxNod.%s = '%s' and taskId = '%S' and prevRec = '%s'",
-						WfMeta.nid, nextNodeId, taskId, prevInstId);
+				.j(WfMeta.nodeTabl, "nxNod",
+						"nxNod.%1$s = '%2$s' and i.%3$s = nxNod.%1$s and taskId = '%4$S' and prevRec = '%5$s'",
+						WfMeta.nid, nextNodeId, nodeInst.nodeFk, taskId, prevInstId);
 		}
 		else q = null;
 

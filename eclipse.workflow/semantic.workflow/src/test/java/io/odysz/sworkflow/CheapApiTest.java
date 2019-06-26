@@ -365,6 +365,46 @@ instId |nodeId  |taskId |oper         |opertime            |descpt              
 000018 |t01.02B |000003 |CheapApiTest |2019-06-22 13:54:03 |                                    |        |             |        |
 		 */
 		assertWf(wftype, newTaskId, "t01.01");
+		
+		// can't back again
+		try {
+			res = CheapApi.next(wftype, newTaskId, "t01.02B.go01")
+			.nodeDesc("cmd: go01 again, current: t01.02B")
+			.commitReq(usr);
+			fail(String.format("Task %s's back command(%s) commited again!",
+					newTaskId, "t01.02B.go01"));
+		} catch (CheapException x) {
+			/*
+			check and found the trying again request:
+			select count(i.nodeId) cnt from task_nodes i join oz_wfnodes nxNod on nxNod.nodeId = 't01.01' AND i.nodeId = nxNod.nodeId AND taskId = '00001F' AND prevRec = '00003j'
+
+			cnt |
+			----|
+			1   |
+
+			found the out-going node instance:
+			select c.nodeId, instId from oz_wfcmds c 
+			left outer join task_nodes i on c.nodeId = i.nodeId AND i.taskId = '00001F' 
+			where cmd = 't01.02B.go01' 
+			order by i.opertime desc
+
+			nodeId  |instId |
+			--------|-------|
+			t01.02B |00003j |
+
+			all created instances:
+			select instId, nodeId, taskId, handlingCmd, prevRec from task_nodes where taskId = '00001F';
+			instId |nodeId  |taskId |handlingCmd  |prevRec |
+			-------|--------|-------|-------------|--------|
+			00003g |t01.01  |00001F |t01.01.stepB |        |
+			00003i |t01.02A |00001F |             |00003g  |
+			00003j |t01.02B |00001F |t01.02B.go01 |00003g  |
+			00003k |t01.01  |00001F |             |00003j  |
+			*/
+			Utils.logi("Got expecting exception: %s", x.getMessage());
+			assertEquals(CheapException.ERR_WF_COMPETATION, x.code());
+		}
+		
 
 		// and loop
 		res = CheapApi.next(wftype, newTaskId, "t01.01.stepB")
@@ -379,6 +419,17 @@ instId |nodeId  |taskId |oper         |opertime            |descpt              
 000018 |t01.02B |000003 |CheapApiTest |2019-06-22 13:54:03 |                                    |        |t01.02B.go01 |        |
 000019 |t01.01  |000003 |CheapApiTest |2019-06-22 16:13:48 |                                    |        |t01.01.stepB |000018  |
 00001A |t01.02B |000003 |CheapApiTest |2019-06-22 16:16:37 |                                    |        |             |000019  |
+
+2019.06.26
+found loopings:
+select c.nodeId, instId from oz_wfcmds c left outer join task_nodes i on c.nodeId = i.nodeId AND i.taskId = '00001F' where cmd = 't01.01.stepB' order by i.opertime desc
+
+nodeId |instId |
+-------|-------|
+t01.01 |00003k |
+t01.01 |00003g |
+
+00003k is waiting (correct)
 		 */
 		assertWf(wftype, newTaskId, "t01.02B");
 
