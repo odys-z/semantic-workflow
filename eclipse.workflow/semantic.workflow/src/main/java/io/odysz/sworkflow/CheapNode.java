@@ -126,14 +126,14 @@ public class CheapNode {
 
 	private HashMap<String, CheapRoute> loadRoutes(String nodeId) throws TransException, SQLException {
 		HashMap<String, CheapRoute> routs = new HashMap<String, CheapRoute>();
-		SemanticObject s = CheapEngin.trcs
+		SemanticObject s = CheapEnginv1.trcs
 				.select(WfMeta.cmdTabl)
 				.col(WfMeta.cmdCmd, "cmd")
 				.col(WfMeta.cmdTxt, "txt")
 				.col(WfMeta.cmdRoute, "route")
 				.col(WfMeta.cmdSort, "sort")
 				.where("=", WfMeta.nid, "'" + nodeId + "'")
-				.rs(CheapEngin.basictx);
+				.rs(CheapEnginv1.basictx);
 		SResultset rs = (SResultset) s.rs(0);
 		rs.beforeFirst();
 		while (rs.next()) {
@@ -220,7 +220,7 @@ public class CheapNode {
 
 		// args: [%1$s] wfid, [%2$s] node-id, [%3$s] user-id, [%4$s] task-id
 		String vw = String.format(rightDs(dskey, trcs), wfId(), nid, usrId, taskId);
-		SResultset rs = Connects.select(CheapEngin.trcs.basiconnId(), vw, Connects.flag_nothing);
+		SResultset rs = Connects.select(CheapEnginv1.trcs.basiconnId(), vw, Connects.flag_nothing);
 		rs.beforeFirst();
 		HashMap<String, String> map = new HashMap<String, String>();
 		while (rs.next()) { 
@@ -245,9 +245,9 @@ public class CheapNode {
 	 * @throws SQLException
 	 */
 	public static String rightDs(String dskey, CheapTransBuild trcs) throws SemanticException, SQLException {
-		Dataset ds = CheapEngin.ritConfigs.get(dskey);
+		Dataset ds = CheapEnginv1.ritConfigs.get(dskey);
 		if (ds == null)
-			ds = CheapEngin.ritConfigs.get("ds-allcmd");
+			ds = CheapEnginv1.ritConfigs.get("ds-allcmd");
 		String sql = ds.getSql(Connects.driverType(trcs.basiconnId()));
 		return sql;
 	}

@@ -151,8 +151,6 @@ public class CheapApiTest {
 	static String conn = "local-sqlite";
 	static LoggingUser usr;
 
-	// private static HashMap<String, TableMeta> metas;
-
 	static {
 		Utils.printCaller(false);
 		
@@ -165,7 +163,7 @@ public class CheapApiTest {
 
 		try {
 			initSqlite(conn);
-			CheapEngin.initCheap("src/test/res/workflow-meta.xml", null);
+			CheapEnginv1.initCheap("src/test/res/workflow-meta.xml", null);
 			usr = new LoggingUser(conn,
 					"src/test/res/semantic-log.xml", "CheapApiTest", jo);
 		} catch (SQLException | TransException | IOException | SAXException e) {
@@ -194,7 +192,7 @@ public class CheapApiTest {
 		inserts.add(row);
 		
 		ArrayList<Statement<?>> postups = new ArrayList<Statement<?>>();
-		postups.add(CheapEngin.trcs
+		postups.add(CheapEnginv1.trcs
 					.insert("task_details")		// new node instance can not auto created in test-start.
 					.nv("remarks", newInstId));	// semantics will handle recId (auto-key)
 
@@ -221,9 +219,9 @@ public class CheapApiTest {
 		else Utils.logi("No arriving event handler");
 		
 		// case 2 start new task, with task record exists
-		ISemantext tr2 = CheapEngin.trcs.instancontxt(usr);
-		CheapWorkflow wf = CheapEngin.getWf(wftype);
-		SemanticObject res2 = (SemanticObject) CheapEngin.trcs
+		ISemantext tr2 = CheapEnginv1.trcs.instancontxt(usr);
+		CheapWorkflow wf = CheapEnginv1.getWf(wftype);
+		SemanticObject res2 = (SemanticObject) CheapEnginv1.trcs
 				.insert(wf.bTabl, usr)
 				.nv("remarks", "testing case 2")
 				.nv(wf.bTaskStateRef, "null stub")
@@ -236,10 +234,10 @@ public class CheapApiTest {
 				.taskNv("remarks", "testing case 2")
 				.commitReq(usr);
 		
-		res2 = CheapEngin.trcs.select(wf.instabl)
+		res2 = CheapEnginv1.trcs.select(wf.instabl)
 				.col(WfMeta.nodeInst.nodeFk, "nid")
 				.where_("=", WfMeta.nodeInst.busiFk, task2)
-				.rs(CheapEngin.trcs.basictx());
+				.rs(CheapEnginv1.trcs.basictx());
 		
 		SResultset rs = (SResultset) res2.rs(0);
 		rs.beforeFirst().next();
@@ -263,7 +261,7 @@ public class CheapApiTest {
 		if (newTaskId == null)
 			test_1_Start();
 		
-		CheapWorkflow wf = CheapEngin.getWf(wftype);
+		CheapWorkflow wf = CheapEnginv1.getWf(wftype);
 
 		SemanticObject res1 = CheapApi.loadFlow(wftype, newTaskId, usr);
 		SResultset nodes = (SResultset) res1.rs(0);
@@ -304,7 +302,7 @@ public class CheapApiTest {
 
 		// A post updating mocking the case that only business handlings knows the semantics.
 		ArrayList<Statement<?>> postups = new ArrayList<Statement<?>>();
-		postups.add(CheapEngin.trcs
+		postups.add(CheapEnginv1.trcs
 					.update("task_details")		 // new node instance can not auto created in test-start.
 					.nv("remarks", newInstId)
 					.where_("=", "taskId", newTaskId)
@@ -322,10 +320,10 @@ public class CheapApiTest {
 		else Utils.logi("No stepping event");
 
 		// verify results of post update
-		res = CheapEngin.trcs.select("task_details")
+		res = CheapEnginv1.trcs.select("task_details")
 			.col("remarks")
 			.where_("=", "taskId", newTaskId)
-			.rs(CheapEngin.trcs.instancontxt(usr));
+			.rs(CheapEnginv1.trcs.instancontxt(usr));
 		SResultset rs = (SResultset) res.rs(0);
 		rs.beforeFirst().next();
 		assertEquals(newInstId, rs.getString("remarks"));

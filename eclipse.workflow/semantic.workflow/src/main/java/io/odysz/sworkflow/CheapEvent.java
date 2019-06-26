@@ -6,6 +6,7 @@ import io.odysz.common.Utils;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.EnginDesign.Req;
+import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.x.TransException;
 
@@ -40,18 +41,20 @@ public class CheapEvent extends SemanticObject {
 	 * @param current
 	 * @param next
 	 * @param taskId a {@link Resulving} value to be resulved or a known task id value
-	 * @param instId a {@link Resulving} value to be resulved or a known instance id value
+	 * @param prevInstId
+	 * @param newInstId a {@link Resulving} value to be resulved or a known instance id value
 	 * @param rq
 	 * @param cmd
 	 */
 	public CheapEvent(String wfId, Evtype evtype, CheapNode current,
-			CheapNode next, Object taskId, Object instId, Req rq, String cmd) {
+			CheapNode next, Object taskId, String prevInstId, Resulving newInstId, Req rq, String cmd) {
 		put("__wfId", wfId);
 		put("__etype", evtype);
 		put("__currentNode", current);
 		put("__nextNode", next);
 		put("__taskId", taskId);
-		put("__instId", instId);
+		put("__instId", newInstId);
+		put("__prevInstId", prevInstId);
 		put("__req", rq);
 		put("__cmd", cmd);
 	}
@@ -66,6 +69,11 @@ public class CheapEvent extends SemanticObject {
 	public String nextNodeId() { 
 		return has("__nextNode") ?
 				((CheapNode)get("__nextNode")).nodeId() : null;
+	}
+
+	public String prevInstId() { 
+		return has("__prevInstId") ?
+				((CheapNode)get("__prevInstId")).nodeId() : null;
 	}
 
 	public String instId() { 
@@ -88,6 +96,15 @@ public class CheapEvent extends SemanticObject {
 
 	public String arriveCondt() {
 		return has("__nextNode") ? ((CheapNode)get("__nextNode")).arrivCondt() : null;
+	}
+
+	public CheapEvent qryCompetition(Query q) {
+		return (CheapEvent) put("__query_competate", q) ;
+	}
+
+	public Query qryCompetition() {
+		return has("__query_competate") ?
+				(Query)get("__query_competate") : null;
 	}
 
 	public Req req() { return (Req) get("__req"); }

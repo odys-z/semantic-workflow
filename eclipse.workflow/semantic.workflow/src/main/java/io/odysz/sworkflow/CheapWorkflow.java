@@ -24,11 +24,11 @@ public class CheapWorkflow {
 	/** e.g. f01 for falt workflow */
 	String node1;
 	
-	/** Business task record can referring some special state,
+	/**<p>The column names definitions, in format:<br>
+	 * [node-id: task-column, ...]</p>
+	 *  Business task record can referring some special state,
 	 * so there may be more column than current state
 		e.g. task.node0 referring to a stating node instance.<br>
-		This is the column names define, in format:<br>
-		[node-id:task-col, ...]<br>
 	 *  e.g. e_inspect_tasks.startNode can be defined as "f01:startNode" (table name in bTabl field)<br>
 	 * With this configuration, e_inspect_tasks.startNode always been set as a FK to c_process_processing.recId*/
 	HashMap<String, String> bNodeInstRefs;
@@ -69,10 +69,10 @@ public class CheapWorkflow {
 		this.bNodeInstRefs = LangExt.parseMap(bNodeInstRefs);
 
 		// load configs - load all my nodes
-		SemanticObject s = CheapEngin.trcs
+		SemanticObject s = CheapEnginv1.trcs
 				.select(WfMeta.nodeTabl)
 				.whereEq(WfMeta.wfWfid, wfId)
-				.rs(CheapEngin.basictx);
+				.rs(CheapEnginv1.basictx);
 		
 		SResultset rs = (SResultset) s.rs(0);
 		rs.beforeFirst();
@@ -132,7 +132,7 @@ public class CheapWorkflow {
 				.col("i.instId", "instId")
 				.col("b." + bRecId, "busiId")
 				.col("i.nodeId", "nodeId")
-				.rs(CheapEngin.basictx);
+				.rs(CheapEnginv1.basictx);
 		SResultset rs = (SResultset) s.rs(0);
 		if (rs.beforeFirst().next())
 			return new String[] {

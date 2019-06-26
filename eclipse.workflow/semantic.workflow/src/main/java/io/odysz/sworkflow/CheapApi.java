@@ -4,14 +4,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 import io.odysz.common.AESHelper;
 import io.odysz.common.LangExt;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
-import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
@@ -22,9 +20,7 @@ import io.odysz.sworkflow.EnginDesign.WfMeta.nodeInst;
 import io.odysz.transact.sql.Insert;
 import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.Statement;
-import io.odysz.transact.sql.parts.Logic;
 import io.odysz.transact.sql.parts.Sql;
-import io.odysz.transact.sql.parts.condition.Condit;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
 
@@ -33,7 +29,6 @@ import io.odysz.transact.x.TransException;
  * @author ody
  */
 public class CheapApi {
-	static ReentrantLock lock = new ReentrantLock();
 
 	/** Finger print used for checking timeout checker's competition.
 	 * When initializing, will update a random value to db, when checking, query it and compare with this version.
@@ -45,7 +40,7 @@ public class CheapApi {
 		cheaprint = AESHelper.encode64(AESHelper.getRandom());
 		ArrayList<String> sqls = new ArrayList<String>(wfids.size());
 		for (String wfid : wfids) {
-				CheapEngin.trcs.update(WfMeta.wftabl)
+				CheapEnginv1.trcs.update(WfMeta.wftabl)
 					.nv(WfMeta.wfChecker, cheaprint)
 					.whereEq(WfMeta.wfWfid, wfid)
 					.commit(sqls);	
@@ -78,7 +73,7 @@ public class CheapApi {
 
 		SemanticObject sobj = new SemanticObject();
 		
-		CheapWorkflow wf = CheapEngin.wfs.get(wftype);
+		CheapWorkflow wf = CheapEnginv1.wfs.get(wftype);
 
 		// take virtual node as starting node.
 		// this logic changed when virtual id composing is changed.
@@ -88,20 +83,20 @@ public class CheapApi {
 		if (n == null)
 			throw new SemanticException("Node not found: ", nodeId);
 
-		sobj.put("rights", n.rights(CheapEngin.trcs, usrId, taskId));
+		sobj.put("rights", n.rights(CheapEnginv1.trcs, usrId, taskId));
 		return sobj;
 	}
 	
 	public static SemanticObject myTasks(IUser usr) throws TransException, SQLException {
-		if (CheapEngin.wfs != null) {
+		if (CheapEnginv1.wfs != null) {
 			SemanticObject tasks = new SemanticObject();
-			for (CheapWorkflow wf : CheapEngin.wfs.values()) {
+			for (CheapWorkflow wf : CheapEnginv1.wfs.values()) {
 				// select b.changeContent, i.* from ir_prjnodes i
 				// join oz_wfnodes n on i.nodeId = n.nodeId and i.handlingCmd is null and n.isFinish <> '1'
 				// join a_user u on u.userId = 'admin'
 				// join oz_wfrights r on r.nodeId = n.nodeId and r.roleId = u.roleId
 				// join p_change_application b on b.currentNode = i.instId;
-				SResultset task = (SResultset) CheapEngin.trcs
+				SResultset task = (SResultset) CheapEnginv1.trcs
 						.select(wf.instabl, "i")
 						.col("b.*").col("n." + WfMeta.nname)
 						.j(WfMeta.nodeTabl, "n", 
@@ -113,7 +108,7 @@ public class CheapApi {
 								WfMeta.rights.nodeFk, WfMeta.nid, WfMeta.rights.roleFk, WfMeta.user.roleFk)
 						.j(wf.bTabl, "b", "b.%s = i.%s",
 								wf.bTaskStateRef, nodeInst.id)
-						.rs(CheapEngin.trcs.instancontxt(usr)).rs(0);
+						.rs(CheapEnginv1.trcs.instancontxt(usr)).rs(0);
 				tasks.put(wf.wfId, task);
 			}
 			return tasks;
@@ -160,7 +155,7 @@ instId |nodeId |taskId |oper         |opertime            |descpt |remarks |hand
 			throws TransException, SQLException {
 		SemanticObject sobj = new SemanticObject();
 		
-		CheapWorkflow wf = CheapEngin.wfs.get(wftype);
+		CheapWorkflow wf = CheapEnginv1.wfs.get(wftype);
 		if (wf == null) 
 			throw new SemanticException("Can not find workflow with id: %s", wftype);
 
@@ -168,7 +163,7 @@ instId |nodeId |taskId |oper         |opertime            |descpt |remarks |hand
 		// left outer join task_nodes i on i.nodeId = n.nodeId and i.taskId = '000001'
 		// where n.wfId = 't01'
 		// order by n.sort;
-		Query q = CheapEngin.trcs
+		Query q = CheapEnginv1.trcs
 				.select(WfMeta.nodeTabl, "n")
 				.col("n." + WfMeta.nsort)
 				.col("n." + WfMeta.nname)
@@ -193,13 +188,13 @@ instId |nodeId |taskId |oper         |opertime            |descpt |remarks |hand
 				.col("u." + WfMeta.user.name);
 		}
 		
-		SemanticObject list = q.rs(CheapEngin.trcs.instancontxt(usr));
+		SemanticObject list = q.rs(CheapEnginv1.trcs.instancontxt(usr));
 		SResultset lst = (SResultset) list.rs(0);
 
 		// load current instance
 		// select i.* from task_nodes i
 		// join tasks b on b.wfState = i.instId and b.taskId = '000010' where b.wfId = 't01'
-		list = CheapEngin.trcs
+		list = CheapEnginv1.trcs
 				.select(wf.instabl, "i")
 				.col("i.*")
 				.col("n." + WfMeta.nisFinish)
@@ -207,7 +202,7 @@ instId |nodeId |taskId |oper         |opertime            |descpt |remarks |hand
 						wf.bTaskStateRef, WfMeta.nodeInst.id, wf.bRecId, taskid, wf.bCateCol, wftype))
 				// .where("=", "b." + wf.bCateCol, "'" + wftype + "'")
 				.j(WfMeta.nodeTabl, "n", String.format("n.%s = i.%s", WfMeta.nid, nodeInst.nodeFk))
-				.rs(CheapEngin.trcs.instancontxt(usr));
+				.rs(CheapEnginv1.trcs.instancontxt(usr));
 		SResultset ist = (SResultset) list.rs(0);
 
 		sobj.rs(lst, lst.getRowCount());
@@ -237,8 +232,8 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 					"Target wftype or node is null. wfid: %s, nodeId: %s",
 					wftype, nId);
 		
-		CheapTransBuild t = CheapEngin.trcs;
-		CheapNode n = CheapEngin.getWf(wftype).getNode(nId);
+		CheapTransBuild t = CheapEnginv1.trcs;
+		CheapNode n = CheapEnginv1.getWf(wftype).getNode(nId);
 		if (n == null)
 			throw new CheapException(CheapException.ERR_WF,
 					"Can't find node: wfId: %s, node: %s",
@@ -261,7 +256,7 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 						wftype, nId)))
 				// .l(t.select("(" + CheapNode.rightDs(n.rightSk(), t) + ")", "_v"), "", "c.cmd = _v.cmd")
 				.l(t.select("(" + rightSelct + ")", "_v"), "", "c.cmd = _v.cmd")
-				.rs(CheapEngin.trcs.basictx());
+				.rs(CheapEnginv1.trcs.basictx());
 		SResultset lst = (SResultset) list.rs(0);
 		
 		return new SemanticObject().rs(lst, lst.getRowCount());
@@ -280,8 +275,9 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	static SemanticObject stepTimeout(String wftype, String nodeId, String taskId, String instId) throws SQLException, TransException {
 		CheapApi api = new CheapApi(wftype, Req.timeout, Req.timeout.name());
 		api.taskId = taskId;
-		SemanticObject jreq = (SemanticObject) api
-				.commitimeout(CheapEngin.checkUser, wftype, nodeId, taskId, instId).get("res");
+		SemanticObject jreq = (SemanticObject) CheapEnginv1
+					.commitimeout(CheapEnginv1.checkUser, wftype, nodeId, taskId, instId)
+					.get("res");
 		return jreq;
 	}
 
@@ -292,8 +288,6 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	/** task table n-vs */
 	private ArrayList<Object[]> nvs;
 
-	// private ArrayList<String[]> multiDels;
-	// private ArrayList<ArrayList<?>> multiInserts;
 	private ArrayList<Statement<?>> postups;
 	private String cmd;
 
@@ -325,7 +319,7 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	
 	public CheapApi postupdates(ArrayList<Statement<?>> postups) {
 		this.postups = postups;
-		if (CheapEngin.debug && postups != null && req != Req.start)
+		if (CheapEnginv1.debug && postups != null && req != Req.start)
 			for (Statement<?> post : postups)
 				if (post instanceof Insert)
 					Utils.warn("[CheapEngin.debug] CheapApi#postupdates(): Inserting new records to %s in a %s request?\n" +
@@ -334,7 +328,22 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 		return this;
 	}
 
-	/**Commit current request set in {@link #req}. TODO how about rename this as doCmd()?
+	/**Commit current request set in {@link #req}.
+	 * <h6>About Competition Check</h6>
+	 * <p>One condition and three competition rules in Cheap-workflow v0.8:
+	 * <ol> <li>Condition: All instance must have a prevRec, except the only starting node instance.<br>
+	 * 			If can't find an out going node with condition 'handleCmd is null',
+	 * 			the checking will fail in early stage;</li>
+	 * 		<li>Check: When starting, if there is already an instance with null handleCmd for the task, fail;</li>
+	 * 		<li>Check: If not starting and prevCmd is null,<br>
+	 * 			fail (shouldn't happen when engine upgraded to v7.4);</li>
+	 * 		<li>Check: If not starting and the out going instance's routes include the requesting one,
+	 * 			fail<br>
+	 * 			- old looping instance is not the same (logic by {@link CheapEngin#findFrom()}: handleCmd is null);<br>
+	 * 			- branching from the out going instance doesn't have a same route;</li>
+	 * </ol>
+	 * </p>
+	 * 
 	 * @param usr
 	 * @return { evt: {@link CheapEvent} for start event(new task ID must resolved), <br>
 	 * 		stepHandler: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
@@ -342,10 +351,9 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	 * }
 	 * @throws SQLException
 	 * @throws TransException 
-	 */
+	 * /
 	public SemanticObject commitReq(IUser usr) throws SQLException, TransException {
 		CheapTransBuild st = CheapEngin.trcs;
-//		SemanticObject multireq = formatMulti(st, usr, multiChildTabl, multiDels, multiInserts);
 
 		SemanticObject logic = CheapEngin.onReqCmd(usr, wftype, req, cmd,
 					taskId, nodeDesc, nvs, postups);
@@ -357,6 +365,7 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 		CheapEvent evt = (CheapEvent) logic.get("evt");
 		CheapWorkflow wf = CheapEngin.getWf(evt.wfId());
 
+		/*
 		Query q;
 		if (req == Req.start && !LangExt.isblank(taskId)) {
 			// CheapEngin only support 1 starting node
@@ -391,13 +400,9 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 		else {
 			q = null;
 		}
-		// FIXME
-		// FIXME
-		// FIXME
-		// FIXME
-		// FIXME
-		// FIXME
-		// bug: competation not checked:
+		* /
+		Query q = qCompet(req, wf);
+		// bug: competition not checked:
 		/*insert into ir_prjnodes  (nodeId, opertime, oper, prevRec, taskId, instId) 
 values ('pcac-manager', now(), 'admin', null, '00000l', '00005N')
 
@@ -416,7 +421,7 @@ select * from p_change_application where changeId = '00000l';
 instId |nodeId       |taskId |oper  |opertime            |descpt         |remarks |handlingCmd       |prevRec |
 -------|-------------|-------|------|--------------------|---------------|--------|------------------|--------|
 00003B |mpac-start   |00000l |admin |2019-06-18 13:48:15 |               |        |start             |        |
-00003C |mpac-ac      |00000l |admin |2019-06-18 13:48:21 |               |        |mpac-ac.next      |        |
+00003C |mpac-ac      |00000l |admin |2019-06-18 13:48:21 |               |        |mpac-ac.next      |<null : competition>
 00003D |mpac-gm      |00000l |admin |2019-06-18 14:06:23 |               |        |mpac-gm.deny      |00003C  |
 00003E |mpac-start   |00000l |admin |2019-06-18 14:07:47 |               |        |mpac-start.submit |00003D  |
 00003F |mpac-ac      |00000l |admin |2019-06-18 14:08:03 |               |        |mpac-ac.next      |00003E  |
@@ -426,8 +431,8 @@ instId |nodeId       |taskId |oper  |opertime            |descpt         |remark
 00005K |pcac-pm      |00000l |admin |2019-06-25 16:05:05 |               |        |pcac-pm.upload    |00005J  |
 00005L |pcac-ac      |00000l |admin |2019-06-25 16:05:13 |qqq            |        |pcac-ac.next      |00005K  |
 00005M |pcac-manager |00000l |admin |2019-06-25 16:05:26 |               |        |                  |00005L  |
-00005N |pcac-manager |00000l |admin |2019-06-25 16:05:29 |               |        |                  |        |
-		 */
+00005N |pcac-manager |00000l |admin |2019-06-25 16:05:29 |               |        |                  |<null : competition>
+		 * /
 
 		// check competition, commit.
 		// FIXME Is this a performance problem? But only supported with RDBMS that have stored processes?
@@ -455,72 +460,20 @@ instId |nodeId       |taskId |oper  |opertime            |descpt         |remark
 		// FIXME Why events handler not called here?
 		return logic;
 	}
-	
-	public SemanticObject commitimeout(IUser usr, String wfid, String nodeId, String busiId, String instId)
-			throws SQLException, TransException {
-		SemanticObject logic = CheapEngin.onTimeout(usr, wfid, nodeId, busiId, instId);
+	*/
 
-		// check competition
-		checkerCompetition(wfid);
-		
-		Insert ins = (Insert) logic.get("stmt");
-		ISemantext smtx = CheapEngin.trcs.instancontxt(usr);
-		ins.ins(smtx);
-		((CheapEvent) logic.get("evt")).resulve(smtx);
-		logic.remove("stmt");
-		return logic;
-	}
-
-	private void checkerCompetition(String wfid) throws TransException, SQLException {
-		SemanticObject res = CheapEngin.trcs.select(WfMeta.wftabl, "wf")
-			.col(WfMeta.wfChecker, "chkr")
-			.where_("=", WfMeta.wfWfid, wfid)
-			.rs(CheapEngin.trcs.basictx());
-		SResultset rs = (SResultset) res.rs(0);
-		if (rs.beforeFirst().next()) {
-			if (CheapEngin.cheaprint == null)
-				Utils.warn("CheapAip is checking competations but it's finger print is null, this should only hanppened when testing");
-			else if (CheapEngin.cheaprint.equals(rs.getString("chkr")))
-				throw new CheapException(CheapException.ERR_WF_COMPETATION,
-						"Another timeout checker is running - the value of %s.%s is different than my finger print: %s.\n" +
-						"To disable background checker, set workflow-meta.xml/t=cfg/k=enable-checker/v: false.",
-						WfMeta.wftabl, WfMeta.wfChecker, CheapEngin.cheaprint);
-		}
-		else Utils.warn("CheapApi#checkerCompetition(): Checking timeout commitment competition fialed. wfid: %s", wfid);
-	}
-
-	
-	/**Format multi-details request into SemanticObject.
-	 * @param st
+	/**Commit current request set in {@link #req}.
 	 * @param usr
-	 * @param tabl
-	 * @param delConds
-	 * @param multiInserts
-	 * @return formated SemanticObject
-	 * @throws TransException
-	@SuppressWarnings("unchecked")
-	private static SemanticObject formatMulti(CheapTransBuild st, IUser usr, String tabl,
-			ArrayList<String[]> delConds, ArrayList<ArrayList<?>> multiInserts) throws TransException {
-		SemanticObject jmultis = new SemanticObject();
-		// del
-		if (delConds != null) {
-			Delete jdel = st.delete(tabl, usr);
-			for (String[] cond : delConds) {
-				jdel.where(cond[0], cond[1], cond[2]);
-			}
-			jmultis.put("del", jdel);
-		}
-		
-		// insert
-		if (multiInserts != null) {
-			for (ArrayList<?> nvs : multiInserts) {
-				Insert jinss = st.insert(tabl, usr);
-				for (String[] nv : (ArrayList<String[]>)nvs) 
-					jinss.nv(nv[0], nv[1]);
-				jmultis.add("insert", jinss);
-			}
-		}
-		return jmultis;
-	}
+	 * @return { evt: {@link CheapEvent} for start event(new task ID must resolved), <br>
+	 * 		stepHandler: {@link CheapEvent} for req (step/deny/next) if there is one configured, <br>
+	 * 		arriHandler: {@link CheapEvent} for arriving event if there is one configured<br>
+	 * }
+	 * @throws SQLException
+	 * @throws TransException 
 	 */
+	public SemanticObject commitReq(IUser usr) throws SQLException, TransException {
+		return CheapEnginv1.commitReq(usr, wftype, req, cmd,
+					taskId, nodeDesc, nvs, postups);
+	}
+
 }
