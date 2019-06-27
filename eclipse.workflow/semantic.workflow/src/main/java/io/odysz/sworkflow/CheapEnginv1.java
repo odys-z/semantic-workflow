@@ -174,7 +174,13 @@ public class CheapEnginv1 {
 				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.postFk))
 					CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.postFk,
 						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
-
+				else throw new CheapException(CheapException.ERR_WF_CONFIG,
+						"CheapEnginv1#realoadCheap(): Found postFk semantics of node instance table (%s.%s) "
+						+ "back referencing different business table (%s.%s) - already have a postFk.\n"
+						+ "It's unreasonable for a parent has an FK back referencing to different child table. "
+						+ "Semantics.DA will generated same auto pk for differnet table, and only auto pk can be resulved.\n"
+						+ "In the future version maybe will extending multiple FK fields.",
+						nodeInst.busiFk, wf.bTabl, wf.bRecId);
 
 				// 2.3 node instance oper, opertime
 				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.opTime)) {
@@ -533,11 +539,16 @@ public class CheapEnginv1 {
 					// .nv(wf.bTaskStateRef, "Resulving...")
 					;
 			if (busiPack != null)
-				for (Object[] nv : busiPack)
+				for (Object[] nv : busiPack) {
+					// for robustness, ignore nv = [wfId, 'id01']
+					if (wf.bCateCol.equals(nv[0]))
+						continue;
+
 					if (nv[1] instanceof AbsPart)
 						ins2.nv((String)nv[0], (AbsPart)nv[1]);
 					else 
 						ins2.nv((String)nv[0], (String)nv[1]);
+				}
 			
 			if (colnameBackRef != null)
 				ins2.nv(colnameBackRef, newInstId);

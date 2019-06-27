@@ -12,12 +12,14 @@ public class CheapException extends SemanticException {
 
 	/**Error code for response*/
 	public static final String ERR_WF = "wf_err";
+
 	public static final String ERR_WF_Rights = "wf_err_rights";
 
-	// TODO add js client
 	public static final String ERR_WF_INTERNAL = "wf_err_internal";
 
 	public static final String ERR_WF_COMPETATION = "wf_err_competing";
+
+	public static final String ERR_WF_CONFIG = "wf_err_config";
 
 	private String code;
 

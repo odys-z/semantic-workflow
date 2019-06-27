@@ -174,6 +174,11 @@ public class CheapApiTest {
 	private String newInstId;
 	private String newTaskId;
 
+	@Test
+	public void test_0_config() {
+		fail("TODO test the configuration of instance table back referencing different business table");
+	}
+
 	public void test_1_Start() throws SQLException, TransException {
 		// case 1 start new task, without task record exists
 		// add some business details (not logic of workflow, but needing committed in same transaction)
@@ -687,5 +692,4 @@ instId |nodeId  |taskId |oper         |opertime            |descpt              
 			}
 		}
 	}
-	
 }
