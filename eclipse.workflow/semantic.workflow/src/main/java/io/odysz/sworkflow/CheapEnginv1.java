@@ -171,6 +171,7 @@ public class CheapEnginv1 {
 
 				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.fkIns,
 						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
+				
 				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.postFk))
 					CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.postFk,
 						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
@@ -180,7 +181,7 @@ public class CheapEnginv1 {
 						+ "It's unreasonable for a parent has an FK back referencing to different child table. "
 						+ "Semantics.DA will generated same auto pk for differnet table, and only auto pk can be resulved.\n"
 						+ "In the future version maybe will extending multiple FK fields.",
-						nodeInst.busiFk, wf.bTabl, wf.bRecId);
+						wf.bTabl, nodeInst.busiFk, wf.bTabl, wf.bRecId);
 
 				// 2.3 node instance oper, opertime
 				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.opTime)) {
@@ -535,6 +536,7 @@ public class CheapEnginv1 {
 		if (Req.start == req && LangExt.isblank(busiId)) {
 			Insert ins2 = trcs
 					.insert(wf.bTabl, usr)
+					.nv(wf.bTaskStateRef, newInstId)
 					.nv(wf.bCateCol, wf.wfId)
 					// .nv(wf.bTaskStateRef, "Resulving...")
 					;
@@ -551,7 +553,10 @@ public class CheapEnginv1 {
 				}
 			
 			if (colnameBackRef != null)
-				ins2.nv(colnameBackRef, newInstId);
+				try {ins2.nv(colnameBackRef, newInstId);
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
 			
 			ins1.post(ins2);
 		}
@@ -572,6 +577,10 @@ public class CheapEnginv1 {
 
 			if (colnameBackRef != null)
 				upd2.nv(colnameBackRef, newInstId);
+			
+			// The task must belong to the wfId
+			if (wf.bCateCol != null)
+				upd2.nv(wf.bCateCol, wftype);
 
 			ins1.post(upd2);
 		}
@@ -596,7 +605,7 @@ public class CheapEnginv1 {
 						fromNode, nextNode, busiId,
 						fromInstId, newInstId, req, cmd);
 
-		evt.qryCompetition(qryCompetition(req, wf, busiId, nextNode.nodeId(), fromInstId));
+		evt.qryCompetition(qryCompetChk(req, wf, busiId, nextNode.nodeId(), fromInstId));
 
 		return new SemanticObject()
 				.put("stmt", ins1)
@@ -769,7 +778,7 @@ instId |nodeId       |taskId |oper  |opertime            |handlingCmd       |pre
 	 * @return
 	 * @throws TransException
 	 */
-	static Query qryCompetition(Req req, CheapWorkflow wf, String taskId, String nextNodeId, String prevInstId)
+	static Query qryCompetChk(Req req, CheapWorkflow wf, String taskId, String nextNodeId, String prevInstId)
 			throws TransException {
 		Query q;
 		// 0 shouldn't happen - request step with empty task
@@ -811,7 +820,7 @@ instId |nodeId       |taskId |oper  |opertime            |handlingCmd       |pre
 				.select(wf.instabl, "i")
 				.col("count(i.nodeId)", "cnt")
 				.j(WfMeta.nodeTabl, "nxNod",
-						"nxNod.%1$s = '%2$s' and i.%3$s = nxNod.%1$s and taskId = '%4$S' and prevRec = '%5$s'",
+						"nxNod.%1$s = '%2$s' and i.%3$s = nxNod.%1$s and taskId = '%4$s' and prevRec = '%5$s'",
 						WfMeta.nid, nextNodeId, nodeInst.nodeFk, taskId, prevInstId);
 		}
 		else q = null;
