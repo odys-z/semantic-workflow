@@ -6,9 +6,12 @@ import java.util.List;
 
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.meta.TableMeta;
 import io.odysz.transact.x.TransException;
 
 public class CheapRobot implements IUser {
+	@Override
+	public TableMeta meta() { return null; }
 
 	@Override
 	public ArrayList<String> dbLog(ArrayList<String> sqls) {
