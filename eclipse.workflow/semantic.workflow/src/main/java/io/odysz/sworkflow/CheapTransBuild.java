@@ -9,6 +9,7 @@ import io.odysz.module.rs.SResultset;
 import io.odysz.module.xtable.XMLTable;
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
+import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
@@ -64,6 +65,10 @@ public class CheapTransBuild extends DATranscxt {
 		} catch (SAXException | IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public ISemantext instancontxt(IUser usr) throws TransException {
+		return super.instancontxt(basiconnId(), usr);
 	}
 
 }
