@@ -175,9 +175,14 @@ instId |nodeId |taskId |oper         |opertime            |descpt |remarks |hand
 				.col("i.*")
 				.col("n." + WfMeta.nisFinish)
 				.l(wf.instabl, "i", "i." + WfMeta.nodeInst.nodeFk + " = n." + WfMeta.nid + " and i." + WfMeta.nodeInst.busiFk + " = '" + taskid + "'")
+
 				// left outer join p_change_application b on i.nodeId = n.nodeId and b.currentNode = i.instId AND i.taskId = '00000I' 
-				.l(wf.bTabl, "b", String.format("i.%s = n.%s and b.%s = i.%s AND i.%s = '%s'",
-							WfMeta.nodeInst.nodeFk, WfMeta.nid, wf.bTaskStateRef, WfMeta.nodeInst.id, WfMeta.nodeInst.busiFk, taskid))
+				// bug 2019.7.30, i.taskId = '00003U' -> b.expenseId = '00003U'
+//				.l(wf.bTabl, "b", String.format("i.%s = n.%s and b.%s = i.%s AND i.%s = '%s'",
+//							WfMeta.nodeInst.nodeFk, WfMeta.nid, wf.bTaskStateRef, WfMeta.nodeInst.id, WfMeta.nodeInst.busiFk, taskid))
+				.l(wf.bTabl, "b", String.format("i.%s = n.%s and b.%s = i.%s AND b.%s = '%s'",
+							WfMeta.nodeInst.nodeFk, WfMeta.nid, wf.bTaskStateRef, WfMeta.nodeInst.id, wf.bRecId, taskid))
+
 				.l(WfMeta.cmdTabl, "c", String.format("i.%s = c.%s", WfMeta.nodeInst.handleCmd, WfMeta.cmdCmd))
 				.where("=", "n." + WfMeta.nodeWfId, "'" + wftype + "'")
 				.orderby("n." + WfMeta.nsort)
