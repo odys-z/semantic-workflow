@@ -18,7 +18,8 @@ import org.xml.sax.SAXException;
 import io.odysz.common.DateFormat;
 import io.odysz.common.LangExt;
 import io.odysz.common.Utils;
-import io.odysz.module.rs.SResultset;
+import io.odysz.module.rs.AnResultset;
+import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.LoggingUser;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.ISemantext;
@@ -202,7 +203,7 @@ public class CheapApiTest {
 					.insert("task_details")		// new node instance can not auto created in test-start.
 					.nv("remarks", newInstId));	// semantics will handle recId (auto-key)
 
-		SemanticObject res1 = CheapApi.start(wftype)
+		CheapResp res1 = CheapApi.start(wftype)
 				.nodeDesc("desc: starting " + DateFormat.formatime(new Date()))
 				.taskNv("remarks", "testing")
 				// .taskChildMulti("task_details", null, inserts)
@@ -210,24 +211,25 @@ public class CheapApiTest {
 				.commitReq(usr);
 
 		// simulating business layer handling events
-		ICheapEventHandler eh = (ICheapEventHandler) res1.get("stepHandler");
+		// ICheapEventHandler eh = (ICheapEventHandler) res1.get("stepHandler");
+		ICheapEventHandler eh = res1.rmStepHandler();
 		if (eh != null) {
-			CheapEvent evt = (CheapEvent) res1.get("evt");
+			CheapEvent evt = res1.event;
 			eh.onCmd(evt);
 			newInstId = (String) evt.instId();
 			newTaskId = (String) evt.taskId();
 		}
 		else Utils.logi("No stepping event");
 
-		eh = (ICheapEventHandler) res1.get("arriHandler");
+		eh = res1.arriveHandler;
 		if (eh != null)
-			eh.onArrive(((CheapEvent) res1.get("evt")));
+			eh.onArrive(res1.event);
 		else Utils.logi("No arriving event handler");
 		
 		// case 2 start new task, with task record exists
 		ISemantext tr2 = CheapEnginv1.trcs.instancontxt(usr);
 		CheapWorkflow wf = CheapEnginv1.getWf(wftype);
-		SemanticObject res2 = (SemanticObject) CheapEnginv1.trcs
+		CheapResp res2 = (CheapResp) CheapEnginv1.trcs
 				.insert(wf.bTabl, usr)
 				.nv("remarks", "testing case 2")
 				.nv(wf.bTaskStateRef, "null stub")
@@ -240,12 +242,12 @@ public class CheapApiTest {
 				.taskNv("remarks", "testing case 2")
 				.commitReq(usr);
 		
-		res2 = CheapEnginv1.trcs.select(wf.instabl)
+		SemanticObject rslt = CheapEnginv1.trcs.select(wf.instabl)
 				.col(WfMeta.nodeInst.nodeFk, "nid")
 				.where_("=", WfMeta.nodeInst.busiFk, task2)
 				.rs(CheapEnginv1.trcs.basictx());
 		
-		SResultset rs = (SResultset) res2.rs(0);
+		AnResultset rs = (AnResultset) rslt.rs(0);
 		rs.beforeFirst().next();
 		assertTrue(!LangExt.isblank(rs.getString("nid")));
 	
@@ -269,10 +271,10 @@ public class CheapApiTest {
 		
 		CheapWorkflow wf = CheapEnginv1.getWf(wftype);
 
-		SemanticObject res1 = CheapApi.loadFlow(wftype, newTaskId, usr);
-		SResultset nodes = (SResultset) res1.rs(0);
-		int nodestotal = res1.total(0);
-		SResultset insts = (SResultset) res1.rs(1);
+		CheapResp res1 = CheapApi.loadFlow(wftype, newTaskId, usr);
+		AnResultset nodes = (AnResultset) res1.rs(0);
+		int nodestotal = nodes.total();
+		AnResultset insts = (AnResultset) res1.rs(1);
 
 		nodes.beforeFirst().next();
 		assertEquals(nodestotal, nodes.getRowCount());
@@ -286,10 +288,10 @@ public class CheapApiTest {
 		// test load commands and rights
 		String nid = nodes.getString(WfMeta.nodeInst.nodeFk);
 		res1 = CheapApi.loadCmds(wftype, nid, newTaskId, usr.uid());
-		SResultset rs = (SResultset) res1.rs(0);
+		AnResultset rs = (AnResultset) res1.rs(0);
 		rs.beforeFirst().next();
 		assertEquals(nid, rs.getString("nodeId"));
-		assertEquals(rs.getRowCount(), res1.total(0));
+		assertEquals(rs.getRowCount(), rs.total());
 	}
 
 	@Test
@@ -298,7 +300,7 @@ public class CheapApiTest {
 		if (my == null)
 			fail("No tasks?");
 		else for (String wfid : my.keySet())
-			assertTrue(my.get(wfid) instanceof SResultset);
+			assertTrue(my.get(wfid) instanceof AnResultset);
 	}
 
 	@Test
@@ -314,23 +316,23 @@ public class CheapApiTest {
 					.where_("=", "taskId", newTaskId)
 					);
 
-		SemanticObject res = CheapApi.next(wftype, newTaskId, "t01.01.stepA")
+		CheapResp res = CheapApi.next(wftype, newTaskId, "t01.01.stepA")
 				.nodeDesc("desc: next " + DateFormat.formatime(new Date()))
 				.postupdates(postups)
 				.commitReq(usr);
 
 		// simulating business layer handling events
-		ICheapEventHandler eh = (ICheapEventHandler) res.get("stepHandler");
+		ICheapEventHandler eh = res.rmStepHandler();
 		if (eh != null)
-			eh.onCmd(((CheapEvent) res.get("evt")));
+			eh.onCmd(res.event);
 		else Utils.logi("No stepping event");
 
 		// verify results of post update
-		res = CheapEnginv1.trcs.select("task_details")
+		SemanticObject rslt = CheapEnginv1.trcs.select("task_details")
 			.col("remarks")
-			.where_("=", "taskId", newTaskId)
+			.whereEq("taskId", newTaskId)
 			.rs(CheapEnginv1.trcs.instancontxt(usr));
-		SResultset rs = (SResultset) res.rs(0);
+		AnResultset rs = (AnResultset) rslt.rs(0);
 		rs.beforeFirst().next();
 		assertEquals(newInstId, rs.getString("remarks"));
 
@@ -474,9 +476,10 @@ instId |nodeId  |taskId |oper         |opertime            |descpt              
 		assertWf(wftype, newTaskId, "t01.03");
 
 		// logic working?
-		eh = (ICheapEventHandler) res.get("arriHandler");
+		// eh = (ICheapEventHandler) res.get("arriHandler");
+		eh = res.arriveHandler;
 		if (eh != null)
-			eh.onArrive(((CheapEvent) res.get("evt")));
+			eh.onArrive(res.event);
 		else Utils.warn("No arriving event handler");
 	}
 
@@ -490,9 +493,9 @@ instId |nodeId  |taskId |oper         |opertime            |descpt              
 	public static void assertWf(String wftype, String taskId, String crntNid) throws SQLException, TransException {
 		assertFalse(LangExt.isblank(crntNid));
 
-		SemanticObject res1 = CheapApi.loadFlow(wftype, taskId, usr);
-		SResultset nodes = (SResultset) res1.rs(0);
-		SResultset insts = (SResultset) res1.rs(1);
+		CheapResp res1 = CheapApi.loadFlow(wftype, taskId, usr);
+		AnResultset nodes = (AnResultset) res1.rs(0);
+		AnResultset insts = (AnResultset) res1.rs(1);
 		
 		nodes.beforeFirst();
 		boolean ok = false;
@@ -522,7 +525,7 @@ instId |nodeId  |taskId |oper         |opertime            |descpt              
 		// testxt = new Transcxt(null);
 		
 		// initialize oz_autoseq - only for sqlite
-		SResultset rs = Connects.select("SELECT type, name, tbl_name FROM sqlite_master where type = 'table' and tbl_name = 'oz_autoseq'",
+		AnResultset rs = Connects.select("SELECT type, name, tbl_name FROM sqlite_master where type = 'table' and tbl_name = 'oz_autoseq'",
 				Connects.flag_nothing);
 		if (rs.getRowCount() == 0) {
 			try { 

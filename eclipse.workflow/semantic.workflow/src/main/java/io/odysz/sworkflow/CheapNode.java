@@ -6,7 +6,7 @@ import java.util.HashMap;
 import io.odysz.common.LangExt;
 import io.odysz.module.rs.SResultset;
 import io.odysz.semantic.DA.Connects;
-import io.odysz.semantic.DA.DatasetCfg.Dataset;
+import io.odysz.semantic.DA.DatasetCfgV11.Dataset;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;

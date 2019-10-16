@@ -23,8 +23,8 @@ import io.odysz.module.xtable.Log4jWrapper;
 import io.odysz.module.xtable.XMLDataFactoryEx;
 import io.odysz.module.xtable.XMLTable;
 import io.odysz.semantic.DASemantics.smtype;
-import io.odysz.semantic.DA.DatasetCfg;
-import io.odysz.semantic.DA.DatasetCfg.Dataset;
+import io.odysz.semantic.DA.DatasetCfgV11;
+import io.odysz.semantic.DA.DatasetCfgV11.Dataset;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
@@ -128,7 +128,7 @@ public class CheapEnginv1 {
 			
 			// table = rigth-ds 
 			ritConfigs = new HashMap<String, Dataset>();
-			DatasetCfg.parseConfigs(ritConfigs, xtabs.get("right-ds"));
+			DatasetCfgV11.parseConfigs(ritConfigs, xtabs.get("right-ds"));
 
 			// table = semantics
 			trcs = new CheapTransBuild(conn, xtabs.get("semantics"));
@@ -243,10 +243,10 @@ public class CheapEnginv1 {
 				// otherwise create a default checker for the wfid,
 				else {
 					String[] sqls = new String[4];
-					sqls[DatasetCfg.ixMysql] = xconfgs.getString("mysql");
-					sqls[DatasetCfg.ixOrcl] = xconfgs.getString("orcl");
-					sqls[DatasetCfg.ixSqlit] = xconfgs.getString("sqlit");
-					sqls[DatasetCfg.ixMs2k] = xconfgs.getString("ms2k");
+					sqls[DatasetCfgV11.ixMysql] = xconfgs.getString("mysql");
+					sqls[DatasetCfgV11.ixOrcl] = xconfgs.getString("orcl");
+					sqls[DatasetCfgV11.ixSqlit] = xconfgs.getString("sqlit");
+					sqls[DatasetCfgV11.ixMs2k] = xconfgs.getString("ms2k");
 	
 					Dataset ds = new Dataset(wfid, null, sqls, null);
 					schedualed = scheduler.scheduleAtFixedRate
@@ -417,7 +417,7 @@ public class CheapEnginv1 {
 	 * @throws TransException 
 	 * Modified 2019.6.2, supporting multiple outgoing branches.
 	 */
-	public static SemanticObject onReqCmd(IUser usr, String wftype, Req req, String cmd,
+	public static CheapResp onReqCmd(IUser usr, String wftype, Req req, String cmd,
 			String busiId, String prevInstDsc, ArrayList<Object[]> busiPack,
 			ArrayList<Statement<?>> postups) throws SQLException, TransException {
 		// Design Notes:
@@ -607,11 +607,11 @@ public class CheapEnginv1 {
 
 		evt.qryCompetition(qryCompetChk(req, wf, busiId, nextNode.nodeId(), fromInstId));
 
-		return new SemanticObject()
-				.put("stmt", ins1)
-				.put("evt", evt)
-				.put("stepHandler", fromNode.onEventHandler())
-				.put("arriHandler", nextNode.isArrived(fromNode) ? nextNode.onEventHandler() : null);
+		return new CheapResp()
+				.statment(ins1)
+				.event(evt)
+				.stepHandler(fromNode.onEventHandler())
+				.arriHandler(nextNode.isArrived(fromNode) ? nextNode.onEventHandler() : null);
 	}
 
 	/**<p>Find <i>from</i> node, the out going node, according to cmd request.</p> 
@@ -690,19 +690,19 @@ public class CheapEnginv1 {
 	 * @throws SQLException
 	 * @throws TransException 
 	 */
-	public static SemanticObject commitReq(IUser usr, String wftype, Req req, String cmd,
+	public static CheapResp commitReq(IUser usr, String wftype, Req req, String cmd,
 			String taskId, String nodeDesc, ArrayList<Object[]> nvs, ArrayList<Statement<?>> postups)
 					throws SQLException, TransException {
 		CheapTransBuild st = CheapEnginv1.trcs;
 
-		SemanticObject logic = CheapEnginv1.onReqCmd(usr, wftype, req, cmd,
+		CheapResp logic = CheapEnginv1.onReqCmd(usr, wftype, req, cmd,
 					taskId, nodeDesc, nvs, postups);
 
-		Insert ins = (Insert) logic.get("stmt");
+		Insert ins = (Insert) logic.statment;
 		ISemantext smtxt = st.instancontxt(usr);
 
 		// prepare competition checking
-		CheapEvent evt = (CheapEvent) logic.get("evt");
+		CheapEvent evt = (CheapEvent) logic.event;
 		CheapWorkflow wf = CheapEnginv1.getWf(evt.wfId());
 
 		// Query q = qCompet(req, wf, taskId, evt.nextNodeId(), evt.prevInstId());
@@ -727,9 +727,9 @@ public class CheapEnginv1 {
 			ins.ins(smtxt);
 		} finally { lock.unlock(); }
 
-		((CheapEvent) logic.get("evt")).resulve(smtxt);
+		logic.event.resulve(smtxt);
 
-		logic.remove("stmt");
+		// logic.statment(null);
 		
 		// FIXME Why events handler not called here?
 		return logic;

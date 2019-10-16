@@ -6,8 +6,8 @@ import org.junit.Test;
 import org.xml.sax.SAXException;
 
 import io.odysz.common.Utils;
-import io.odysz.semantic.DA.DatasetCfg;
-import io.odysz.semantic.DA.DatasetCfg.Dataset;
+import io.odysz.semantic.DA.DatasetCfgV11;
+import io.odysz.semantic.DA.DatasetCfgV11.Dataset;
 import io.odysz.transact.x.TransException;
 
 /**Test {@link CheapChecker#checkTimeout()}
@@ -23,7 +23,7 @@ public class CheapCheckerTest {
 		Dataset ds;
 		{
 			String[] sqls = new String[4];
-			sqls[DatasetCfg.ixSqlit] = "select (CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) )/60 expMin, \n" + 
+			sqls[DatasetCfgV11.ixSqlit] = "select (CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) )/60 expMin, \n" + 
 					"		i.opertime, n.timeouts, n.timeoutRoute, n.wfId, i.nodeId nodeId, i.taskId taskId, i.instId\n" + 
 					"		from task_nodes i join oz_wfnodes n on i.nodeId = n.nodeId and n.timeouts > 0 and i.handlingCmd is null\n" + 
 					"		where CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) > n.timeouts";

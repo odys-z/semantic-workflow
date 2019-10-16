@@ -8,7 +8,7 @@ import java.util.List;
 import io.odysz.common.AESHelper;
 import io.odysz.common.LangExt;
 import io.odysz.common.Utils;
-import io.odysz.module.rs.SResultset;
+import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
@@ -66,12 +66,12 @@ public class CheapApi {
 		return api;
 	}
 	
-	public static SemanticObject right(String wftype, String usrId, String nodeId, String taskId)
+	public static CheapResp right(String wftype, String usrId, String nodeId, String taskId)
 			throws SemanticException, SQLException {
 		if (nodeId == null)
 			throw new SemanticException("Node Id is null");
 
-		SemanticObject sobj = new SemanticObject();
+		CheapResp sobj = new CheapResp();
 		
 		CheapWorkflow wf = CheapEnginv1.wfs.get(wftype);
 
@@ -83,7 +83,7 @@ public class CheapApi {
 		if (n == null)
 			throw new SemanticException("Node not found: ", nodeId);
 
-		sobj.put("rights", n.rights(CheapEnginv1.trcs, usrId, taskId));
+		sobj.rights(n.rights(CheapEnginv1.trcs, usrId, taskId));
 		return sobj;
 	}
 	
@@ -96,7 +96,7 @@ public class CheapApi {
 				// join a_user u on u.userId = 'admin'
 				// join oz_wfrights r on r.nodeId = n.nodeId and r.roleId = u.roleId
 				// join p_change_application b on b.currentNode = i.instId;
-				SResultset task = (SResultset) CheapEnginv1.trcs
+				AnResultset task = (AnResultset) CheapEnginv1.trcs
 						.select(wf.instabl, "i")
 						.col("b.*").col("n." + WfMeta.nname)
 						.j(WfMeta.nodeTabl, "n", 
@@ -151,9 +151,9 @@ instId |nodeId |taskId |oper         |opertime            |descpt |remarks |hand
 	 * @throws TransException
 	 * @throws SQLException
 	 */
-	public static SemanticObject loadFlow(String wftype, String taskid, IUser usr)
+	public static CheapResp loadFlow(String wftype, String taskid, IUser usr)
 			throws TransException, SQLException {
-		SemanticObject sobj = new SemanticObject();
+		CheapResp sobj = new CheapResp();
 		
 		CheapWorkflow wf = CheapEnginv1.wfs.get(wftype);
 		if (wf == null) 
@@ -194,7 +194,7 @@ instId |nodeId |taskId |oper         |opertime            |descpt |remarks |hand
 		}
 		
 		SemanticObject list = q.rs(CheapEnginv1.trcs.instancontxt(usr));
-		SResultset lst = (SResultset) list.rs(0);
+		AnResultset lst = (AnResultset) list.rs(0);
 
 		// load current instance
 		// select i.* from task_nodes i
@@ -208,7 +208,7 @@ instId |nodeId |taskId |oper         |opertime            |descpt |remarks |hand
 				// .where("=", "b." + wf.bCateCol, "'" + wftype + "'")
 				.j(WfMeta.nodeTabl, "n", String.format("n.%s = i.%s", WfMeta.nid, nodeInst.nodeFk))
 				.rs(CheapEnginv1.trcs.instancontxt(usr));
-		SResultset ist = (SResultset) list.rs(0);
+		AnResultset ist = (AnResultset) list.rs(0);
 
 		sobj.rs(lst, lst.getRowCount());
 		sobj.rs(ist, ist.getRowCount());
@@ -230,7 +230,7 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 	 * @throws TransException
 	 * @throws SQLException
 	 */
-	public static SemanticObject loadCmds(String wftype, String nId, String taskid, String uid)
+	public static CheapResp loadCmds(String wftype, String nId, String taskid, String uid)
 			throws TransException, SQLException {
 		if (LangExt.isblank(wftype) || LangExt.isblank(nId))
 			throw new CheapException(CheapException.ERR_WF,
@@ -262,9 +262,9 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 				// .l(t.select("(" + CheapNode.rightDs(n.rightSk(), t) + ")", "_v"), "", "c.cmd = _v.cmd")
 				.l(t.select("(" + rightSelct + ")", "_v"), "", "c.cmd = _v.cmd")
 				.rs(CheapEnginv1.trcs.basictx());
-		SResultset lst = (SResultset) list.rs(0);
+		AnResultset lst = (AnResultset) list.rs(0);
 		
-		return new SemanticObject().rs(lst, lst.getRowCount());
+		return new CheapResp().rs(lst, lst.getRowCount());
 	}
 
 	/**Get next route node according to ntimeoutRoute (no time checking).<br>
@@ -476,7 +476,7 @@ instId |nodeId       |taskId |oper  |opertime            |descpt         |remark
 	 * @throws SQLException
 	 * @throws TransException 
 	 */
-	public SemanticObject commitReq(IUser usr) throws SQLException, TransException {
+	public CheapResp commitReq(IUser usr) throws SQLException, TransException {
 		return CheapEnginv1.commitReq(usr, wftype, req, cmd,
 					taskId, nodeDesc, nvs, postups);
 	}
