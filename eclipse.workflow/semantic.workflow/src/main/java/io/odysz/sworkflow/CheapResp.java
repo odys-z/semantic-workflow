@@ -2,12 +2,11 @@ package io.odysz.sworkflow;
 
 import java.util.HashMap;
 
-import io.odysz.anson.Anson;
 import io.odysz.anson.AnsonField;
-import io.odysz.module.rs.AnResultset;
+import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.transact.sql.Statement;
 
-public class CheapResp extends Anson {
+public class CheapResp extends AnsonResp {
 
 	@AnsonField(ignoreTo=true)
 	Statement<?> statment;
@@ -64,11 +63,27 @@ public class CheapResp extends Anson {
 	}
 
 
-	private AnResultset anRs;
-	public AnResultset rs() {
-		return anRs;
+//	private List<AnResultset> rsLst;
+//	public List<AnResultset> rses() {
+//		return rsLst;
+//	}
+//
+//	public AnResultset rs(int i) {
+//		return rsLst.get(i);
+//	}
+//
+//	public CheapResp rs(AnResultset rs, int rowCount) {
+//		if (rsLst == null)
+//			rsLst = new ArrayList<AnResultset>();
+//		rsLst.add(rs.total(rowCount));
+//		return this;
+//	}
+
+	private String rsInf;
+	public CheapResp rsInfo(String format) {
+		rsInf = format;
+		return this;
 	}
-
-
+	public String rsInfo() { return rsInf; }
 
 }

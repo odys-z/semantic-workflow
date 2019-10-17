@@ -212,7 +212,7 @@ instId |nodeId |taskId |oper         |opertime            |descpt |remarks |hand
 
 		sobj.rs(lst, lst.getRowCount());
 		sobj.rs(ist, ist.getRowCount());
-		sobj.put("rs structure", String.format("0: nodes joining instances of %s, 1: current instance",
+		sobj.rsInfo(String.format("0: nodes joining instances of %s, 1: current instance",
 					taskid));
 		return sobj;
 	}
@@ -264,7 +264,7 @@ chg01.01 |chg01.start     |start check |a           |0  |</pre>
 				.rs(CheapEnginv1.trcs.basictx());
 		AnResultset lst = (AnResultset) list.rs(0);
 		
-		return new CheapResp().rs(lst, lst.getRowCount());
+		return (CheapResp) new CheapResp().rs(lst, lst.getRowCount());
 	}
 
 	/**Get next route node according to ntimeoutRoute (no time checking).<br>

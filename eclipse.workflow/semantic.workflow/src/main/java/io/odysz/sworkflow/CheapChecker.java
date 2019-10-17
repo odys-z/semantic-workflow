@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 import io.odysz.common.LangExt;
 import io.odysz.common.Utils;
-import io.odysz.module.rs.SResultset;
+import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DatasetCfgV11.Dataset;
 import io.odysz.semantics.x.SemanticException;
@@ -67,7 +67,7 @@ public class CheapChecker implements Runnable, ICheapChecker {
 			return checked;
 		}
 
-		SResultset rs = Connects.select(sql);
+		AnResultset rs = Connects.select(sql);
 		rs.beforeFirst();
 		while (rs.next()) {
 			String nid = rs.getString("nodeId");

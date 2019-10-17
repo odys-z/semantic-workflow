@@ -4,7 +4,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 
 import io.odysz.common.LangExt;
-import io.odysz.module.rs.SResultset;
+import io.odysz.module.rs.AnResultset;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.sworkflow.CheapNode.VirtualNode;
 import io.odysz.sworkflow.EnginDesign.WfMeta;
@@ -74,7 +74,7 @@ public class CheapWorkflow {
 				.whereEq(WfMeta.wfWfid, wfId)
 				.rs(CheapEnginv1.basictx);
 		
-		SResultset rs = (SResultset) s.rs(0);
+		AnResultset rs = (AnResultset) s.rs(0);
 		rs.beforeFirst();
 
 		nodes = new HashMap<String, CheapNode>(rs.getRowCount());
@@ -133,7 +133,7 @@ public class CheapWorkflow {
 				.col("b." + bRecId, "busiId")
 				.col("i.nodeId", "nodeId")
 				.rs(CheapEnginv1.basictx);
-		SResultset rs = (SResultset) s.rs(0);
+		AnResultset rs = (AnResultset) s.rs(0);
 		if (rs.beforeFirst().next())
 			return new String[] {
 					rs.getString("busiId"),

@@ -5,7 +5,7 @@ import java.sql.SQLException;
 
 import org.xml.sax.SAXException;
 
-import io.odysz.module.rs.SResultset;
+import io.odysz.module.rs.AnResultset;
 import io.odysz.module.xtable.XMLTable;
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
@@ -23,7 +23,7 @@ public class CheapTransBuild extends DATranscxt {
 	public Query select(String tabl, String... alias) {
 		Query q = super.select(tabl, alias);
 		q.doneOp((conn, sqls) -> {
-			SResultset rs = Connects.select(conn.connId(), sqls.get(0));
+			AnResultset rs = Connects.select(conn.connId(), sqls.get(0));
 			return new SemanticObject().rs(rs, rs.total());
 		});
 		return q;

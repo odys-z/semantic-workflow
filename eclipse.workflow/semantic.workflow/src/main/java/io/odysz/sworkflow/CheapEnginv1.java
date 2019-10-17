@@ -17,7 +17,7 @@ import org.xml.sax.SAXException;
 import io.odysz.common.Configs;
 import io.odysz.common.LangExt;
 import io.odysz.common.Utils;
-import io.odysz.module.rs.SResultset;
+import io.odysz.module.rs.AnResultset;
 import io.odysz.module.xtable.IXMLStruct;
 import io.odysz.module.xtable.Log4jWrapper;
 import io.odysz.module.xtable.XMLDataFactoryEx;
@@ -138,7 +138,7 @@ public class CheapEnginv1 {
 			SemanticObject s = trcs
 					.select(WfMeta.wftabl)
 					.rs(basictx); // static context is enough to load cheap configs
-			SResultset rs = (SResultset) s.rs(0); 
+			AnResultset rs = (AnResultset) s.rs(0); 
 			rs.beforeFirst();
 
 			wfs = new HashMap<String, CheapWorkflow>(rs.getRowCount());
@@ -347,7 +347,7 @@ public class CheapEnginv1 {
 				// update the current (timeout) node as the prvNode
 				.nv(nodeInst.prevInst, instId) // can't be null - no null node can timeout
 				// op-time semantics is removed to avoid updating when stepping next
-				.nv(nodeInst.opertime, Funcall.now(CheapEnginv1.trcs.basictx().dbtype()))
+				.nv(nodeInst.opertime, Funcall.now())
 				.nv(nodeInst.oper, usr.uid());
 
 		Resulving newInstId = new Resulving(wf.instabl, nodeInst.id);
@@ -493,7 +493,7 @@ public class CheapEnginv1 {
 			// .nv(nodeInst.busiFk, "Resulving...")
 			.nv(nodeInst.nodeFk, nextNode.nodeId()) // .nv(nodeInst.descol, nodeDesc)
 			// op-time semantics is removed to avoid updating when stepping next and updating 'preNode'
-			.nv(nodeInst.opertime, Funcall.now(CheapEnginv1.trcs.basictx().dbtype()))
+			.nv(nodeInst.opertime, Funcall.now())
 			.nv(nodeInst.oper, usr.uid());
 
 		Resulving newInstId = new Resulving(wf.instabl, nodeInst.id);
@@ -588,7 +588,7 @@ public class CheapEnginv1 {
 		//3. handle multi-operation request, e.g. multireq &amp; postreq<br>
 		// ins1.postChildren(multireq, trcs);
 		ins1.post(postups);
-		
+	
 		CheapEvent evt = null;
 		if (Req.start == req)
 			// start: create task
@@ -643,7 +643,7 @@ public class CheapEnginv1 {
 				.orderby("i." + nodeInst.opertime, "desc");
 
 		SemanticObject res = q.rs(trcs.basictx()); // shouldn't using context?
-		SResultset rs = (SResultset) res.rs(0);
+		AnResultset rs = (AnResultset) res.rs(0);
 		
 		if (rs == null || rs.getRowCount() < 1) {
 			Utils.warn("CheapEngin#findFrom(): Found %s starting instance for the cmd %s, task: %s",
@@ -715,7 +715,7 @@ public class CheapEnginv1 {
 			if (q != null) {
 				// check competation
 				SemanticObject s = q.rs(smtxt);
-				SResultset rs = (SResultset) s.rs(0);
+				AnResultset rs = (AnResultset) s.rs(0);
 				if (rs.beforeFirst().next()) {
 					if (rs.getInt("cnt") > 0)
 						throw new CheapException(CheapException.ERR_WF_COMPETATION,
@@ -853,7 +853,7 @@ instId |nodeId       |taskId |oper  |opertime            |handlingCmd       |pre
 			.col(WfMeta.wfChecker, "chkr")
 			.where_("=", WfMeta.wfWfid, wfid)
 			.rs(CheapEnginv1.trcs.basictx());
-		SResultset rs = (SResultset) res.rs(0);
+		AnResultset rs = (AnResultset) res.rs(0);
 		if (rs.beforeFirst().next()) {
 			if (CheapEnginv1.cheaprint == null)
 				Utils.warn("CheapAip is checking competations but it's finger print is null, this should only hanppened when testing");

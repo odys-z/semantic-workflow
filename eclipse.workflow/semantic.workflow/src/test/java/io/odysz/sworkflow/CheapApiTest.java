@@ -19,7 +19,6 @@ import io.odysz.common.DateFormat;
 import io.odysz.common.LangExt;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.AnResultset;
-import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.LoggingUser;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantics.ISemantext;
@@ -229,6 +228,7 @@ public class CheapApiTest {
 		// case 2 start new task, with task record exists
 		ISemantext tr2 = CheapEnginv1.trcs.instancontxt(usr);
 		CheapWorkflow wf = CheapEnginv1.getWf(wftype);
+		@SuppressWarnings("unused")
 		CheapResp res2 = (CheapResp) CheapEnginv1.trcs
 				.insert(wf.bTabl, usr)
 				.nv("remarks", "testing case 2")
@@ -494,8 +494,8 @@ instId |nodeId  |taskId |oper         |opertime            |descpt              
 		assertFalse(LangExt.isblank(crntNid));
 
 		CheapResp res1 = CheapApi.loadFlow(wftype, taskId, usr);
-		AnResultset nodes = (AnResultset) res1.rs(0);
-		AnResultset insts = (AnResultset) res1.rs(1);
+		AnResultset nodes = res1.rs(0);
+		AnResultset insts = res1.rs(1);
 		
 		nodes.beforeFirst();
 		boolean ok = false;

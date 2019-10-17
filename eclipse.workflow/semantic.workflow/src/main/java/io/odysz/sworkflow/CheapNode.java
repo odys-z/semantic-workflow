@@ -4,7 +4,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 
 import io.odysz.common.LangExt;
-import io.odysz.module.rs.SResultset;
+import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DatasetCfgV11.Dataset;
 import io.odysz.semantics.IUser;
@@ -134,7 +134,7 @@ public class CheapNode {
 				.col(WfMeta.cmdSort, "sort")
 				.where("=", WfMeta.nid, "'" + nodeId + "'")
 				.rs(CheapEnginv1.basictx);
-		SResultset rs = (SResultset) s.rs(0);
+		AnResultset rs = (AnResultset) s.rs(0);
 		rs.beforeFirst();
 		while (rs.next()) {
 			String cmd = rs.getString("cmd");
@@ -220,7 +220,7 @@ public class CheapNode {
 
 		// args: [%1$s] wfid, [%2$s] node-id, [%3$s] user-id, [%4$s] task-id
 		String vw = String.format(rightDs(dskey, trcs), wfId(), nid, usrId, taskId);
-		SResultset rs = Connects.select(CheapEnginv1.trcs.basiconnId(), vw, Connects.flag_nothing);
+		AnResultset rs = Connects.select(CheapEnginv1.trcs.basiconnId(), vw, Connects.flag_nothing);
 		rs.beforeFirst();
 		HashMap<String, String> map = new HashMap<String, String>();
 		while (rs.next()) { 
