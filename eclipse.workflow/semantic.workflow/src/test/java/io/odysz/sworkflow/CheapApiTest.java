@@ -229,7 +229,7 @@ public class CheapApiTest {
 		ISemantext tr2 = CheapEnginv1.trcs.instancontxt(usr);
 		CheapWorkflow wf = CheapEnginv1.getWf(wftype);
 		@SuppressWarnings("unused")
-		CheapResp res2 = (CheapResp) CheapEnginv1.trcs
+		SemanticObject resObj = (SemanticObject) CheapEnginv1.trcs
 				.insert(wf.bTabl, usr)
 				.nv("remarks", "testing case 2")
 				.nv(wf.bTaskStateRef, "null stub")
@@ -237,7 +237,8 @@ public class CheapApiTest {
 				.ins(tr2);
 		String task2 = (String) tr2.resulvedVal(wf.bTabl, wf.bRecId);
 
-		res2 = CheapApi.start(wftype, task2)
+		@SuppressWarnings("unused")
+		CheapResp resp = CheapApi.start(wftype, task2)
 				.nodeDesc("node instance desc: starting " + task2)
 				.taskNv("remarks", "testing case 2")
 				.commitReq(usr);
@@ -253,7 +254,7 @@ public class CheapApiTest {
 	
 		// case 3 trying start task2 should failed because tasks already started
 		try {
-			res2 = CheapApi.start(wftype, task2)
+			resp = CheapApi.start(wftype, task2)
 				.nodeDesc("desc: starting " + task2)
 				.taskNv("remarks", "testing case 2")
 				.commitReq(usr);
