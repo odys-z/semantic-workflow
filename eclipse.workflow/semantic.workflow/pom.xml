@@ -46,7 +46,7 @@
 			to update immediately. -->
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>semantic.DA</artifactId>
-	    <version>0.9.9-SNAPSHOT</version>
+	    <version>1.0.0</version>
 	</dependency>
 
    	<dependency>
