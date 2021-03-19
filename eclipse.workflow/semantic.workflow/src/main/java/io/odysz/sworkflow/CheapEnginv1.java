@@ -23,8 +23,8 @@ import io.odysz.module.xtable.Log4jWrapper;
 import io.odysz.module.xtable.XMLDataFactoryEx;
 import io.odysz.module.xtable.XMLTable;
 import io.odysz.semantic.DASemantics.smtype;
-import io.odysz.semantic.DA.DatasetCfgV11;
-import io.odysz.semantic.DA.DatasetCfgV11.Dataset;
+import io.odysz.semantic.DA.DatasetCfg;
+import io.odysz.semantic.DA.DatasetCfg.Dataset;
 import io.odysz.semantics.ISemantext;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
@@ -128,7 +128,7 @@ public class CheapEnginv1 {
 			
 			// table = rigth-ds 
 			ritConfigs = new HashMap<String, Dataset>();
-			DatasetCfgV11.parseConfigs(ritConfigs, xtabs.get("right-ds"));
+			DatasetCfg.parseConfigs(ritConfigs, xtabs.get("right-ds"));
 
 			// table = semantics
 			trcs = new CheapTransBuild(conn, xtabs.get("semantics"));
@@ -243,10 +243,10 @@ public class CheapEnginv1 {
 				// otherwise create a default checker for the wfid,
 				else {
 					String[] sqls = new String[4];
-					sqls[DatasetCfgV11.ixMysql] = xconfgs.getString("mysql");
-					sqls[DatasetCfgV11.ixOrcl] = xconfgs.getString("orcl");
-					sqls[DatasetCfgV11.ixSqlit] = xconfgs.getString("sqlit");
-					sqls[DatasetCfgV11.ixMs2k] = xconfgs.getString("ms2k");
+					sqls[DatasetCfg.ixMysql] = xconfgs.getString("mysql");
+					sqls[DatasetCfg.ixOrcl] = xconfgs.getString("orcl");
+					sqls[DatasetCfg.ixSqlit] = xconfgs.getString("sqlit");
+					sqls[DatasetCfg.ixMs2k] = xconfgs.getString("ms2k");
 	
 					Dataset ds = new Dataset(wfid, null, sqls, null);
 					schedualed = scheduler.scheduleAtFixedRate

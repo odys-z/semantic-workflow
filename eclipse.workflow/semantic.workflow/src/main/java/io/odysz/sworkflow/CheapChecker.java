@@ -7,7 +7,7 @@ import io.odysz.common.LangExt;
 import io.odysz.common.Utils;
 import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DA.Connects;
-import io.odysz.semantic.DA.DatasetCfgV11.Dataset;
+import io.odysz.semantic.DA.DatasetCfg.Dataset;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.sworkflow.CheapEvent.Evtype;
 
