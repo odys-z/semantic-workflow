@@ -23,10 +23,7 @@ public class CheapRobot implements IUser {
 		return false;
 	}
 	
-	@Override
-	public String sessionId() {
-		return null;
-	}
+	// @Override public String sessionId() { return null; }
 
 	@Override
 	public void touch() { }
@@ -37,9 +34,7 @@ public class CheapRobot implements IUser {
 	}
 
 	@Override
-	public SemanticObject logout() {
-		return null;
-	}
+	public SemanticObject logout() { return null; }
 
 	@Override
 	public void writeJsonRespValue(Object writer) throws IOException {}
@@ -50,19 +45,13 @@ public class CheapRobot implements IUser {
 	}
 
 	@Override
-	public String sessionKey() {
-		return null;
-	}
+	public String sessionId() { return null; }
 
 	@Override
-	public IUser sessionKey(String skey) {
-		return null;
-	}
+	public IUser sessionId(String skey) { return null; }
 
 	@Override
-	public IUser notify(Object note) throws TransException {
-		return null;
-	}
+	public IUser notify(Object note) throws TransException { return null; }
 
 	@Override
 	public List<Object> notifies() { return null; }
