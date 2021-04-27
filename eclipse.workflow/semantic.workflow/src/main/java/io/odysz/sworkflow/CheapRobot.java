@@ -55,4 +55,7 @@ public class CheapRobot implements IUser {
 
 	@Override
 	public List<Object> notifies() { return null; }
+
+	@Override
+	public long touchedMs() { return System.currentTimeMillis(); }
 }
