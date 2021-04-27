@@ -45,10 +45,10 @@ public class CheapRobot implements IUser {
 	}
 
 	@Override
-	public String sessionId() { return null; }
+	public String sessionKey() { return null; }
 
 	@Override
-	public IUser sessionId(String skey) { return null; }
+	public IUser sessionKey(String skey) { return null; }
 
 	@Override
 	public IUser notify(Object note) throws TransException { return null; }
