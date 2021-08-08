@@ -220,7 +220,10 @@ public class CheapNode {
 
 		// args: [%1$s] wfid, [%2$s] node-id, [%3$s] user-id, [%4$s] task-id
 		String vw = String.format(rightDs(dskey, trcs), wfId(), nid, usrId, taskId);
-		AnResultset rs = Connects.select(CheapEnginv1.trcs.basiconnId(), vw, Connects.flag_nothing);
+
+		// AnResultset rs = Connects.select(CheapEnginv1.trcs.basiconnId(), vw, Connects.flag_nothing);
+		AnResultset rs = Connects.select(Connects.uri2conn("/cheapflow"), vw, Connects.flag_nothing);
+
 		rs.beforeFirst();
 		HashMap<String, String> map = new HashMap<String, String>();
 		while (rs.next()) { 
@@ -248,7 +251,8 @@ public class CheapNode {
 		Dataset ds = CheapEnginv1.ritConfigs.get(dskey);
 		if (ds == null)
 			ds = CheapEnginv1.ritConfigs.get("ds-allcmd");
-		String sql = ds.getSql(Connects.driverType(trcs.basiconnId()));
+		String sql = ds.getSql(Connects.driverType(Connects.uri2conn("/cheapflow")));
+
 		return sql;
 	}
 

@@ -68,7 +68,7 @@ public class CheapTransBuild extends DATranscxt {
 	}
 
 	public ISemantext instancontxt(IUser usr) throws TransException {
-		return super.instancontxt(basiconnId(), usr);
+		return super.instancontxt(Connects.uri2conn("/cheapflow"), usr);
 	}
 
 }
