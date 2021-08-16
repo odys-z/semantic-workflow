@@ -28,7 +28,7 @@ public class CheapCheckerTest {
 					"		from task_nodes i join oz_wfnodes n on i.nodeId = n.nodeId and n.timeouts > 0 and i.handlingCmd is null\n" + 
 					"		where CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', i.opertime) as integer) > n.timeouts";
 
-			ds = new Dataset("t01", null, sqls, null);
+			ds = new Dataset("t01", null, null, sqls, null);
 		}
 
 		CheapChecker chkr = new CheapChecker(CheapApiTest.conn, "t01", 2000, ds);

@@ -248,7 +248,8 @@ public class CheapEnginv1 {
 					sqls[DatasetCfg.ixSqlit] = xconfgs.getString("sqlit");
 					sqls[DatasetCfg.ixMs2k] = xconfgs.getString("ms2k");
 	
-					Dataset ds = new Dataset(wfid, null, sqls, null);
+					String xconn = xconfgs.getString("conn");
+					Dataset ds = new Dataset(wfid, null, xconn, sqls, null);
 					schedualed = scheduler.scheduleAtFixedRate
 							(new CheapChecker(conn, wfid, ms, ds), 0, ms, TimeUnit.MICROSECONDS);
 					
