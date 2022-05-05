@@ -10,6 +10,8 @@ import io.odysz.semantics.meta.TableMeta;
 import io.odysz.transact.x.TransException;
 
 public class CheapRobot implements IUser {
+	private long touched = 0;
+
 	@Override
 	public TableMeta meta() { return null; }
 
@@ -23,10 +25,13 @@ public class CheapRobot implements IUser {
 		return false;
 	}
 	
-	// @Override public String sessionId() { return null; }
+	public IUser touch() {
+		touched = System.currentTimeMillis();
+		return this;
+	}
 
 	@Override
-	public void touch() { }
+	public long touchedMs() { return touched; }
 
 	@Override
 	public String uid() {
@@ -55,7 +60,4 @@ public class CheapRobot implements IUser {
 
 	@Override
 	public List<Object> notifies() { return null; }
-
-	@Override
-	public long touchedMs() { return System.currentTimeMillis(); }
 }
