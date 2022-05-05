@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xml>
 <conns>
-  <t id="drvmnger" pk="id" columns="id,type,isdef,src,usr,pswd,dbg,smtcs">
+  <t id="drvmnger" pk="id" columns="id,type,isdef,src,usr,pswd,dbg,log,smtcs">
   	<!-- drvmnger table is used to configure basic db connection, for pooled datasource, see bdcp -->
   	<!-- smtcs: semantics configuration used only for the connection.
   		(And a global semantics configuration?) -->
@@ -16,11 +16,23 @@
   		<pswd>test</pswd>
   		<!-- enable sql printing -->
   		<dbg>true</dbg>
-  		<smtcs>src/test/res/semantic-log.xml</smtcs>
+  		<smtcs>semantic-log.xml</smtcs>
   	</c>
   </t>
 
   <t id="dbcp" pk="id" columns="id,type,src,usr,pswd,isdef,dbg,smtcs">
   <!-- Not Used -->
+  </t>
+  
+  <t id="conn-uri" pk='uri' columns="uri, conn">
+  	<!-- for uri, see AnClient/js/example/example.js/north-star/north-app.jsx
+  	     for conn, see above
+  	     It's planned to try configure connections via user requests, in the future.
+  	-->
+   	<c>
+  		<uri>/</uri>
+  		<conn>local-sqlite</conn>
+  	</c>
+  	
   </t>
 </conns>
