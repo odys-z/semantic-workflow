@@ -15,6 +15,9 @@
 	<s> <k>wfrights-meta</k>
 		<v>task_rights,nodeId,roleId</v>
 	</s>
+	<s> <k>debug</k>
+		<v>true</v>
+	</s>
   </t>
 
   <t id="semantics" pk="id" columns="id,smtc,tabl,pk,args">

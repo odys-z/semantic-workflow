@@ -102,6 +102,7 @@ public class CheapEnginv1 {
 			// table = conn
 			XMLTable cfg = xtabs.get("cfg");
 			String conn = null;
+			boolean debug = true;
 			boolean enableChkr = false;
 			cfg.beforeFirst();
 			while (cfg.next()) {
@@ -124,6 +125,8 @@ public class CheapEnginv1 {
 					WfMeta.rights.nodeFk = vss[1];
 					WfMeta.rights.roleFk = vss[2];
 				}
+				else if ("debug".equals(k))
+					debug = cfg.getBool("v", debug);
 			}
 			
 			// table = rigth-ds 
@@ -131,7 +134,7 @@ public class CheapEnginv1 {
 			DatasetCfg.parseConfigs(ritConfigs, xtabs.get("right-ds"));
 
 			// table = semantics
-			trcs = new CheapTransBuild(conn, xtabs.get("semantics"));
+			trcs = new CheapTransBuild(conn, xtabs.get("semantics"), debug);
 			basictx = trcs.instancontxt(new CheapRobot());
 
 			// select * from oz_wfworkflow;
@@ -163,18 +166,18 @@ public class CheapEnginv1 {
 				// 2. append semantics for handling routes, etc.
 
 				// 2.1 node instance auto key, e.g. task_nodes.instId
-				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.autoInc, nodeInst.id);
+				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.autoInc, nodeInst.id, debug);
 				
 				// 2.2 node instance fk-ins to tasks.taskId
 				// in case of step, task-id is not created, the ref string is kept untouched
 				// - this shall be improved, implicit semantics is not encouraged.
 
 				CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.fkIns,
-						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
+						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId }, debug);
 				
 				if (!CheapTransBuild.hasSemantics(conn, instabl, smtype.postFk))
 					CheapTransBuild.addSemantics(conn, instabl, nodeInst.id, smtype.postFk,
-						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId });
+						new String[] { nodeInst.busiFk, wf.bTabl, wf.bRecId }, debug);
 				else throw new CheapException(CheapException.ERR_WF_CONFIG,
 						"CheapEnginv1#realoadCheap(): Found postFk semantics of node instance table (%s.%s) "
 						+ "back referencing different business table (%s.%s) - already have a postFk.\n"
@@ -197,10 +200,10 @@ public class CheapEnginv1 {
 
 				// 2.4 business task's pk and current state ref, e.g. tasks.wfState -> task_nodes.instId
 				if (!CheapTransBuild.hasSemantics(conn, busitabl, smtype.autoInc))
-					CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.autoInc, bRecId);
+					CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.autoInc, bRecId, debug);
 				if (!CheapTransBuild.hasSemantics(conn, busitabl, smtype.fkIns))
 					CheapTransBuild.addSemantics(conn, busitabl, bRecId, smtype.fkIns,
-						new String[] {busiState, instabl, nodeInst.id});
+						new String[] {busiState, instabl, nodeInst.id}, debug);
 				if (!CheapTransBuild.hasSemantics(conn, busitabl, smtype.opTime))
 					Utils.warn("WARN -- CheapEngin --\nCheapEngin didn't find oper-time semanticcs for business table %s.\n" +
 								"CheapEngin doesn't require this semantics, and it can be configured in it's own semantic.xml.",

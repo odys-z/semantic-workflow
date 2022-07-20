@@ -51,17 +51,18 @@ public class CheapTransBuild extends DATranscxt {
 	 * This constructor can only been called after super class {@link DATranscxt} initialized with DB metas.
 	 * @param connId
 	 * @param xtabl
+	 * @param debug 
 	 * @throws SQLException 
 	 * @throws SemanticException 
 	 * @throws IOException 
 	 * @throws SAXException 
 	 */
-	public CheapTransBuild(String connId, XMLTable xtabl)
+	public CheapTransBuild(String connId, XMLTable xtabl, boolean debug)
 			throws TransException, SQLException, SAXException, IOException {
 		// super(connId, Connects.loadMeta(connId));
 		super(connId); // metas must already loaded
 		try {
-			initConfigs(connId, xtabl);
+			initConfigs(connId, xtabl, debug);
 		} catch (SAXException | IOException e) {
 			e.printStackTrace();
 		}
