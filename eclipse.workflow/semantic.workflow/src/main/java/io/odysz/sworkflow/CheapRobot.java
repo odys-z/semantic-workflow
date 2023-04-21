@@ -13,7 +13,7 @@ public class CheapRobot implements IUser {
 	private long touched = 0;
 
 	@Override
-	public TableMeta meta() { return null; }
+	public TableMeta meta(String... c) { return null; }
 
 	@Override
 	public ArrayList<String> dbLog(ArrayList<String> sqls) {
